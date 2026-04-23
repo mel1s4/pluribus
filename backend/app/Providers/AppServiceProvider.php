@@ -1,0 +1,63 @@
+<?php
+
+namespace App\Providers;
+
+use App\Models\Place;
+use App\Models\User;
+use App\Policies\PlacePolicy;
+use App\Support\CapabilityResolver;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     */
+    public function register(): void
+    {
+        //
+    }
+
+    /**
+     * Bootstrap any application services.
+     */
+    public function boot(): void
+    {
+        Gate::policy(Place::class, PlacePolicy::class);
+
+        Gate::before(function ($user, string $_ability) {
+            if ($user instanceof User && $user->isRoot()) {
+                return true;
+            }
+
+            return null;
+        });
+
+        $resolver = $this->app->make(CapabilityResolver::class);
+        foreach ($resolver->allCatalogCapabilityIds() as $capabilityId) {
+            Gate::define($capabilityId, function (User $user) use ($capabilityId, $resolver): bool {
+                return $resolver->userHasCapability($user, $capabilityId);
+            });
+        }
+
+        RateLimiter::for('login', function (Request $request) {
+            $key = (string) $request->input('email', '').'|'.$request->ip();
+
+            return Limit::perMinute(5)->by($key);
+        });
+
+        RateLimiter::for('join-invitation-show', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
+        RateLimiter::for('join-invitation-register', function (Request $request) {
+            $token = (string) $request->route('token', '');
+
+            return Limit::perMinute(8)->by($request->ip().'|'.$token);
+        });
+    }
+}

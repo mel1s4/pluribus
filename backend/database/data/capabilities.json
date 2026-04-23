@@ -1,0 +1,262 @@
+{
+  "profile": {
+    "module": "profile",
+    "capabilities": [
+      {
+        "id": "profile.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View your own profile and public profile fields of others."
+      },
+      {
+        "id": "profile.update",
+        "name": "update",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Change your own profile details, avatar, and preferences."
+      }
+    ]
+  },
+  "chats": {
+    "module": "chats",
+    "capabilities": [
+      {
+        "id": "chats.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "Open chat threads you are allowed to access."
+      },
+      {
+        "id": "chats.send",
+        "name": "send",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Send messages in chats you belong to."
+      },
+      {
+        "id": "chats.delete_own",
+        "name": "delete_own",
+        "category": "delete",
+        "isDangerous": false,
+        "description": "Delete messages you authored within retention rules."
+      },
+      {
+        "id": "chats.moderate",
+        "name": "moderate",
+        "category": "approve",
+        "isDangerous": false,
+        "description": "Remove or flag others' messages per community policy."
+      },
+      {
+        "id": "chats.delete_any",
+        "name": "delete_any",
+        "category": "delete",
+        "isDangerous": true,
+        "description": "Delete any message in scoped chats regardless of author."
+      }
+    ]
+  },
+  "stores": {
+    "module": "stores",
+    "capabilities": [
+      {
+        "id": "stores.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View store listings and catalog information."
+      },
+      {
+        "id": "stores.create",
+        "name": "create",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Register new stores under allowed scopes."
+      },
+      {
+        "id": "stores.update",
+        "name": "update",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Edit store profile, hours, and storefront configuration."
+      },
+      {
+        "id": "stores.delete",
+        "name": "delete",
+        "category": "delete",
+        "isDangerous": true,
+        "description": "Remove a store and its merchant configuration."
+      },
+      {
+        "id": "stores.manage_offers",
+        "name": "manage_offers",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create and edit offers, pricing, and promotions."
+      }
+    ]
+  },
+  "map": {
+    "module": "map",
+    "capabilities": [
+      {
+        "id": "map.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "Use map views and browse public pins and regions."
+      },
+      {
+        "id": "map.share_location",
+        "name": "share_location",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Publish or update your own location markers where allowed."
+      }
+    ]
+  },
+  "offers": {
+    "module": "offers",
+    "capabilities": [
+      {
+        "id": "offers.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "See active offers and deal details."
+      },
+      {
+        "id": "offers.create",
+        "name": "create",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Draft new offers for stores you manage."
+      },
+      {
+        "id": "offers.update",
+        "name": "update",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Change offer terms, inventory links, and visibility."
+      },
+      {
+        "id": "offers.delete",
+        "name": "delete",
+        "category": "delete",
+        "isDangerous": true,
+        "description": "Retire or permanently delete offers."
+      }
+    ]
+  },
+  "users": {
+    "module": "users",
+    "capabilities": [
+      {
+        "id": "users.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "List and inspect user accounts within your scope."
+      },
+      {
+        "id": "users.create",
+        "name": "create",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Provision new user accounts or invitations."
+      },
+      {
+        "id": "users.update",
+        "name": "update",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Edit user records, flags, and non-auth fields."
+      },
+      {
+        "id": "users.delete",
+        "name": "delete",
+        "category": "delete",
+        "isDangerous": true,
+        "description": "Deactivate or delete user accounts."
+      },
+      {
+        "id": "users.assign_types",
+        "name": "assign_types",
+        "category": "write",
+        "isDangerous": true,
+        "description": "Grant or revoke user types and capability bundles."
+      }
+    ]
+  },
+  "notifications": {
+    "module": "notifications",
+    "capabilities": [
+      {
+        "id": "notifications.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "Read your notification inbox and delivery history."
+      },
+      {
+        "id": "notifications.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Send or schedule platform or community notifications."
+      }
+    ]
+  },
+  "settings": {
+    "module": "settings",
+    "capabilities": [
+      {
+        "id": "settings.update_own",
+        "name": "update_own",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Change personal settings such as theme and language."
+      },
+      {
+        "id": "settings.update_any",
+        "name": "update_any",
+        "category": "write",
+        "isDangerous": true,
+        "description": "Override another user's preferences or feature flags."
+      }
+    ]
+  },
+  "i18n": {
+    "module": "i18n",
+    "capabilities": [
+      {
+        "id": "i18n.manage_strings",
+        "name": "manage_strings",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Edit translation catalogs and locale rollout settings."
+      }
+    ]
+  },
+  "system": {
+    "module": "system",
+    "capabilities": [
+      {
+        "id": "system.config",
+        "name": "config",
+        "category": "write",
+        "isDangerous": true,
+        "description": "Change environment-level configuration and feature switches."
+      },
+      {
+        "id": "system.view_logs",
+        "name": "view_logs",
+        "category": "read",
+        "isDangerous": false,
+        "description": "Read application and audit logs for investigations."
+      }
+    ]
+  }
+}

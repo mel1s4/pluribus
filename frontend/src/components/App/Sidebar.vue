@@ -1,0 +1,164 @@
+<script setup>
+import { computed } from 'vue'
+import { hasCapability } from '../../composables/useCapabilities'
+import { useCommunity } from '../../composables/useCommunity'
+import { t } from '../../i18n/i18n'
+
+const { displayName } = useCommunity()
+
+defineProps({
+  open: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const emit = defineEmits(['close'])
+
+const sidebarId = 'app-sidebar'
+
+const links = computed(() => {
+  const all = [
+    { key: 'dashboard', to: '/dashboard', label: t('nav.dashboard'), icon: 'fa-gauge-high', capability: null },
+    {
+      key: 'users',
+      to: '/users',
+      label: t('nav.users'),
+      icon: 'fa-users',
+      capability: 'users.view',
+    },
+    {
+      key: 'community-settings',
+      to: '/community',
+      label: t('nav.community'),
+      icon: 'fa-people-roof',
+      capability: null,
+    },
+    { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'fa-plug', capability: null },
+    { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'fa-comments', capability: null },
+    { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'fa-store', capability: null },
+    { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'fa-map-location-dot', capability: null },
+    {
+      key: 'notifications',
+      to: '/notifications',
+      label: t('quickNav.notifications'),
+      icon: 'fa-bell',
+      capability: null,
+    },
+    { key: 'profile', to: '/profile', label: t('quickNav.profile'), icon: 'fa-user', capability: null },
+    { key: 'settings', to: '/settings', label: t('nav.settings'), icon: 'fa-gear', capability: null },
+  ]
+  return all.filter((item) => !item.capability || hasCapability(item.capability))
+})
+
+function maybeCloseMobile() {
+  if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
+    emit('close')
+  }
+}
+</script>
+
+<template>
+  <div :id="sidebarId" class="app-sidebar" role="navigation" :aria-hidden="!open">
+    <div class="app-sidebar__header">
+      <span class="app-sidebar__brand">{{ displayName }}</span>
+      <button
+        type="button"
+        class="app-sidebar__close app-sidebar__close--mobile"
+        :aria-label="t('nav.closeNavigation')"
+        @click="emit('close')"
+      >
+        <i class="fa-solid fa-xmark" aria-hidden="true" />
+      </button>
+    </div>
+
+    <nav class="app-sidebar__nav" aria-label="Main">
+      <RouterLink
+        v-for="link in links"
+        :key="link.key"
+        :to="link.to"
+        class="app-sidebar__link"
+        active-class="is-active"
+        @click="maybeCloseMobile"
+      >
+        <i :class="['fa-solid', link.icon]" aria-hidden="true" />
+        <span>{{ link.label }}</span>
+      </RouterLink>
+    </nav>
+  </div>
+</template>
+
+<style lang="scss" scoped>
+.app-sidebar {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
+.app-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.app-sidebar__brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.app-sidebar__close {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  cursor: pointer;
+  color: inherit;
+}
+
+.app-sidebar__close--mobile {
+  @media (max-width: 1023px) {
+    display: inline-flex;
+  }
+}
+
+.app-sidebar__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.65rem 0.5rem 1rem;
+  overflow: auto;
+  min-height: 0;
+}
+
+.app-sidebar__link {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  border-radius: 0.5rem;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.92rem;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: color-mix(in srgb, var(--border) 45%, transparent);
+  }
+
+  &.is-active {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--border) 55%, transparent);
+    font-weight: 600;
+  }
+}
+</style>

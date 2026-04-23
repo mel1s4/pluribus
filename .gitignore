@@ -1,0 +1,22 @@
+# Local database directories (if you accidentally created bind mounts)
+/db/
+/db_postgres_backup/
+
+# IDE
+.idea/
+.vscode/
+.cursor/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary
+/tmp/
+*.tmp
