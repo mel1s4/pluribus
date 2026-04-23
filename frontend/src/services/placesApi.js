@@ -10,6 +10,13 @@ export async function fetchPlaces() {
 /**
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
+export async function fetchCommunityPlacesMap() {
+  return apiJson('GET', '/api/community-map/places')
+}
+
+/**
+ * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
+ */
 export async function fetchPlace(id) {
   return apiJson('GET', `/api/places/${id}`)
 }
@@ -84,6 +91,82 @@ export async function updateOffer(placeId, offerId, payload) {
 export async function deleteOffer(placeId, offerId) {
   await ensureCsrfCookie()
   return apiJson('DELETE', `/api/places/${placeId}/offers/${offerId}`)
+}
+
+/**
+ * @param {number|string} placeId
+ */
+export async function fetchRequirements(placeId) {
+  return apiJson('GET', `/api/places/${placeId}/requirements`)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {FormData|Record<string, unknown>} payload
+ */
+export async function createRequirement(placeId, payload) {
+  await ensureCsrfCookie()
+  if (payload instanceof FormData) {
+    return apiForm('POST', `/api/places/${placeId}/requirements`, payload)
+  }
+  return apiJson('POST', `/api/places/${placeId}/requirements`, payload)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {number|string} requirementId
+ * @param {FormData|Record<string, unknown>} payload
+ */
+export async function updateRequirement(placeId, requirementId, payload) {
+  await ensureCsrfCookie()
+  if (payload instanceof FormData) {
+    return apiForm('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
+  }
+  return apiJson('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {number|string} requirementId
+ */
+export async function deleteRequirement(placeId, requirementId) {
+  await ensureCsrfCookie()
+  return apiJson('DELETE', `/api/places/${placeId}/requirements/${requirementId}`)
+}
+
+/**
+ * @param {{ q?: string, page?: number }} params
+ */
+export async function fetchCommunityPlaceOffers(params = {}) {
+  const q = new URLSearchParams()
+  if (params.q) q.set('q', String(params.q))
+  if (params.page) q.set('page', String(params.page))
+  const qs = q.toString()
+  const suffix = qs ? `?${qs}` : ''
+  return apiJson('GET', `/api/community-place-offers${suffix}`)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {number|string} requirementId
+ * @param {FormData|Record<string, unknown>} payload
+ */
+export async function createRequirementResponse(placeId, requirementId, payload) {
+  await ensureCsrfCookie()
+  if (payload instanceof FormData) {
+    return apiForm('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
+  }
+  return apiJson('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {number|string} requirementId
+ * @param {number|string} responseId
+ */
+export async function deleteRequirementResponse(placeId, requirementId, responseId) {
+  await ensureCsrfCookie()
+  return apiJson('DELETE', `/api/places/${placeId}/requirements/${requirementId}/responses/${responseId}`)
 }
 
 /**

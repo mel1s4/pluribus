@@ -2,7 +2,11 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Place;
+use App\Models\PlaceOffer;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePlaceOfferRequest extends FormRequest
 {
@@ -16,10 +20,17 @@ class UpdatePlaceOfferRequest extends FormRequest
      */
     public function rules(): array
     {
+        /** @var Place|null $place */
+        $place = $this->route('place');
+        $placeId = (int) ($place?->id ?? 0);
+
         return [
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'price' => ['sometimes', 'required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'visibility_scope' => ['sometimes', 'required', 'string', Rule::in([PlaceOffer::VISIBILITY_SCOPE_PUBLIC, PlaceOffer::VISIBILITY_SCOPE_AUDIENCE])],
+            'audience_ids' => ['nullable', 'array'],
+            'audience_ids.*' => ['integer', Rule::exists('place_audiences', 'id')->where('place_id', $placeId)],
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],
             'photo' => ['nullable', 'file', 'image', 'max:5120'],
@@ -41,5 +52,34 @@ class UpdatePlaceOfferRequest extends FormRequest
                 $this->merge(['tags' => is_array($decoded) ? $decoded : []]);
             }
         }
+        if ($this->has('audience_ids') && is_string($this->input('audience_ids'))) {
+            $raw = trim($this->input('audience_ids'));
+            if ($raw === '' || strcasecmp($raw, 'null') === 0) {
+                $this->merge(['audience_ids' => []]);
+            } else {
+                $decoded = json_decode($raw, true);
+                $this->merge(['audience_ids' => is_array($decoded) ? $decoded : []]);
+            }
+        }
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $v): void {
+            /** @var PlaceOffer|null $existing */
+            $existing = $this->route('offer');
+            $scope = $this->has('visibility_scope')
+                ? $this->input('visibility_scope')
+                : ($existing?->visibility_scope ?? PlaceOffer::VISIBILITY_SCOPE_PUBLIC);
+            if ($scope !== PlaceOffer::VISIBILITY_SCOPE_AUDIENCE) {
+                return;
+            }
+            $ids = $this->has('audience_ids')
+                ? $this->input('audience_ids', [])
+                : ($existing?->audiences()->pluck('place_audiences.id')->all() ?? []);
+            if (! is_array($ids) || $ids === []) {
+                $v->errors()->add('audience_ids', 'Select at least one audience when visibility is audience-scoped.');
+            }
+        });
     }
 }

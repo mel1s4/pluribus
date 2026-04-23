@@ -14,7 +14,9 @@ const LegalView = () => import('../views/public/Legal.vue')
 const JoinInvitationView = () => import('../views/public/JoinInvitation.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
-const ChatsView = () => import('../views/app/Chats.vue')
+const ChatsView = () => import('../views/app/ChatsPage.vue')
+const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
+const ChatFolderPage = () => import('../views/app/ChatFolderPage.vue')
 const MapView = () => import('../views/app/MapView.vue')
 const NotificationsView = () => import('../views/app/Notifications.vue')
 const ProfileView = () => import('../views/app/Profile.vue')
@@ -64,6 +66,7 @@ const routes = [
   },
   {
     path: '/join/:token',
+    alias: ['/invitacion/:token'],
     name: 'joinInvitation',
     component: JoinInvitationView,
     meta: {
@@ -102,6 +105,28 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'chats.title',
+    },
+  },
+  {
+    path: '/chats/folder/:folderId',
+    name: 'chatFolder',
+    component: ChatFolderPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'chats.folderTitle',
+    },
+  },
+  {
+    path: '/chats/:chatId',
+    name: 'chatThread',
+    component: ChatThreadPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: true,
+      headerTitleKey: 'chats.thread.title',
     },
   },
   {

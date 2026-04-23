@@ -4,6 +4,7 @@ import { language, t } from '../i18n/i18n'
 
 export const communityName = ref(null)
 export const communityLogoUrl = ref(null)
+export const communityDefaultLanguage = ref(null)
 
 export function useCommunity() {
   const displayName = computed(() => {
@@ -18,6 +19,7 @@ export function useCommunity() {
   return {
     communityName,
     communityLogoUrl,
+    communityDefaultLanguage,
     displayName,
     fetchCommunityBranding,
   }
@@ -28,6 +30,7 @@ export async function fetchCommunityBranding() {
   if (!ok || !data || typeof data !== 'object' || !data.community) {
     communityName.value = null
     communityLogoUrl.value = null
+    communityDefaultLanguage.value = null
     return
   }
   const c = data.community
@@ -35,4 +38,6 @@ export async function fetchCommunityBranding() {
   communityName.value = name.length ? name : null
   const logo = c.logo_url
   communityLogoUrl.value = typeof logo === 'string' && logo.length ? logo : null
+  const defaultLanguage = c.default_language
+  communityDefaultLanguage.value = typeof defaultLanguage === 'string' ? defaultLanguage : null
 }

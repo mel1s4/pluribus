@@ -5,15 +5,18 @@ import App from './App.vue'
 import router from './router'
 import { initI18n } from './i18n/i18n'
 import { initTheme } from './theme/theme'
-import { fetchCommunityBranding } from './composables/useCommunity'
-import { resolveSession } from './composables/useSession'
+import { communityDefaultLanguage, fetchCommunityBranding } from './composables/useCommunity'
+import { resolveSession, sessionStatus } from './composables/useSession'
 
 initTheme()
-initI18n()
 
 async function bootstrap() {
-  await resolveSession()
   await fetchCommunityBranding()
+  await resolveSession()
+  initI18n({
+    defaultLanguage: communityDefaultLanguage.value,
+    allowStoredLanguage: sessionStatus.value === 'authenticated',
+  })
   createApp(App).use(router).mount('#app')
 }
 

@@ -23,6 +23,7 @@ class CommunityResource extends JsonResource
             'rules' => $this->rules,
             'logo' => $this->logo,
             'logo_url' => $this->resolveLogoUrl($this->logo),
+            'default_language' => $this->default_language,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

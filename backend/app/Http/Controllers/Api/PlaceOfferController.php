@@ -18,8 +18,14 @@ class PlaceOfferController extends Controller
     public function index(Request $request, Place $place): AnonymousResourceCollection
     {
         $this->authorize('view', $place);
+        $uid = (int) $request->user()->id;
+        $canManage = $request->user()->can('update', $place);
 
-        $offers = $place->offers()->orderBy('id')->get();
+        $offersQuery = $place->offers()->with('audiences:id')->orderBy('id');
+        if (! $canManage) {
+            $offersQuery->visibleToUser($uid);
+        }
+        $offers = $offersQuery->get();
 
         return PlaceOfferResource::collection($offers);
     }
@@ -55,7 +61,14 @@ class PlaceOfferController extends Controller
             'photo_path' => $photoPath,
             'gallery_paths' => $galleryPaths === [] ? null : $galleryPaths,
             'tags' => $tags === [] ? null : $tags,
+            'visibility_scope' => $validated['visibility_scope'] ?? PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
         ]);
+        $offer->audiences()->sync(
+            ($validated['visibility_scope'] ?? PlaceOffer::VISIBILITY_SCOPE_PUBLIC) === PlaceOffer::VISIBILITY_SCOPE_AUDIENCE
+                ? ($validated['audience_ids'] ?? [])
+                : []
+        );
+        $offer->load('audiences:id');
 
         return response()->json([
             'offer' => new PlaceOfferResource($offer),
@@ -110,12 +123,20 @@ class PlaceOfferController extends Controller
             'title' => $validated['title'] ?? $offer->title,
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $offer->description,
             'price' => $validated['price'] ?? $offer->price,
+            'visibility_scope' => $validated['visibility_scope'] ?? $offer->visibility_scope,
         ]);
         if (array_key_exists('photo_path', $validated)) {
             $offer->photo_path = $validated['photo_path'];
         }
         $offer->gallery_paths = $galleryPaths === [] ? null : $galleryPaths;
         $offer->save();
+        $scope = $validated['visibility_scope'] ?? $offer->visibility_scope;
+        if ($scope === PlaceOffer::VISIBILITY_SCOPE_AUDIENCE) {
+            $offer->audiences()->sync($validated['audience_ids'] ?? $offer->audiences()->pluck('place_audiences.id')->all());
+        } elseif (array_key_exists('visibility_scope', $validated)) {
+            $offer->audiences()->sync([]);
+        }
+        $offer->load('audiences:id');
 
         return response()->json([
             'offer' => new PlaceOfferResource($offer->fresh()),

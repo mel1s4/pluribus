@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\CommunityInvitationMail;
 use App\Models\Community;
 use App\Models\CommunityInvitation;
+use App\Support\LocaleOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
@@ -51,7 +52,11 @@ class CommunityInvitationController extends Controller
             'revoked_at' => null,
         ]);
 
-        $joinUrl = rtrim((string) config('app.frontend_url'), '/').'/join/'.$plainToken;
+        $joinPath = $community->default_language === 'es' ? 'invitacion' : 'join';
+        if (! in_array((string) $community->default_language, LocaleOptions::codes(), true)) {
+            $joinPath = 'join';
+        }
+        $joinUrl = rtrim((string) config('app.frontend_url'), '/').'/'.$joinPath.'/'.$plainToken;
 
         $emailSent = false;
         if ($email !== null) {

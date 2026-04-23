@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Mail\CommunityInvitationMail;
+use App\Models\Community;
 use App\Models\CommunityInvitation;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -68,5 +69,40 @@ class CommunityInvitationStoreApiTest extends TestCase
             ->assertJsonPath('invitation.email', null);
 
         Mail::assertNothingSent();
+    }
+
+    public function test_join_url_uses_spanish_slug_when_community_default_language_is_spanish(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        Community::current()->update(['default_language' => 'es']);
+        $this->actingAs($root);
+
+        $response = $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 7,
+        ])->assertCreated();
+
+        $joinUrl = $response->json('invitation.join_url');
+        $this->assertIsString($joinUrl);
+        $this->assertStringContainsString('/invitacion/', $joinUrl);
+        $this->assertStringNotContainsString('/join/', $joinUrl);
+    }
+
+    public function test_join_url_uses_join_slug_when_community_default_language_is_english(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        Community::current()->update(['default_language' => 'en']);
+        $this->actingAs($root);
+
+        $response = $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 7,
+        ])->assertCreated();
+
+        $joinUrl = $response->json('invitation.join_url');
+        $this->assertIsString($joinUrl);
+        $this->assertStringContainsString('/join/', $joinUrl);
     }
 }

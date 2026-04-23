@@ -33,7 +33,7 @@ class CommunitySettingsController extends Controller
         $payload = (new CommunityResource($community))->toArray($request);
 
         return response()->json([
-            'community' => Arr::only($payload, ['name', 'logo_url']),
+            'community' => Arr::only($payload, ['name', 'logo_url', 'default_language']),
         ]);
     }
 
@@ -95,6 +95,7 @@ class CommunitySettingsController extends Controller
             'description' => $validated['description'] ?? null,
             'rules' => $validated['rules'] ?? null,
             'logo' => $nextLogo,
+            'default_language' => $validated['default_language'] ?? $community->default_language,
         ]);
         $community->save();
 

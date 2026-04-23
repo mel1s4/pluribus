@@ -6,12 +6,14 @@ import Input from '../../atoms/Input.vue'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
+import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../../i18n/locales'
 import { apiForm, apiJson } from '../../services/api'
 
 const form = reactive({
   name: '',
   description: '',
   rules: '',
+  default_language: DEFAULT_LANGUAGE,
 })
 
 const serverLogoUrl = ref('')
@@ -45,6 +47,12 @@ const saveError = ref('')
 const saveLoading = ref(false)
 
 const canEdit = computed(() => Boolean(sessionUser.value?.is_root))
+const languageOptions = computed(() =>
+  SUPPORTED_LANGUAGES.map((entry) => ({
+    value: entry.code,
+    label: t(entry.labelKey),
+  })),
+)
 
 const logoPreviewSrc = computed(() => {
   if (removeLogoPending.value) {
@@ -88,6 +96,7 @@ async function load() {
   form.name = c.name ?? ''
   form.description = c.description ?? ''
   form.rules = c.rules ?? ''
+  form.default_language = c.default_language ?? DEFAULT_LANGUAGE
   serverLogoUrl.value = typeof c.logo_url === 'string' && c.logo_url.length ? c.logo_url : ''
   logoFile.value = null
   removeLogoPending.value = false
@@ -122,6 +131,7 @@ async function onSubmit() {
     fd.append('name', form.name.trim())
     fd.append('description', form.description.trim() === '' ? '' : form.description.trim())
     fd.append('rules', form.rules.trim() === '' ? '' : form.rules.trim())
+    fd.append('default_language', form.default_language)
     if (logoFile.value) {
       fd.append('logo_upload', logoFile.value)
     }
@@ -137,6 +147,7 @@ async function onSubmit() {
       name: form.name.trim(),
       description: form.description.trim() === '' ? null : form.description.trim(),
       rules: form.rules.trim() === '' ? null : form.rules.trim(),
+      default_language: form.default_language,
     })
     ok = res.ok
     status = res.status
@@ -196,6 +207,20 @@ async function onSubmit() {
             rows="6"
             :disabled="!canEdit"
           ></textarea>
+          <label class="community-settings-form-tab__areaLabel" for="community-default-language">{{
+            t('communitySettings.fieldDefaultLanguage')
+          }}</label>
+          <select
+            id="community-default-language"
+            v-model="form.default_language"
+            class="community-settings-form-tab__select"
+            name="community-default-language"
+            :disabled="!canEdit"
+          >
+            <option v-for="option in languageOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
+          </select>
 
           <div class="community-settings-form-tab__logo">
             <span class="community-settings-form-tab__logo-label">{{ t('communitySettings.fieldLogo') }}</span>
@@ -289,6 +314,16 @@ async function onSubmit() {
   font: inherit;
   resize: vertical;
   min-height: 4rem;
+}
+
+.community-settings-form-tab__select {
+  width: 100%;
+  max-width: 32rem;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  font: inherit;
+  background: var(--bg);
 }
 
 .community-settings-form-tab__error {

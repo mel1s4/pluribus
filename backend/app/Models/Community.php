@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\LocaleOptions;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -17,6 +18,7 @@ class Community extends Model
         'description',
         'rules',
         'logo',
+        'default_language',
     ];
 
     /**
@@ -34,6 +36,7 @@ class Community extends Model
             'description' => null,
             'rules' => null,
             'logo' => null,
+            'default_language' => LocaleOptions::default(),
         ]);
     }
 }

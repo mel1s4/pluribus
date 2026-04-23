@@ -15,6 +15,17 @@ use Illuminate\Support\Facades\Storage;
 
 class PlaceController extends Controller
 {
+    public function mapIndex(Request $request): AnonymousResourceCollection
+    {
+        $places = Place::query()
+            ->whereNotNull('latitude')
+            ->whereNotNull('longitude')
+            ->orderBy('name')
+            ->get();
+
+        return PlaceResource::collection($places);
+    }
+
     public function index(Request $request): AnonymousResourceCollection
     {
         $uid = (int) $request->user()->id;
@@ -72,10 +83,25 @@ class PlaceController extends Controller
         $this->authorize('view', $place);
 
         $uid = (int) $request->user()->id;
+        $canManage = $request->user()->can('update', $place);
         $place->load([
-            'offers',
+            'offers' => function ($q) use ($uid, $canManage): void {
+                $q->with('audiences:id')->orderBy('id');
+                if (! $canManage) {
+                    $q->visibleToUser($uid);
+                }
+            },
+            'requirements' => function ($q) use ($uid, $canManage): void {
+                $q->with(['responses.user', 'exampleOffer.place', 'audiences:id'])->orderBy('id');
+                if (! $canManage) {
+                    $q->visibleToUser($uid);
+                }
+            },
             'administrators' => fn ($q) => $q->where('users.id', $uid),
         ]);
+        foreach ($place->requirements as $req) {
+            $req->setRelation('place', $place);
+        }
 
         return response()->json([
             'place' => new PlaceResource($place),
@@ -136,9 +162,13 @@ class PlaceController extends Controller
         $place->refresh();
         $uid = (int) $request->user()->id;
         $place->load([
-            'offers',
+            'offers' => fn ($q) => $q->with('audiences:id')->orderBy('id'),
+            'requirements' => fn ($q) => $q->with(['responses.user', 'exampleOffer.place', 'audiences:id'])->orderBy('id'),
             'administrators' => fn ($q) => $q->where('users.id', $uid),
         ]);
+        foreach ($place->requirements as $req) {
+            $req->setRelation('place', $place);
+        }
 
         return response()->json([
             'place' => new PlaceResource($place),

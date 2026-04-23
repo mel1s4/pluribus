@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Community;
 use App\Models\User;
+use App\Support\LocaleOptions;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -36,7 +37,8 @@ class CommunitySingletonApiTest extends TestCase
             ->getJson('/api/community/branding')
             ->assertOk()
             ->assertJsonPath('community.name', 'Riverbend Commons')
-            ->assertJsonStructure(['community' => ['name', 'logo_url']]);
+            ->assertJsonPath('community.default_language', LocaleOptions::default())
+            ->assertJsonStructure(['community' => ['name', 'logo_url', 'default_language']]);
     }
 
     public function test_authenticated_member_can_get_community(): void
@@ -47,7 +49,7 @@ class CommunitySingletonApiTest extends TestCase
 
         $this->statefulJson('GET', '/api/community')
             ->assertOk()
-            ->assertJsonStructure(['community' => ['id', 'name', 'description', 'rules', 'logo', 'logo_url']]);
+            ->assertJsonStructure(['community' => ['id', 'name', 'description', 'rules', 'logo', 'logo_url', 'default_language']]);
     }
 
     public function test_root_can_patch_community(): void
@@ -62,16 +64,19 @@ class CommunitySingletonApiTest extends TestCase
             'description' => 'About us',
             'rules' => 'Be kind.',
             'logo' => 'https://example.com/logo.png',
+            'default_language' => 'es',
         ])
             ->assertOk()
             ->assertJsonPath('community.name', 'Renamed Community')
             ->assertJsonPath('community.rules', 'Be kind.')
             ->assertJsonPath('community.logo', 'https://example.com/logo.png')
-            ->assertJsonPath('community.logo_url', 'https://example.com/logo.png');
+            ->assertJsonPath('community.logo_url', 'https://example.com/logo.png')
+            ->assertJsonPath('community.default_language', 'es');
 
         $this->assertDatabaseHas('communities', [
             'id' => $community->id,
             'name' => 'Renamed Community',
+            'default_language' => 'es',
         ]);
     }
 
@@ -86,6 +91,7 @@ class CommunitySingletonApiTest extends TestCase
             'description' => null,
             'rules' => null,
             'logo' => null,
+            'default_language' => LocaleOptions::default(),
         ])->assertForbidden();
     }
 
@@ -101,6 +107,7 @@ class CommunitySingletonApiTest extends TestCase
                 'name' => 'With Logo',
                 'description' => 'About',
                 'rules' => 'Rules',
+                'default_language' => LocaleOptions::default(),
                 'logo_upload' => $file,
             ])
             ->assertOk()
@@ -114,6 +121,21 @@ class CommunitySingletonApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->get('/api/community')
             ->assertOk()
-            ->assertJsonStructure(['community' => ['logo_url']]);
+            ->assertJsonStructure(['community' => ['logo_url', 'default_language']]);
+    }
+
+    public function test_root_patch_rejects_invalid_default_language(): void
+    {
+        $root = User::factory()->root()->create();
+        $this->actingAs($root);
+
+        $this->statefulJson('PATCH', '/api/community', [
+            'name' => 'Community',
+            'description' => null,
+            'rules' => null,
+            'logo' => null,
+            'default_language' => 'fr',
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['default_language']);
     }
 }

@@ -7,6 +7,7 @@ import Title from '../../atoms/Title.vue'
 import PlaceAdministratorsSection from '../../components/App/PlaceAdministratorsSection.vue'
 import PlaceAudiencesSection from '../../components/App/PlaceAudiencesSection.vue'
 import PlaceOffersSection from '../../components/App/PlaceOffersSection.vue'
+import PlaceRequirementsSection from '../../components/App/PlaceRequirementsSection.vue'
 import PlaceBasicsForm from '../../organisms/PlaceBasicsForm.vue'
 import { t } from '../../i18n/i18n'
 import { deletePlace, fetchPlace, updatePlace } from '../../services/placesApi.js'
@@ -189,6 +190,16 @@ load()
         <button
           type="button"
           class="place-edit-page__tab"
+          :class="{ 'is-active': tab === 'requirements' }"
+          role="tab"
+          :aria-selected="tab === 'requirements'"
+          @click="onTabClick('requirements')"
+        >
+          {{ t('myPlaces.tabRequirements') }}
+        </button>
+        <button
+          type="button"
+          class="place-edit-page__tab"
           :class="{ 'is-active': tab === 'audiences' }"
           role="tab"
           :aria-selected="tab === 'audiences'"
@@ -224,6 +235,11 @@ load()
         </Card>
         <PlaceOffersSection
           v-else-if="tab === 'offers'"
+          :place-id="place.id"
+          @changed="load"
+        />
+        <PlaceRequirementsSection
+          v-else-if="tab === 'requirements'"
           :place-id="place.id"
           @changed="load"
         />

@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Models\Place;
+use App\Models\Chat;
 use App\Models\User;
+use App\Policies\ChatPolicy;
 use App\Policies\PlacePolicy;
 use App\Support\CapabilityResolver;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -28,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Place::class, PlacePolicy::class);
+        Gate::policy(Chat::class, ChatPolicy::class);
 
         Gate::before(function ($user, string $_ability) {
             if ($user instanceof User && $user->isRoot()) {

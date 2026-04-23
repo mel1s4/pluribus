@@ -1,14 +1,19 @@
 import { ref } from 'vue'
 import { messages } from './messages'
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from './locales'
 
 const STORAGE_KEY = 'pluribus.language'
-const SUPPORTED_LANGS = ['en', 'es']
 
-export const language = ref('en')
+export const language = ref(DEFAULT_LANGUAGE)
 
-export function initI18n() {
+export function initI18n(options = {}) {
   const stored = safeGetLocalStorage(STORAGE_KEY)
-  const next = stored && SUPPORTED_LANGS.includes(stored) ? stored : 'en'
+  const communityDefault =
+    typeof options.defaultLanguage === 'string' && isSupportedLanguage(options.defaultLanguage)
+      ? options.defaultLanguage
+      : DEFAULT_LANGUAGE
+  const allowStoredLanguage = options.allowStoredLanguage !== false
+  const next = allowStoredLanguage && stored && isSupportedLanguage(stored) ? stored : communityDefault
 
   language.value = next
   // Helps screen readers and browser translation hints.
@@ -16,7 +21,7 @@ export function initI18n() {
 }
 
 export function setLanguage(nextLang) {
-  const lang = SUPPORTED_LANGS.includes(nextLang) ? nextLang : 'en'
+  const lang = isSupportedLanguage(nextLang) ? nextLang : DEFAULT_LANGUAGE
   language.value = lang
   safeSetLocalStorage(STORAGE_KEY, lang)
   document.documentElement.lang = lang

@@ -92,6 +92,14 @@ class Place extends Model
     }
 
     /**
+     * @return HasMany<PlaceRequirement, $this>
+     */
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(PlaceRequirement::class);
+    }
+
+    /**
      * @return HasMany<PlaceAudience, $this>
      */
     public function audiences(): HasMany

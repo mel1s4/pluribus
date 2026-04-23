@@ -33,4 +33,20 @@ class PlaceAudience extends Model
     {
         return $this->belongsToMany(User::class, 'place_audience_user');
     }
+
+    /**
+     * @return BelongsToMany<PlaceOffer, $this>
+     */
+    public function offers(): BelongsToMany
+    {
+        return $this->belongsToMany(PlaceOffer::class, 'place_offer_audience');
+    }
+
+    /**
+     * @return BelongsToMany<PlaceRequirement, $this>
+     */
+    public function requirements(): BelongsToMany
+    {
+        return $this->belongsToMany(PlaceRequirement::class, 'place_requirement_audience');
+    }
 }

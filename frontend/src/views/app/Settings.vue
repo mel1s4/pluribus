@@ -22,6 +22,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { t, language, setLanguage } from '../../i18n/i18n'
+import { SUPPORTED_LANGUAGES } from '../../i18n/locales'
 import { themeMode, setThemeMode } from '../../theme/theme'
 import Title from '../../atoms/Title.vue'
 import SettingsGroup from '../../molecules/SettingsGroup.vue'
@@ -47,10 +48,12 @@ const themeOptions = computed(() => [
   { value: 'dark', label: t('settings.theme.dark') },
 ])
 
-const langOptions = computed(() => [
-  { value: 'en', label: t('settings.language.english') },
-  { value: 'es', label: t('settings.language.spanish') },
-])
+const langOptions = computed(() =>
+  SUPPORTED_LANGUAGES.map((entry) => ({
+    value: entry.code,
+    label: t(entry.labelKey),
+  })),
+)
 
 onMounted(() => {
   setHeaderActions([

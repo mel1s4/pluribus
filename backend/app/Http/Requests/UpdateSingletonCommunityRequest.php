@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\LocaleOptions;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateSingletonCommunityRequest extends FormRequest
@@ -36,6 +37,7 @@ class UpdateSingletonCommunityRequest extends FormRequest
             'logo' => ['nullable', 'string', 'max:2048'],
             'logo_upload' => ['nullable', 'file', 'image', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
+            'default_language' => ['sometimes', 'string', 'in:'.implode(',', LocaleOptions::codes())],
         ];
     }
 }

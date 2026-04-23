@@ -13,7 +13,8 @@ while ! php artisan db:show > /dev/null 2>&1; do
   sleep 1
 done
 
-php artisan migrate --force
+# Migrations removed from automatic startup to prevent data loss
+# Run manually when needed: docker compose exec api php artisan migrate --force
 
 php artisan storage:link 2>/dev/null || true
 

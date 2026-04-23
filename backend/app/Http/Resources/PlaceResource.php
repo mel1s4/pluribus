@@ -61,6 +61,10 @@ class PlaceResource extends JsonResource
             $data['offers'] = PlaceOfferResource::collection($this->offers);
         }
 
+        if ($this->relationLoaded('requirements')) {
+            $data['requirements'] = PlaceRequirementResource::collection($this->requirements);
+        }
+
         return $data;
     }
 }

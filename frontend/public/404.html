@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page Not Found - Community</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --primary: #2563eb;
+        --primary-hover: #1d4ed8;
+        --text: #1f2937;
+        --text-muted: #6b7280;
+        --bg: #ffffff;
+        --border: #e5e7eb;
+      }
+      
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --primary: #3b82f6;
+          --primary-hover: #60a5fa;
+          --text: #f9fafb;
+          --text-muted: #9ca3af;
+          --bg: #111827;
+          --border: #374151;
+        }
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 
+                     'Helvetica Neue', Arial, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        line-height: 1.6;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+      }
+      
+      .container {
+        max-width: 500px;
+        text-align: center;
+      }
+      
+      .error-code {
+        font-size: 6rem;
+        font-weight: 700;
+        color: var(--primary);
+        line-height: 1;
+        margin-bottom: 1rem;
+      }
+      
+      h1 {
+        font-size: 1.875rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+      }
+      
+      p {
+        font-size: 1.125rem;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+      }
+      
+      .btn {
+        display: inline-block;
+        padding: 0.75rem 1.5rem;
+        background-color: var(--primary);
+        color: white;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+        border: none;
+        cursor: pointer;
+        font-size: 1rem;
+      }
+      
+      .btn:hover {
+        background-color: var(--primary-hover);
+      }
+      
+      .links {
+        margin-top: 2rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+      }
+      
+      .link {
+        color: var(--primary);
+        text-decoration: none;
+        font-weight: 500;
+      }
+      
+      .link:hover {
+        text-decoration: underline;
+      }
+      
+      .icon {
+        display: inline-block;
+        width: 120px;
+        height: 120px;
+        margin-bottom: 2rem;
+        opacity: 0.8;
+      }
+      
+      @media (max-width: 640px) {
+        .error-code {
+          font-size: 4rem;
+        }
+        
+        h1 {
+          font-size: 1.5rem;
+        }
+        
+        p {
+          font-size: 1rem;
+        }
+        
+        .icon {
+          width: 80px;
+          height: 80px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+              stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" 
+              style="color: var(--primary)"/>
+      </svg>
+      
+      <div class="error-code">404</div>
+      <h1>Page Not Found</h1>
+      <p>The page you're looking for doesn't exist or has been moved.</p>
+      
+      <a href="/" class="btn">Go to Home</a>
+      
+      <div class="links">
+        <a href="/login" class="link">Login</a>
+        <a href="/contact" class="link">Contact</a>
+      </div>
+    </div>
+    
+    <script>
+      // If this is a Vue Router route (has a fragment or looks like an app route),
+      // redirect to the main app to let Vue Router handle it
+      (function() {
+        const path = window.location.pathname;
+        const appRoutes = ['/join/', '/invitacion/', '/dashboard', '/profile', '/settings', '/map', '/users', '/places', '/my-places', '/community', '/members/'];
+        
+        const isAppRoute = appRoutes.some(route => path.startsWith(route));
+        
+        if (isAppRoute) {
+          // Redirect to index.html with the original path preserved
+          window.location.href = '/';
+        }
+      })();
+    </script>
+  </body>
+</html>

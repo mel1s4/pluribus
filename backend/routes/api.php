@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommunityInvitationController;
+use App\Http\Controllers\Api\ChatBackupController;
+use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatFolderController;
+use App\Http\Controllers\Api\ChatMessageController;
+use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\JoinInvitationController;
 use App\Http\Controllers\Api\MemberProfileController;
@@ -9,6 +14,8 @@ use App\Http\Controllers\Api\PlaceAdministratorController;
 use App\Http\Controllers\Api\PlaceAudienceController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\PlaceOfferController;
+use App\Http\Controllers\Api\PlaceRequirementController;
+use App\Http\Controllers\Api\PlaceRequirementResponseController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\UserAdminController;
 use Illuminate\Support\Facades\Route;
@@ -53,6 +60,24 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/community/leadership', [CommunitySettingsController::class, 'leadership']);
     Route::patch('/community', [CommunitySettingsController::class, 'update']);
 
+    Route::get('/community-place-offers', [CommunityPlaceOfferController::class, 'index']);
+    Route::get('/community-map/places', [PlaceController::class, 'mapIndex']);
+    Route::get('/chats', [ChatController::class, 'index']);
+    Route::post('/chats', [ChatController::class, 'store']);
+    Route::get('/chats/{chat}', [ChatController::class, 'show']);
+    Route::patch('/chats/{chat}', [ChatController::class, 'update']);
+    Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
+    Route::get('/chats/{chat}/messages', [ChatMessageController::class, 'index'])->scopeBindings();
+    Route::post('/chats/{chat}/messages', [ChatMessageController::class, 'store'])->scopeBindings();
+    Route::get('/chat-folders', [ChatFolderController::class, 'index']);
+    Route::post('/chat-folders', [ChatFolderController::class, 'store']);
+    Route::patch('/chat-folders/{folder}', [ChatFolderController::class, 'update']);
+    Route::delete('/chat-folders/{folder}', [ChatFolderController::class, 'destroy']);
+    Route::get('/chats/{chat}/backups', [ChatBackupController::class, 'index'])->scopeBindings();
+    Route::post('/chats/{chat}/backups', [ChatBackupController::class, 'store'])->scopeBindings();
+    Route::get('/chat-backups/{backup}/download', [ChatBackupController::class, 'download'])
+        ->name('chat-backups.download');
+
     Route::get('/places', [PlaceController::class, 'index']);
     Route::post('/places', [PlaceController::class, 'store']);
     Route::get('/places/{place}', [PlaceController::class, 'show']);
@@ -63,6 +88,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/places/{place}/offers', [PlaceOfferController::class, 'store'])->scopeBindings();
     Route::patch('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'update'])->scopeBindings();
     Route::delete('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'destroy'])->scopeBindings();
+
+    Route::get('/places/{place}/requirements', [PlaceRequirementController::class, 'index'])->scopeBindings();
+    Route::post('/places/{place}/requirements', [PlaceRequirementController::class, 'store'])->scopeBindings();
+    Route::patch('/places/{place}/requirements/{requirement}', [PlaceRequirementController::class, 'update'])->scopeBindings();
+    Route::delete('/places/{place}/requirements/{requirement}', [PlaceRequirementController::class, 'destroy'])->scopeBindings();
+
+    Route::post('/places/{place}/requirements/{requirement}/responses', [PlaceRequirementResponseController::class, 'store'])->scopeBindings();
+    Route::delete('/places/{place}/requirements/{requirement}/responses/{response}', [PlaceRequirementResponseController::class, 'destroy'])->scopeBindings();
 
     Route::get('/places/{place}/audience-members', [PlaceAudienceController::class, 'pickableMembers'])->scopeBindings();
     Route::get('/places/{place}/audiences', [PlaceAudienceController::class, 'index'])->scopeBindings();

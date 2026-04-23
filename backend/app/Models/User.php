@@ -66,4 +66,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Place::class);
     }
+
+    /**
+     * @return HasMany<Chat, $this>
+     */
+    public function ownedChats(): HasMany
+    {
+        return $this->hasMany(Chat::class, 'owner_id');
+    }
 }

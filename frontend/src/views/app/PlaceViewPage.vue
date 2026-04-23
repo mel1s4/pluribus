@@ -5,6 +5,7 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import PlaceLocationPicker from '../../organisms/PlaceLocationPicker.vue'
 import PlaceOffersPublicList from '../../molecules/PlaceOffersPublicList.vue'
+import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublicList.vue'
 import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDisplay.vue'
 import { t } from '../../i18n/i18n'
 import { fetchPlace } from '../../services/placesApi.js'
@@ -145,6 +146,16 @@ load()
       <Card class="place-view-page__card">
         <h2 class="place-view-page__cardTitle">{{ t('places.viewOffersSection') }}</h2>
         <PlaceOffersPublicList :offers="place.offers || []" />
+      </Card>
+
+      <Card class="place-view-page__card">
+        <h2 class="place-view-page__cardTitle">{{ t('places.viewRequirementsSection') }}</h2>
+        <PlaceRequirementsPublicList
+          :place-id="place.id"
+          :can-manage-place="canManage"
+          :requirements="place.requirements || []"
+          @updated="load"
+        />
       </Card>
     </div>
     <div v-else class="place-view-page__errorWrap">

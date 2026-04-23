@@ -32,6 +32,10 @@ class PlaceOfferResource extends JsonResource
             'gallery_paths' => $gallery ?? [],
             'gallery_urls' => collect($gallery ?? [])->map(fn (string $p) => PlaceMedia::publicUrl($p))->filter()->values()->all(),
             'tags' => $tags ?? [],
+            'visibility_scope' => $this->visibility_scope,
+            'audience_ids' => $this->relationLoaded('audiences')
+                ? $this->audiences->pluck('id')->map(fn ($id) => (int) $id)->values()->all()
+                : [],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

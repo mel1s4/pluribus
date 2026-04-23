@@ -6,6 +6,7 @@ import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
 import {
   createOffer as apiCreateOffer,
   deleteOffer,
+  fetchAudiences,
   fetchOffers,
   updateOffer,
 } from '../../services/placesApi.js'
@@ -20,9 +21,10 @@ const props = defineProps({
 const emit = defineEmits(['changed'])
 
 const offers = ref([])
+const audiences = ref([])
 const error = ref('')
 const editing = ref(null)
-const form = ref({ title: '', description: '', price: '', tags: [] })
+const form = ref({ title: '', description: '', price: '', tags: [], visibility_scope: 'public', audience_ids: [] })
 const removeGallery = ref([])
 const photoInput = ref(null)
 const galleryInput = ref(null)
@@ -36,6 +38,8 @@ const createForm = ref({
   description: '',
   price: '',
   tags: [],
+  visibility_scope: 'public',
+  audience_ids: [],
 })
 
 async function load() {
@@ -47,6 +51,8 @@ async function load() {
     return
   }
   offers.value = Array.isArray(data?.data) ? data.data : []
+  const audiencesResponse = await fetchAudiences(props.placeId)
+  audiences.value = audiencesResponse.ok && Array.isArray(audiencesResponse.data?.data) ? audiencesResponse.data.data : []
 }
 
 watch(
@@ -66,6 +72,8 @@ function startEdit(o) {
     description: o.description || '',
     price: String(o.price),
     tags: Array.isArray(o.tags) ? [...o.tags] : [],
+    visibility_scope: o.visibility_scope || 'public',
+    audience_ids: Array.isArray(o.audience_ids) ? [...o.audience_ids] : [],
   }
   removeGallery.value = []
 }
@@ -83,6 +91,8 @@ async function saveEdit() {
   fd.append('description', form.value.description || '')
   fd.append('price', form.value.price)
   fd.append('tags', JSON.stringify(Array.isArray(form.value.tags) ? form.value.tags : []))
+  fd.append('visibility_scope', form.value.visibility_scope || 'public')
+  fd.append('audience_ids', JSON.stringify(Array.isArray(form.value.audience_ids) ? form.value.audience_ids : []))
   if (photoInput.value?.files?.[0]) {
     fd.append('photo', photoInput.value.files[0])
   }
@@ -126,6 +136,8 @@ async function createOffer() {
     fd.append('description', createForm.value.description || '')
     fd.append('price', createForm.value.price)
     fd.append('tags', JSON.stringify(Array.isArray(createForm.value.tags) ? createForm.value.tags : []))
+    fd.append('visibility_scope', createForm.value.visibility_scope || 'public')
+    fd.append('audience_ids', JSON.stringify(Array.isArray(createForm.value.audience_ids) ? createForm.value.audience_ids : []))
     if (createPhoto.value?.files?.[0]) {
       fd.append('photo', createPhoto.value.files[0])
     }
@@ -145,13 +157,15 @@ async function createOffer() {
       description: createForm.value.description || null,
       price: Number(createForm.value.price),
       tags: Array.isArray(createForm.value.tags) ? createForm.value.tags : [],
+      visibility_scope: createForm.value.visibility_scope || 'public',
+      audience_ids: Array.isArray(createForm.value.audience_ids) ? createForm.value.audience_ids : [],
     })
     if (!ok) {
       error.value = t('myPlaces.offerCreateError').replace('{status}', String(status))
       return
     }
   }
-  createForm.value = { title: '', description: '', price: '', tags: [] }
+  createForm.value = { title: '', description: '', price: '', tags: [], visibility_scope: 'public', audience_ids: [] }
   if (createPhoto.value) createPhoto.value.value = ''
   if (createGallery.value) createGallery.value.value = ''
   await load()
@@ -224,6 +238,20 @@ async function createOffer() {
         :hint="t('myPlaces.offerTagsHint')"
         @update:model-value="form.tags = $event"
       />
+      <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
+      <select v-model="form.visibility_scope" class="place-offers__input">
+        <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
+        <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
+      </select>
+      <label v-if="form.visibility_scope === 'audience'" class="place-offers__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
+      <select
+        v-if="form.visibility_scope === 'audience'"
+        v-model="form.audience_ids"
+        class="place-offers__input"
+        multiple
+      >
+        <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
+      </select>
       <label class="place-offers__label">{{ t('myPlaces.offerPhoto') }}</label>
       <input
         ref="photoInput"
@@ -302,6 +330,20 @@ async function createOffer() {
         :hint="t('myPlaces.offerTagsHint')"
         @update:model-value="createForm.tags = $event"
       />
+      <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
+      <select v-model="createForm.visibility_scope" class="place-offers__input">
+        <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
+        <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
+      </select>
+      <label v-if="createForm.visibility_scope === 'audience'" class="place-offers__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
+      <select
+        v-if="createForm.visibility_scope === 'audience'"
+        v-model="createForm.audience_ids"
+        class="place-offers__input"
+        multiple
+      >
+        <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
+      </select>
       <label class="place-offers__label">{{ t('myPlaces.offerPhoto') }}</label>
       <input
         ref="createPhoto"

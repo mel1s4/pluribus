@@ -20,3 +20,7 @@ yarn-error.log*
 # Temporary
 /tmp/
 *.tmp
+/frontend/dist-deploy/
+
+# Deployment secrets
+.secrets
