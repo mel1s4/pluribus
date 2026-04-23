@@ -18,7 +18,7 @@ class PlaceAudienceController extends Controller
 {
     public function pickableMembers(Request $request, Place $place): AnonymousResourceCollection
     {
-        $this->authorize('view', $place);
+        $this->authorize('update', $place);
 
         $users = User::query()
             ->orderBy('name')
@@ -29,7 +29,7 @@ class PlaceAudienceController extends Controller
 
     public function index(Request $request, Place $place): AnonymousResourceCollection
     {
-        $this->authorize('view', $place);
+        $this->authorize('update', $place);
 
         $audiences = $place->audiences()
             ->with('members')

@@ -33,9 +33,9 @@ class CommunityInvitationStoreApiTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->admin()->create();
+        $root = User::factory()->root()->create();
 
-        $this->actingAs($admin);
+        $this->actingAs($root);
 
         $inviteEmail = 'invite-'.uniqid('', true).'@example.com';
 
@@ -57,9 +57,9 @@ class CommunityInvitationStoreApiTest extends TestCase
     {
         Mail::fake();
 
-        $admin = User::factory()->admin()->create();
+        $root = User::factory()->root()->create();
 
-        $this->actingAs($admin);
+        $this->actingAs($root);
 
         $this->statefulJson('POST', '/api/invitations', [
             'max_uses' => 7,

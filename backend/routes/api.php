@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\JoinInvitationController;
+use App\Http\Controllers\Api\MemberProfileController;
 use App\Http\Controllers\Api\PlaceAdministratorController;
 use App\Http\Controllers\Api\PlaceAudienceController;
 use App\Http\Controllers\Api\PlaceController;
@@ -38,6 +39,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar']);
+
+    Route::get('/members/{user}', [MemberProfileController::class, 'show']);
 
     Route::get('/users', [UserAdminController::class, 'index']);
     Route::post('/invitations', [CommunityInvitationController::class, 'store']);

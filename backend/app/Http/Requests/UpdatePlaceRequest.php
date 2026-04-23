@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Place;
+use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -19,19 +20,29 @@ class UpdatePlaceRequest extends FormRequest
      */
     public function rules(): array
     {
-        return [
+        $rules = [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],
             'latitude' => ['sometimes', 'nullable', 'numeric', 'between:-90,90', 'required_with:longitude'],
             'longitude' => ['sometimes', 'nullable', 'numeric', 'between:-180,180', 'required_with:latitude'],
+            'location_type' => ['sometimes', 'required', 'string', Rule::in(Place::LOCATION_TYPES)],
             'service_area_type' => ['sometimes', 'required', 'string', Rule::in(Place::SERVICE_AREA_TYPES)],
             'radius_meters' => ['nullable', 'integer', 'min:1', 'max:500000'],
             'area_geojson' => ['nullable', 'array'],
             'logo' => ['nullable', 'file', 'image', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
         ];
+
+        $time = ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
+        foreach (PlaceServiceScheduleNormalizer::DAY_KEYS as $day) {
+            $rules['service_schedule.'.$day] = ['nullable', 'array', 'max:'.PlaceServiceScheduleNormalizer::MAX_SLOTS_PER_DAY];
+            $rules['service_schedule.'.$day.'.*.open'] = $time;
+            $rules['service_schedule.'.$day.'.*.close'] = $time;
+        }
+
+        return $rules;
     }
 
     protected function prepareForValidation(): void
@@ -58,6 +69,20 @@ class UpdatePlaceRequest extends FormRequest
         if ($this->has('radius_meters') && $this->input('radius_meters') === '') {
             $merge['radius_meters'] = null;
         }
+        if ($this->has('service_schedule')) {
+            $raw = $this->input('service_schedule');
+            if (is_string($raw)) {
+                $trim = trim($raw);
+                if ($trim === '' || strcasecmp($trim, 'null') === 0) {
+                    $merge['service_schedule'] = PlaceServiceScheduleNormalizer::normalize([]);
+                } else {
+                    $decoded = json_decode($raw, true);
+                    $merge['service_schedule'] = PlaceServiceScheduleNormalizer::normalize(is_array($decoded) ? $decoded : []);
+                }
+            } else {
+                $merge['service_schedule'] = PlaceServiceScheduleNormalizer::normalize($raw);
+            }
+        }
         if ($merge !== []) {
             $this->merge($merge);
         }
@@ -72,6 +97,7 @@ class UpdatePlaceRequest extends FormRequest
                 return;
             }
             $sat = $this->input('service_area_type', $place->service_area_type);
+            $lt = $this->input('location_type', $place->location_type ?? Place::LOCATION_NONE);
             $radius = $this->has('radius_meters')
                 ? $this->input('radius_meters')
                 : $place->radius_meters;
@@ -81,9 +107,18 @@ class UpdatePlaceRequest extends FormRequest
             $lat = $this->has('latitude') ? $this->input('latitude') : $place->latitude;
             $lng = $this->has('longitude') ? $this->input('longitude') : $place->longitude;
 
-            if ($sat === Place::SERVICE_AREA_RADIUS || $sat === Place::SERVICE_AREA_POLYGON) {
+            if ($lt === Place::LOCATION_POINT) {
                 if ($lat === null || $lat === '' || $lng === null || $lng === '') {
-                    $v->errors()->add('latitude', 'Location (latitude and longitude) is required when the service area is radius or polygon.');
+                    $v->errors()->add('latitude', 'Latitude and longitude are required when location is a point on the map.');
+                }
+            }
+
+            if ($sat === Place::SERVICE_AREA_RADIUS || $sat === Place::SERVICE_AREA_POLYGON) {
+                if ($this->has('location_type') && $this->input('location_type') === Place::LOCATION_NONE) {
+                    $v->errors()->add('location_type', 'Location cannot be “none” when the service area is radius or polygon.');
+                }
+                if ($lat === null || $lat === '' || $lng === null || $lng === '') {
+                    $v->errors()->add('latitude', 'Latitude and longitude are required when the service area is radius or polygon.');
                 }
             }
 
@@ -103,6 +138,12 @@ class UpdatePlaceRequest extends FormRequest
                 }
                 if (is_array($geo) && $geo !== []) {
                     $v->errors()->add('area_geojson', 'Must be empty when service area is none.');
+                }
+            }
+
+            if ($lt === Place::LOCATION_NONE && $sat === Place::SERVICE_AREA_NONE) {
+                if (($lat !== null && $lat !== '') || ($lng !== null && $lng !== '')) {
+                    $v->errors()->add('latitude', 'Latitude and longitude must be empty when both location and service area are none.');
                 }
             }
         });

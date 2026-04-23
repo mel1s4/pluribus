@@ -11,6 +11,7 @@ import {
   placeApiErrorMessage,
   placeCreateToFormData,
 } from '../../utils/placeForm.js'
+import { normalizeServiceSchedule } from '../../utils/placeSchedule.js'
 
 const router = useRouter()
 const draft = ref(emptyPlaceDraft())
@@ -29,6 +30,7 @@ async function onSubmit() {
         name: d.name.trim(),
         description: d.description?.trim() || null,
         tags: Array.isArray(d.tags) ? d.tags : [],
+        service_schedule: normalizeServiceSchedule(d.service_schedule),
       }
   const { ok, status, data } = await createPlace(payload)
   saveLoading.value = false

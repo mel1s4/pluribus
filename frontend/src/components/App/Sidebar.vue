@@ -25,7 +25,7 @@ const links = computed(() => {
       to: '/users',
       label: t('nav.users'),
       icon: 'fa-users',
-      capability: 'users.view',
+      capability: null,
     },
     {
       key: 'community-settings',

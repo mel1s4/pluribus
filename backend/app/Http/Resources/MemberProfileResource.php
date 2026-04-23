@@ -3,25 +3,22 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
-use App\Support\CapabilityResolver;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use Illuminate\Support\Facades\Storage;
 
 /**
- * Session user payload (login + /api/user) including effective capabilities.
+ * Public directory profile for a community member.
  *
  * @mixin User
  */
-class UserResource extends JsonResource
+class MemberProfileResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
-        $resolver = app(CapabilityResolver::class);
-
         $externalLinks = is_array($this->external_links) ? $this->external_links : [];
 
         return [
@@ -29,6 +26,9 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
+            'avatar_url' => $this->avatar_path
+                ? Storage::disk('public')->url($this->avatar_path)
+                : null,
             'phone_numbers' => is_array($this->phone_numbers) ? $this->phone_numbers : [],
             'contact_emails' => is_array($this->contact_emails) ? $this->contact_emails : [],
             'aliases' => is_array($this->aliases) ? $this->aliases : [],
@@ -41,15 +41,8 @@ class UserResource extends JsonResource
                     : ['title' => '', 'url' => ''],
                 $externalLinks
             ),
-            'avatar_url' => $this->avatar_path
-                ? Storage::disk('public')->url($this->avatar_path)
-                : null,
-            'is_root' => (bool) $this->is_root,
             'user_type' => $this->user_type,
-            'email_verified_at' => $this->email_verified_at?->toIso8601String(),
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
-            'capabilities' => $resolver->forUser($this->resource),
+            'is_root' => (bool) $this->is_root,
         ];
     }
 }

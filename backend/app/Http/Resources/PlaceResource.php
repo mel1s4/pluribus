@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Place;
 use App\Models\User;
 use App\Support\PlaceMedia;
+use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -43,11 +44,15 @@ class PlaceResource extends JsonResource
             ],
             'latitude' => $lat,
             'longitude' => $lng,
+            'location_type' => $this->location_type ?? Place::LOCATION_NONE,
             'service_area_type' => $this->service_area_type,
             'radius_meters' => $this->radius_meters,
             'area_geojson' => $this->area_geojson,
             'logo_path' => $this->logo_path,
             'logo_url' => PlaceMedia::publicUrl($this->logo_path),
+            'service_schedule' => PlaceServiceScheduleNormalizer::normalize(
+                is_array($this->service_schedule) ? $this->service_schedule : []
+            ),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

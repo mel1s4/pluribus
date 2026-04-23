@@ -31,14 +31,24 @@ L.Icon.Default.mergeOptions({
  *   getModel: () => Record<string, unknown>,
  *   getAreaType: () => string,
  *   patchModel: (partial: Record<string, unknown>) => void,
+ *   readOnly?: boolean,
  * }} ctx
  */
 export function usePlaceLeafletMap(mapContainerRef, ctx) {
+  const readOnly = Boolean(ctx.readOnly)
+  function showPinForModel(m) {
+    const pin = hasValidPin(m)
+    if (!pin) return false
+    const loc = m.location_type || 'none'
+    const sat = m.service_area_type || 'none'
+    return loc === 'point' || sat === 'radius' || sat === 'polygon'
+  }
   let map = null
   let marker = null
   let circle = null
   let drawControl = null
   let drawnItems = null
+  let readonlyPolygonLayer = null
 
   function makeMarkerIcon() {
     const hex = MARKER_COLOR.replace('#', '')
@@ -58,12 +68,17 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
   function placeMarker(lat, lng) {
     if (!map) return
     if (marker) map.removeLayer(marker)
-    marker = L.marker([lat, lng], { draggable: true, icon: makeMarkerIcon() }).addTo(map)
-    marker.on('dragend', (e) => {
-      const p = e.target.getLatLng()
-      ctx.patchModel({ latitude: p.lat, longitude: p.lng })
-      refreshOverlays()
-    })
+    marker = L.marker([lat, lng], {
+      draggable: !readOnly,
+      icon: makeMarkerIcon(),
+    }).addTo(map)
+    if (!readOnly) {
+      marker.on('dragend', (e) => {
+        const p = e.target.getLatLng()
+        ctx.patchModel({ latitude: p.lat, longitude: p.lng })
+        refreshOverlays()
+      })
+    }
     map.setView([lat, lng], Math.max(map.getZoom(), 13), { animate: false })
   }
 
@@ -82,8 +97,9 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
     const lng = pin ? Number(m.longitude) : NaN
     const sat = m.service_area_type
     const rm = m.radius_meters
+    const showPin = showPinForModel(m)
     if (marker) {
-      if (pin) {
+      if (showPin) {
         marker.setLatLng([lat, lng])
       } else {
         removeMarker()
@@ -93,7 +109,7 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
       map.removeLayer(circle)
       circle = null
     }
-    if (sat === 'radius' && rm && pin) {
+    if (sat === 'radius' && rm && pin && showPin) {
       circle = L.circle([lat, lng], {
         radius: rm,
         color: MARKER_COLOR,
@@ -119,6 +135,7 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
       area_geojson: geometry,
       latitude: center.lat,
       longitude: center.lng,
+      location_type: 'point',
     })
     placeMarker(center.lat, center.lng)
   }
@@ -138,8 +155,44 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
     }
   }
 
+  function clearReadonlyPolygon() {
+    if (map && readonlyPolygonLayer) {
+      map.removeLayer(readonlyPolygonLayer)
+    }
+    readonlyPolygonLayer = null
+  }
+
+  function addReadonlyPolygonLayer() {
+    if (!map || !readOnly) return
+    clearReadonlyPolygon()
+    const m = ctx.getModel()
+    const geo = m.area_geojson
+    if (ctx.getAreaType() !== 'polygon' || !geo || typeof geo !== 'object' || geo.type !== 'Polygon') {
+      return
+    }
+    readonlyPolygonLayer = L.geoJSON(
+      { type: 'Feature', geometry: geo },
+      {
+        style: {
+          color: MARKER_COLOR,
+          fillColor: MARKER_COLOR,
+          fillOpacity: 0.2,
+        },
+      },
+    ).addTo(map)
+    try {
+      map.fitBounds(readonlyPolygonLayer.getBounds(), { padding: [24, 24], maxZoom: 15 })
+    } catch {
+      /* ignore invalid bounds */
+    }
+  }
+
   function setupDrawControls() {
     if (!map) return
+    if (readOnly) {
+      addReadonlyPolygonLayer()
+      return
+    }
     teardownDraw()
     if (!drawnItems) {
       drawnItems = new L.FeatureGroup()
@@ -206,8 +259,18 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
     })
   }
 
+  function canSetPointFromMapClick() {
+    if (ctx.getAreaType() === 'polygon') return false
+    const m = ctx.getModel()
+    const loc = m.location_type || 'none'
+    const sat = m.service_area_type || 'none'
+    if (sat === 'none' && loc === 'none') return false
+    return loc === 'point' || sat === 'radius'
+  }
+
   function onMapClick(e) {
-    if (ctx.getAreaType() === 'polygon') return
+    if (readOnly) return
+    if (!canSetPointFromMapClick()) return
     const { lat, lng } = e.latlng
     ctx.patchModel({ latitude: lat, longitude: lng })
     placeMarker(lat, lng)
@@ -219,9 +282,10 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
     if (!el) return
     const m = ctx.getModel()
     const pin = hasValidPin(m)
+    const showPin = showPinForModel(m)
     const centerLat = pin ? Number(m.latitude) : DEFAULT_CENTER.lat
     const centerLng = pin ? Number(m.longitude) : DEFAULT_CENTER.lng
-    const zoom = pin ? 13 : 5
+    const zoom = pin && showPin ? 13 : pin ? 11 : 5
     map = L.map(el).setView([centerLat, centerLng], zoom)
     L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO',
@@ -229,9 +293,11 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
       maxZoom: 20,
     }).addTo(map)
 
-    map.on('click', onMapClick)
+    if (!readOnly) {
+      map.on('click', onMapClick)
+    }
 
-    if (pin) {
+    if (pin && showPin) {
       placeMarker(Number(m.latitude), Number(m.longitude))
     }
     setupDrawControls()
@@ -245,6 +311,7 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
 
   function destroyMap() {
     teardownDraw()
+    clearReadonlyPolygon()
     if (map) {
       map.remove()
       map = null
@@ -261,14 +328,15 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
   watch(
     () => {
       const m = ctx.getModel()
-      return [m.latitude, m.longitude, m.service_area_type]
+      return [m.latitude, m.longitude, m.service_area_type, m.location_type]
     },
     () => {
       if (!map) return
       if (ctx.getModel().service_area_type === 'polygon') return
       const m = ctx.getModel()
       const pin = hasValidPin(m)
-      if (!pin) {
+      const showPin = showPinForModel(m)
+      if (!pin || !showPin) {
         removeMarker()
         refreshOverlays()
         return

@@ -7,9 +7,10 @@ use App\Models\User;
 
 class PlacePolicy
 {
-    public function view(User $user, Place $place): bool
+    public function view(User $_user, Place $_place): bool
     {
-        return $place->roleForUser($user) !== '';
+        // Any authenticated user may view place details (directory / public page).
+        return true;
     }
 
     public function update(User $user, Place $place): bool

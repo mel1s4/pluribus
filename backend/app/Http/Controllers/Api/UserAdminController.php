@@ -15,8 +15,6 @@ class UserAdminController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
-        $this->authorize('users.view');
-
         $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
 
         $paginator = User::query()
@@ -36,6 +34,10 @@ class UserAdminController extends Controller
             'email' => $validated['email'],
             'password' => $validated['password'],
             'username' => $validated['username'] ?? null,
+            'phone_numbers' => $validated['phone_numbers'],
+            'contact_emails' => $validated['contact_emails'],
+            'aliases' => $validated['aliases'],
+            'external_links' => $validated['external_links'],
             'user_type' => 'member',
             'is_root' => false,
         ];
@@ -59,8 +61,6 @@ class UserAdminController extends Controller
 
     public function show(Request $request, User $user): JsonResponse
     {
-        $this->authorize('users.view');
-
         return response()->json([
             'user' => new UserSummaryResource($user),
         ]);
@@ -92,6 +92,19 @@ class UserAdminController extends Controller
 
         if (! empty($validated['password'])) {
             $data['password'] = $validated['password'];
+        }
+
+        if (array_key_exists('phone_numbers', $validated)) {
+            $data['phone_numbers'] = $validated['phone_numbers'];
+        }
+        if (array_key_exists('contact_emails', $validated)) {
+            $data['contact_emails'] = $validated['contact_emails'];
+        }
+        if (array_key_exists('aliases', $validated)) {
+            $data['aliases'] = $validated['aliases'];
+        }
+        if (array_key_exists('external_links', $validated)) {
+            $data['external_links'] = $validated['external_links'];
         }
 
         if ($request->user()?->can('users.assign_types')) {

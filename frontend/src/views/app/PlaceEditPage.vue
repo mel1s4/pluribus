@@ -11,6 +11,7 @@ import PlaceBasicsForm from '../../organisms/PlaceBasicsForm.vue'
 import { t } from '../../i18n/i18n'
 import { deletePlace, fetchPlace, updatePlace } from '../../services/placesApi.js'
 import { placeApiErrorMessage, placeToFormData } from '../../utils/placeForm.js'
+import { normalizeServiceSchedule } from '../../utils/placeSchedule.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -40,12 +41,14 @@ function draftFromPlace(p) {
     tags: Array.isArray(p.tags) ? [...p.tags] : [],
     latitude: loc.latitude ?? p.latitude ?? null,
     longitude: loc.longitude ?? p.longitude ?? null,
+    location_type: p.location_type || 'none',
     service_area_type: p.service_area_type,
     radius_meters: p.radius_meters,
     area_geojson: p.area_geojson,
     logo_url: p.logo_url ?? null,
     logoFile: null,
     removeLogo: false,
+    service_schedule: normalizeServiceSchedule(p.service_schedule),
   }
 }
 
@@ -101,9 +104,11 @@ async function onSubmit() {
         tags: Array.isArray(d.tags) ? d.tags : [],
         latitude: d.latitude,
         longitude: d.longitude,
+        location_type: d.location_type || 'none',
         service_area_type: d.service_area_type,
         radius_meters: d.radius_meters,
         area_geojson: d.area_geojson,
+        service_schedule: normalizeServiceSchedule(d.service_schedule),
       }
   const { ok, status, data } = await updatePlace(d.id, payload)
   saveLoading.value = false

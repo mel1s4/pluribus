@@ -7,6 +7,7 @@ use App\Http\Requests\StorePlaceRequest;
 use App\Http\Requests\UpdatePlaceRequest;
 use App\Http\Resources\PlaceResource;
 use App\Models\Place;
+use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -37,6 +38,10 @@ class PlaceController extends Controller
         $tags = $validated['tags'] ?? [];
         $tags = is_array($tags) ? array_values(array_filter(array_map('strval', $tags), fn (string $t) => $t !== '')) : [];
 
+        $schedule = array_key_exists('service_schedule', $validated)
+            ? PlaceServiceScheduleNormalizer::normalize($validated['service_schedule'])
+            : null;
+
         $place = Place::query()->create([
             'user_id' => $request->user()->id,
             'name' => $validated['name'],
@@ -44,9 +49,11 @@ class PlaceController extends Controller
             'tags' => $tags === [] ? null : $tags,
             'latitude' => null,
             'longitude' => null,
+            'location_type' => Place::LOCATION_NONE,
             'service_area_type' => Place::SERVICE_AREA_NONE,
             'radius_meters' => null,
             'area_geojson' => null,
+            'service_schedule' => $this->scheduleOrNull($schedule),
         ]);
 
         if ($request->hasFile('logo')) {
@@ -101,6 +108,15 @@ class PlaceController extends Controller
             }
         }
 
+        $effectiveSat = $validated['service_area_type'] ?? $place->service_area_type;
+        if ($effectiveSat === Place::SERVICE_AREA_RADIUS || $effectiveSat === Place::SERVICE_AREA_POLYGON) {
+            $validated['location_type'] = Place::LOCATION_POINT;
+        }
+
+        if (array_key_exists('service_schedule', $validated)) {
+            $validated['service_schedule'] = $this->scheduleOrNull($validated['service_schedule']);
+        }
+
         $place->update($validated);
 
         if ($request->hasFile('logo')) {
@@ -140,5 +156,19 @@ class PlaceController extends Controller
         $place->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    /**
+     * @param  array<string, list<array{open: string, close: string}>>  $normalized
+     */
+    private function scheduleOrNull(array $normalized): ?array
+    {
+        foreach ($normalized as $slots) {
+            if ($slots !== []) {
+                return $normalized;
+            }
+        }
+
+        return null;
     }
 }

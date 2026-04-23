@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
 import PlaceLocationPicker from './PlaceLocationPicker.vue'
+import PlaceServiceScheduleEditor from '../molecules/PlaceServiceScheduleEditor.vue'
 import PlaceTagsField from '../molecules/PlaceTagsField.vue'
 import { t } from '../i18n/i18n'
 
@@ -51,6 +52,7 @@ const locationModel = computed({
     return {
       latitude: m.latitude,
       longitude: m.longitude,
+      location_type: m.location_type || 'none',
       service_area_type: m.service_area_type,
       radius_meters: m.radius_meters,
       area_geojson: m.area_geojson,
@@ -60,6 +62,7 @@ const locationModel = computed({
     patch({
       latitude: v.latitude,
       longitude: v.longitude,
+      location_type: v.location_type || 'none',
       service_area_type: v.service_area_type,
       radius_meters: v.radius_meters ?? null,
       area_geojson: v.area_geojson ?? null,
@@ -107,6 +110,10 @@ function onLogoFile(ev) {
 function onClearLogo() {
   patch({ logoFile: null, removeLogo: true })
 }
+
+function setSchedule(next) {
+  patch({ service_schedule: next })
+}
 </script>
 
 <template>
@@ -137,6 +144,12 @@ function onClearLogo() {
       :label="t('myPlaces.fieldTags')"
       :hint="t('myPlaces.tagsHint')"
       @update:model-value="patch({ tags: $event })"
+    />
+
+    <PlaceServiceScheduleEditor
+      :model-value="modelValue.service_schedule || {}"
+      :disabled="saveLoading"
+      @update:model-value="setSchedule"
     />
 
     <div class="place-basics-form__logo">

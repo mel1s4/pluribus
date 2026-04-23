@@ -2,6 +2,8 @@
  * Shared helpers for place create/edit flows.
  */
 
+import { emptyServiceSchedule, normalizeServiceSchedule } from './placeSchedule.js'
+
 export function emptyPlaceDraft() {
   return {
     id: null,
@@ -10,9 +12,11 @@ export function emptyPlaceDraft() {
     tags: [],
     latitude: null,
     longitude: null,
+    location_type: 'none',
     service_area_type: 'none',
     radius_meters: null,
     area_geojson: null,
+    service_schedule: emptyServiceSchedule(),
     logo_url: null,
     logoFile: null,
     removeLogo: false,
@@ -35,6 +39,7 @@ export function placeToFormData(draft) {
     fd.append('latitude', String(draft.latitude))
     fd.append('longitude', String(draft.longitude))
   }
+  fd.append('location_type', draft.location_type || 'none')
   fd.append('service_area_type', draft.service_area_type)
   if (draft.radius_meters != null && draft.radius_meters !== '') {
     fd.append('radius_meters', String(draft.radius_meters))
@@ -50,6 +55,10 @@ export function placeToFormData(draft) {
   if (draft.removeLogo) {
     fd.append('remove_logo', '1')
   }
+  fd.append(
+    'service_schedule',
+    JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
+  )
   return fd
 }
 
@@ -67,6 +76,10 @@ export function placeCreateToFormData(draft) {
   if (draft.logoFile instanceof File) {
     fd.append('logo', draft.logoFile)
   }
+  fd.append(
+    'service_schedule',
+    JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
+  )
   return fd
 }
 

@@ -26,13 +26,15 @@ class UserAdminApiTest extends TestCase
             ->json($method, $uri, $data);
     }
 
-    public function test_member_cannot_list_users(): void
+    public function test_member_can_list_users(): void
     {
         $user = User::factory()->create(['user_type' => 'member']);
 
         $this->actingAs($user);
 
-        $this->statefulJson('GET', '/api/users')->assertForbidden();
+        $this->statefulJson('GET', '/api/users')
+            ->assertOk()
+            ->assertJsonStructure(['data', 'links', 'meta']);
     }
 
     public function test_admin_can_list_users(): void
@@ -59,7 +61,7 @@ class UserAdminApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_admin_can_create_user(): void
+    public function test_admin_cannot_create_user(): void
     {
         $admin = User::factory()->admin()->create();
 
@@ -67,17 +69,13 @@ class UserAdminApiTest extends TestCase
 
         $email = 'created-'.uniqid('', true).'@example.com';
 
-        $response = $this->statefulJson('POST', '/api/users', [
+        $this->statefulJson('POST', '/api/users', [
             'name' => 'Created User',
             'email' => $email,
             'password' => 'long-password-1',
-        ]);
+        ])->assertForbidden();
 
-        $response->assertCreated()
-            ->assertJsonPath('user.email', $email)
-            ->assertJsonPath('user.user_type', 'member');
-
-        $this->assertDatabaseHas('users', ['email' => $email, 'user_type' => 'member']);
+        $this->assertDatabaseMissing('users', ['email' => $email]);
     }
 
     public function test_member_cannot_delete_user(): void
@@ -90,16 +88,16 @@ class UserAdminApiTest extends TestCase
         $this->statefulJson('DELETE', '/api/users/'.$target->id)->assertForbidden();
     }
 
-    public function test_admin_can_delete_other_user(): void
+    public function test_admin_cannot_delete_other_user(): void
     {
         $admin = User::factory()->admin()->create();
         $target = User::factory()->create();
 
         $this->actingAs($admin);
 
-        $this->statefulJson('DELETE', '/api/users/'.$target->id)->assertOk();
+        $this->statefulJson('DELETE', '/api/users/'.$target->id)->assertForbidden();
 
-        $this->assertDatabaseMissing('users', ['id' => $target->id]);
+        $this->assertDatabaseHas('users', ['id' => $target->id]);
     }
 
     public function test_admin_cannot_delete_self(): void
@@ -130,14 +128,17 @@ class UserAdminApiTest extends TestCase
         $this->statefulJson('DELETE', '/api/users/'.$root->id)->assertForbidden();
     }
 
-    public function test_member_cannot_show_user(): void
+    public function test_member_can_show_user(): void
     {
         $member = User::factory()->create(['user_type' => 'member']);
         $target = User::factory()->create();
 
         $this->actingAs($member);
 
-        $this->statefulJson('GET', '/api/users/'.$target->id)->assertForbidden();
+        $this->statefulJson('GET', '/api/users/'.$target->id)
+            ->assertOk()
+            ->assertJsonPath('user.id', $target->id)
+            ->assertJsonPath('user.email', $target->email);
     }
 
     public function test_admin_can_show_user(): void
@@ -166,7 +167,7 @@ class UserAdminApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_admin_can_update_non_root_user(): void
+    public function test_admin_cannot_update_non_root_user(): void
     {
         $admin = User::factory()->admin()->create();
         $target = User::factory()->create(['name' => 'Old Name']);
@@ -179,15 +180,12 @@ class UserAdminApiTest extends TestCase
             'name' => 'New Display',
             'email' => $newEmail,
             'username' => null,
-        ])
-            ->assertOk()
-            ->assertJsonPath('user.name', 'New Display')
-            ->assertJsonPath('user.email', $newEmail);
+        ])->assertForbidden();
 
         $this->assertDatabaseHas('users', [
             'id' => $target->id,
-            'name' => 'New Display',
-            'email' => $newEmail,
+            'name' => 'Old Name',
+            'email' => $target->email,
         ]);
     }
 
@@ -223,7 +221,7 @@ class UserAdminApiTest extends TestCase
             ->assertJsonPath('user.name', 'Peer Renamed');
     }
 
-    public function test_admin_cannot_change_user_type_even_when_sent(): void
+    public function test_admin_cannot_patch_user_to_change_type(): void
     {
         $admin = User::factory()->admin()->create();
         $target = User::factory()->create(['user_type' => 'member']);
@@ -234,9 +232,12 @@ class UserAdminApiTest extends TestCase
             'name' => $target->name,
             'email' => $target->email,
             'user_type' => 'admin',
-        ])
-            ->assertOk()
-            ->assertJsonPath('user.user_type', 'member');
+        ])->assertForbidden();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id,
+            'user_type' => 'member',
+        ]);
     }
 
     public function test_root_can_promote_member_to_admin(): void

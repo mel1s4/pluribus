@@ -39,7 +39,7 @@
   "admin": {
     "entity_type": null,
     "role": "admin",
-    "description": "Community administrator; manages member accounts and moderation tools without the root flag.",
+    "description": "Community administrator; moderation and settings without the root flag or member-account management.",
     "capabilities": [
       "profile.view",
       "profile.update",
@@ -59,10 +59,6 @@
       "offers.create",
       "offers.update",
       "offers.delete",
-      "users.view",
-      "users.create",
-      "users.update",
-      "users.delete",
       "notifications.view",
       "notifications.manage",
       "settings.update_own",

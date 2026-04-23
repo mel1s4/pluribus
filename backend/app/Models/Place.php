@@ -19,6 +19,16 @@ class Place extends Model
         self::ADMIN_ROLE_EDITOR,
     ];
 
+    public const LOCATION_NONE = 'none';
+
+    public const LOCATION_POINT = 'point';
+
+    /** @var list<string> */
+    public const LOCATION_TYPES = [
+        self::LOCATION_NONE,
+        self::LOCATION_POINT,
+    ];
+
     public const SERVICE_AREA_NONE = 'none';
 
     public const SERVICE_AREA_RADIUS = 'radius';
@@ -42,10 +52,12 @@ class Place extends Model
         'tags',
         'latitude',
         'longitude',
+        'location_type',
         'service_area_type',
         'radius_meters',
         'area_geojson',
         'logo_path',
+        'service_schedule',
     ];
 
     /**
@@ -59,6 +71,7 @@ class Place extends Model
             'radius_meters' => 'integer',
             'area_geojson' => 'array',
             'tags' => 'array',
+            'service_schedule' => 'array',
         ];
     }
 

@@ -11,7 +11,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-#[Fillable(['name', 'email', 'username', 'avatar_path', 'password', 'is_root', 'user_type'])]
+#[Fillable([
+    'name',
+    'email',
+    'username',
+    'avatar_path',
+    'phone_numbers',
+    'contact_emails',
+    'aliases',
+    'external_links',
+    'password',
+    'is_root',
+    'user_type',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -35,6 +47,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_root' => 'boolean',
+            'phone_numbers' => 'array',
+            'contact_emails' => 'array',
+            'aliases' => 'array',
+            'external_links' => 'array',
         ];
     }
 
@@ -50,5 +66,4 @@ class User extends Authenticatable
     {
         return $this->hasMany(Place::class);
     }
-
 }

@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import { t } from '../../i18n/i18n'
 
@@ -44,6 +45,10 @@ const props = defineProps({
     type: String,
     default: '',
   },
+  memberProfileTo: {
+    type: Object,
+    default: null,
+  },
 })
 
 const emit = defineEmits(['delete'])
@@ -64,7 +69,16 @@ const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
 
 <template>
   <tr class="users-table-row">
-    <td class="users-table-row__cell users-table-row__cell--name">{{ user.name }}</td>
+    <td class="users-table-row__cell users-table-row__cell--name">
+      <RouterLink
+        v-if="memberProfileTo"
+        class="users-table-row__profileLink"
+        :to="memberProfileTo"
+      >
+        {{ user.name }}
+      </RouterLink>
+      <span v-else>{{ user.name }}</span>
+    </td>
     <td class="users-table-row__cell">{{ user.email }}</td>
     <td class="users-table-row__cell">{{ user.username || '—' }}</td>
     <td class="users-table-row__cell">{{ typeLabel }}</td>
@@ -113,6 +127,17 @@ const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
 
 .users-table-row__cell--name {
   font-weight: 600;
+}
+
+.users-table-row__profileLink {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.users-table-row__profileLink:hover {
+  text-decoration: underline;
+  color: #1d4ed8;
 }
 
 .users-table-row__cell--actions {

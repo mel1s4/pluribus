@@ -9,6 +9,10 @@ const props = defineProps({
     type: Object,
     required: true,
   },
+  readOnly: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits(['update:modelValue'])
@@ -26,12 +30,41 @@ const leaflet = usePlaceLeafletMap(mapContainer, {
   getModel: () => props.modelValue,
   getAreaType: () => props.modelValue.service_area_type || 'none',
   patchModel: emitFull,
+  readOnly: props.readOnly,
+})
+
+function mapPickersOnlyPan() {
+  if (areaType.value === 'polygon') return true
+  const loc = props.modelValue.location_type || 'none'
+  if (areaType.value === 'none' && loc === 'none') return true
+  return false
+}
+
+const locationType = computed({
+  get: () => props.modelValue.location_type || 'none',
+  set: (v) => {
+    if (v === 'none' && (areaType.value === 'radius' || areaType.value === 'polygon')) {
+      return
+    }
+    const patch = { location_type: v }
+    if (v === 'none' && areaType.value === 'none') {
+      patch.latitude = null
+      patch.longitude = null
+    }
+    emitFull(patch)
+    nextTick(() => {
+      leaflet.refreshOverlays()
+    })
+  },
 })
 
 const areaType = computed({
   get: () => props.modelValue.service_area_type || 'none',
   set: (v) => {
     const patch = { service_area_type: v }
+    if (v === 'radius' || v === 'polygon') {
+      patch.location_type = 'point'
+    }
     if (v === 'none') {
       patch.radius_meters = null
       patch.area_geojson = null
@@ -85,7 +118,7 @@ function onCenterMyLocation() {
     (pos) => {
       const lat = pos.coords.latitude
       const lng = pos.coords.longitude
-      if (areaType.value === 'polygon') {
+      if (mapPickersOnlyPan()) {
         leaflet.panTo(lat, lng)
       } else {
         emitFull({ latitude: lat, longitude: lng })
@@ -104,7 +137,7 @@ function onCenterMyLocation() {
 
 function onSelectSearchResult({ lat, lng }) {
   geolocateError.value = ''
-  if (areaType.value === 'polygon') {
+  if (mapPickersOnlyPan()) {
     leaflet.panTo(lat, lng)
   } else {
     emitFull({ latitude: lat, longitude: lng })
@@ -131,11 +164,42 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="place-location-picker">
-    <p class="place-location-picker__location-intro">
+  <div class="place-location-picker" :class="{ 'place-location-picker--readOnly': readOnly }">
+    <p v-if="readOnly" class="place-location-picker__location-intro">
+      {{ t('places.viewLocationIntro') }}
+    </p>
+    <p v-else class="place-location-picker__location-intro">
       {{ t('myPlaces.locationIntro') }}
     </p>
-    <fieldset class="place-location-picker__fieldset">
+    <fieldset v-if="!readOnly" class="place-location-picker__fieldset">
+      <legend class="place-location-picker__legend">{{ t('myPlaces.placeLocation') }}</legend>
+      <div class="place-location-picker__radios">
+        <label class="place-location-picker__radio">
+          <input
+            v-model="locationType"
+            type="radio"
+            value="none"
+            :disabled="areaType === 'radius' || areaType === 'polygon'"
+          />
+          <span>{{ t('myPlaces.placeLocationNone') }}</span>
+        </label>
+        <label class="place-location-picker__radio">
+          <input
+            v-model="locationType"
+            type="radio"
+            value="point"
+          />
+          <span>{{ t('myPlaces.placeLocationPoint') }}</span>
+        </label>
+      </div>
+      <p
+        v-if="areaType === 'radius' || areaType === 'polygon'"
+        class="place-location-picker__fieldset-hint"
+      >
+        {{ t('myPlaces.placeLocationLockedHint') }}
+      </p>
+    </fieldset>
+    <fieldset v-if="!readOnly" class="place-location-picker__fieldset">
       <legend class="place-location-picker__legend">{{ t('myPlaces.serviceArea') }}</legend>
       <div class="place-location-picker__radios">
         <label class="place-location-picker__radio">
@@ -166,6 +230,7 @@ onBeforeUnmount(() => {
     </fieldset>
 
     <PlaceLocationMapToolbar
+      v-if="!readOnly"
       :geolocate-busy="geolocateBusy"
       @center-my-location="onCenterMyLocation"
       @select-search-result="onSelectSearchResult"
@@ -181,7 +246,7 @@ onBeforeUnmount(() => {
 
     <div ref="mapContainer" class="place-location-picker__map" />
 
-    <div v-if="areaType === 'radius'" class="place-location-picker__radius">
+    <div v-if="!readOnly && areaType === 'radius'" class="place-location-picker__radius">
       <label class="place-location-picker__radius-label" for="place-radius-km">{{ t('myPlaces.radiusKm') }}</label>
       <input
         id="place-radius-km"
@@ -195,7 +260,7 @@ onBeforeUnmount(() => {
       />
     </div>
 
-    <p v-if="areaType === 'polygon'" class="place-location-picker__hint">
+    <p v-if="!readOnly && areaType === 'polygon'" class="place-location-picker__hint">
       {{ t('myPlaces.polygonHint') }}
     </p>
   </div>
@@ -226,6 +291,12 @@ onBeforeUnmount(() => {
   font-size: 0.9rem;
 }
 
+.place-location-picker__fieldset-hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
 .place-location-picker__radios {
   display: flex;
   flex-wrap: wrap;
@@ -252,6 +323,10 @@ onBeforeUnmount(() => {
   border-radius: 8px;
   border: 1px solid var(--border);
   overflow: hidden;
+}
+
+.place-location-picker--readOnly .place-location-picker__map {
+  min-height: 280px;
 }
 
 .place-location-picker__radius {

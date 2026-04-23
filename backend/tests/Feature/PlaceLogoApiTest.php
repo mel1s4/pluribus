@@ -66,6 +66,7 @@ class PlaceLogoApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->patch('/api/places/'.$placeId, [
                 'name' => 'Shop',
+                'location_type' => 'point',
                 'latitude' => '52.5',
                 'longitude' => '13.4',
                 'service_area_type' => 'none',

@@ -78,6 +78,10 @@ function editToFor(target) {
   return { name: 'userEdit', params: { userId: String(target.id) } }
 }
 
+function memberProfileToFor(target) {
+  return { name: 'memberProfile', params: { userId: String(target.id) } }
+}
+
 async function onDeleteUser(target) {
   if (!window.confirm(t('users.deleteConfirm').replace('{name}', target.name))) {
     return
@@ -154,6 +158,7 @@ onUnmounted(() => {
             v-for="u in rows"
             :key="u.id"
             :user="u"
+            :member-profile-to="memberProfileToFor(u)"
             :show-actions="showRowActions"
             :show-edit="canEdit"
             :edit-to="editToFor(u)"

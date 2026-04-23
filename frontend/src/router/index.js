@@ -22,7 +22,9 @@ const ApiTestView = () => import('../views/app/ApiTest.vue')
 const UsersView = () => import('../views/app/Users.vue')
 const UserCreatePage = () => import('../views/app/UserCreatePage.vue')
 const UserEditPage = () => import('../views/app/UserEditPage.vue')
+const MemberProfilePage = () => import('../views/app/MemberProfilePage.vue')
 const MyPlacesView = () => import('../views/app/MyPlaces.vue')
+const PlaceViewPage = () => import('../views/app/PlaceViewPage.vue')
 const PlaceCreatePage = () => import('../views/app/PlaceCreatePage.vue')
 const PlaceEditPage = () => import('../views/app/PlaceEditPage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
@@ -147,6 +149,28 @@ const routes = [
     },
   },
   {
+    path: '/members/:userId',
+    name: 'memberProfile',
+    component: MemberProfilePage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'memberProfile.title',
+    },
+  },
+  {
+    path: '/places/:placeId',
+    name: 'placeView',
+    component: PlaceViewPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'places.viewTitle',
+    },
+  },
+  {
     path: '/users/new',
     name: 'userCreate',
     component: UserCreatePage,
@@ -177,7 +201,6 @@ const routes = [
     meta: {
       layout: 'app',
       requiresAuth: true,
-      requiresCapability: 'users.view',
       hideHeader: false,
       headerTitleKey: 'users.title',
     },

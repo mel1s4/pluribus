@@ -22,6 +22,10 @@ class ProfileController extends Controller
         $data = [
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone_numbers' => $validated['phone_numbers'],
+            'contact_emails' => $validated['contact_emails'],
+            'aliases' => $validated['aliases'],
+            'external_links' => $validated['external_links'],
         ];
 
         $username = $validated['username'] ?? null;

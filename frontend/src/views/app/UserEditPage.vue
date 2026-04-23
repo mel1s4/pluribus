@@ -5,6 +5,8 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Input from '../../atoms/Input.vue'
 import Title from '../../atoms/Title.vue'
+import ProfileExternalLinksEditor from '../../molecules/ProfileExternalLinksEditor.vue'
+import ProfileStringListEditor from '../../molecules/ProfileStringListEditor.vue'
 import { hasCapability } from '../../composables/useCapabilities'
 import { resolveSession, sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
@@ -28,12 +30,17 @@ const form = reactive({
   password: '',
   user_type: 'member',
   is_root: false,
+  phone_numbers: [],
+  contact_emails: [],
+  aliases: [],
+  external_links: [],
 })
 
 const loadError = ref('')
 const loading = ref(true)
 const saveError = ref('')
 const saveLoading = ref(false)
+const usernameFieldError = ref('')
 
 const assignTypes = computed(() => hasCapability('users.assign_types'))
 
@@ -41,6 +48,28 @@ const userId = computed(() => {
   const raw = route.params.userId
   return typeof raw === 'string' ? raw : ''
 })
+
+function cloneStringList(value) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.map((x) => (typeof x === 'string' || typeof x === 'number' ? String(x) : ''))
+}
+
+function cloneExternalLinks(value) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+  return value.map((row) => {
+    if (!row || typeof row !== 'object') {
+      return { title: '', url: '' }
+    }
+    return {
+      title: typeof row.title === 'string' ? row.title : '',
+      url: typeof row.url === 'string' ? row.url : '',
+    }
+  })
+}
 
 async function load() {
   const id = userId.value
@@ -68,11 +97,22 @@ async function load() {
   form.password = ''
   form.user_type = u.user_type ?? 'member'
   form.is_root = Boolean(u.is_root)
+  form.phone_numbers = cloneStringList(u.phone_numbers)
+  form.contact_emails = cloneStringList(u.contact_emails)
+  form.aliases = cloneStringList(u.aliases)
+  form.external_links = cloneExternalLinks(u.external_links)
 }
 
 watch(userId, () => {
   load()
 })
+
+watch(
+  () => form.username,
+  () => {
+    usernameFieldError.value = ''
+  },
+)
 
 watch(
   () => form.is_root,
@@ -85,15 +125,35 @@ watch(
 
 load()
 
+function setUsernameFieldErrorFromResponse(data, status) {
+  usernameFieldError.value = ''
+  if (status !== 422 || !data || typeof data !== 'object') {
+    return
+  }
+  const errors = data.errors
+  if (!errors || typeof errors !== 'object') {
+    return
+  }
+  const list = errors.username
+  if (Array.isArray(list) && list.length > 0 && typeof list[0] === 'string') {
+    usernameFieldError.value = t('profile.usernameTaken')
+  }
+}
+
 async function onSubmit() {
   const id = userId.value
   if (!id) return
   saveError.value = ''
+  usernameFieldError.value = ''
   saveLoading.value = true
   const body = {
     name: form.name.trim(),
     email: form.email.trim(),
     username: form.username.trim() === '' ? null : form.username.trim(),
+    phone_numbers: form.phone_numbers,
+    contact_emails: form.contact_emails,
+    aliases: form.aliases,
+    external_links: form.external_links,
   }
   if (form.password.trim()) {
     body.password = form.password
@@ -109,6 +169,7 @@ async function onSubmit() {
   const { ok, status, data } = await updateUser(id, body)
   saveLoading.value = false
   if (!ok) {
+    setUsernameFieldErrorFromResponse(data, status)
     saveError.value = userApiErrorMessage(data, status, t('users.saveError'))
     return
   }
@@ -141,69 +202,109 @@ function goBack() {
     </p>
     <p v-else-if="loading" class="user-edit-page__muted">{{ t('users.loadingOne') }}</p>
 
-    <Card v-else class="user-edit-page__panel">
-      <form class="user-edit-page__form" @submit.prevent="onSubmit">
-        <div class="user-edit-page__fields">
-          <Input
-            v-model="form.name"
-            name="edit-name"
-            type="text"
-            :label="t('users.fieldName')"
-            autocomplete="name"
-            required
-          />
-          <Input
-            v-model="form.email"
-            name="edit-email"
-            type="email"
-            :label="t('users.fieldEmail')"
-            autocomplete="email"
-            required
-          />
-          <Input
-            v-model="form.username"
-            name="edit-username"
-            type="text"
-            :label="t('users.fieldUsername')"
-            autocomplete="username"
-          />
-          <Input
-            v-model="form.password"
-            name="edit-password"
-            type="password"
-            :label="t('users.fieldPasswordNew')"
-            autocomplete="new-password"
-          />
-          <p class="user-edit-page__hint">{{ t('users.passwordOptionalHint') }}</p>
+    <template v-else>
+      <Card class="user-edit-page__panel">
+        <form class="user-edit-page__form" @submit.prevent="onSubmit">
+          <div class="user-edit-page__fields">
+            <Input
+              v-model="form.name"
+              name="edit-name"
+              type="text"
+              :label="t('users.fieldName')"
+              autocomplete="name"
+              required
+            />
+            <Input
+              v-model="form.email"
+              name="edit-email"
+              type="email"
+              :label="t('users.fieldEmail')"
+              autocomplete="email"
+              required
+            />
+            <Input
+              v-model="form.username"
+              name="edit-username"
+              type="text"
+              :label="t('users.fieldUsername')"
+              autocomplete="username"
+            />
+            <p v-if="usernameFieldError" class="user-edit-page__fieldError" role="alert">
+              {{ usernameFieldError }}
+            </p>
+            <Input
+              v-model="form.password"
+              name="edit-password"
+              type="password"
+              :label="t('users.fieldPasswordNew')"
+              autocomplete="new-password"
+            />
+            <p class="user-edit-page__hint">{{ t('users.passwordOptionalHint') }}</p>
 
-          <template v-if="assignTypes">
-            <label class="user-edit-page__selectLabel" for="edit-user-type">{{ t('users.fieldUserType') }}</label>
-            <select
-              v-if="!form.is_root"
-              id="edit-user-type"
-              v-model="form.user_type"
-              class="user-edit-page__select"
-              name="edit-user-type"
-            >
-              <option v-for="opt in ASSIGNABLE_USER_TYPES" :key="opt" :value="opt">
-                {{ userTypeLabel(opt) }}
-              </option>
-            </select>
-            <p v-else class="user-edit-page__muted">{{ t('users.typeRootLocked') }}</p>
-            <label class="user-edit-page__checkLabel">
-              <input v-model="form.is_root" type="checkbox" name="edit-is-root" />
-              {{ t('users.fieldIsRoot') }}
-            </label>
-          </template>
-        </div>
-        <p v-if="saveError" class="user-edit-page__error" role="alert">
-          {{ saveError }}
-        </p>
-        <Button type="submit" variant="primary" :loading="saveLoading">
-          {{ t('users.saveUser') }}
-        </Button>
-      </form>
-    </Card>
+            <template v-if="assignTypes">
+              <label class="user-edit-page__selectLabel" for="edit-user-type">{{ t('users.fieldUserType') }}</label>
+              <select
+                v-if="!form.is_root"
+                id="edit-user-type"
+                v-model="form.user_type"
+                class="user-edit-page__select"
+                name="edit-user-type"
+              >
+                <option v-for="opt in ASSIGNABLE_USER_TYPES" :key="opt" :value="opt">
+                  {{ userTypeLabel(opt) }}
+                </option>
+              </select>
+              <p v-else class="user-edit-page__muted">{{ t('users.typeRootLocked') }}</p>
+              <label class="user-edit-page__checkLabel">
+                <input v-model="form.is_root" type="checkbox" name="edit-is-root" />
+                {{ t('users.fieldIsRoot') }}
+              </label>
+            </template>
+          </div>
+
+          <h2 class="user-edit-page__subheading">{{ t('profile.contactHeading') }}</h2>
+          <p class="user-edit-page__hint user-edit-page__hint--spaced">{{ t('profile.contactIntro') }}</p>
+          <div class="user-edit-page__contactBlock">
+            <ProfileStringListEditor
+              v-model="form.phone_numbers"
+              :label="t('profile.fieldPhones')"
+              input-type="text"
+              :add-label="t('profile.listAdd')"
+              :remove-label="t('profile.listRemove')"
+            />
+            <ProfileStringListEditor
+              v-model="form.contact_emails"
+              :label="t('profile.fieldContactEmails')"
+              input-type="email"
+              :add-label="t('profile.listAdd')"
+              :remove-label="t('profile.listRemove')"
+            />
+            <ProfileStringListEditor
+              v-model="form.aliases"
+              :label="t('profile.fieldAliases')"
+              input-type="text"
+              :add-label="t('profile.listAdd')"
+              :remove-label="t('profile.listRemove')"
+            />
+            <ProfileExternalLinksEditor
+              v-model="form.external_links"
+              :heading="t('profile.fieldExternalLinks')"
+              :title-label="t('profile.fieldLinkTitle')"
+              :url-label="t('profile.fieldLinkUrl')"
+              :add-label="t('profile.linkAdd')"
+              :remove-label="t('profile.listRemove')"
+            />
+          </div>
+
+          <p v-if="saveError" class="user-edit-page__error" role="alert">
+            {{ saveError }}
+          </p>
+          <Button type="submit" variant="primary" :loading="saveLoading">
+            {{ t('users.saveUser') }}
+          </Button>
+        </form>
+      </Card>
+    </template>
   </section>
 </template>
 
@@ -254,10 +355,29 @@ function goBack() {
   max-width: 28rem;
 }
 
+.user-edit-page__contactBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  width: 100%;
+  max-width: 36rem;
+}
+
+.user-edit-page__subheading {
+  margin: 0.5rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
 .user-edit-page__hint {
   margin: -0.25rem 0 0;
   font-size: 0.85rem;
   color: var(--muted, #6b7280);
+}
+
+.user-edit-page__hint--spaced {
+  margin: 0 0 0.35rem;
+  max-width: 36rem;
 }
 
 .user-edit-page__selectLabel {
@@ -284,5 +404,11 @@ function goBack() {
   margin: 0;
   color: #b91c1c;
   font-size: 0.9rem;
+}
+
+.user-edit-page__fieldError {
+  margin: -0.35rem 0 0;
+  color: #b91c1c;
+  font-size: 0.85rem;
 }
 </style>
