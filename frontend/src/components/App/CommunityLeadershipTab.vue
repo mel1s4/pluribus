@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue'
 import Card from '../../atoms/Card.vue'
 import { t } from '../../i18n/i18n'
-import { apiJson } from '../../services/api'
+import { fetchCommunityLeadership } from '../../services/communityApi.js'
 
 const loadError = ref('')
 const loading = ref(true)
@@ -47,7 +47,7 @@ const empty = computed(() => !loading.value && !loadError.value && leaders.value
 async function load() {
   loadError.value = ''
   loading.value = true
-  const { ok, status, data } = await apiJson('GET', '/api/community/leadership')
+  const { ok, status, data } = await fetchCommunityLeadership()
   loading.value = false
   if (!ok) {
     loadError.value = apiErrorMessage(data, status, t('communitySettings.leadershipLoadError'))
@@ -80,6 +80,7 @@ load()
               :src="leader.avatar_url"
               alt=""
               class="community-leadership-tab__avatar-img"
+              loading="lazy"
             />
             <span v-else class="community-leadership-tab__avatar-fallback" aria-hidden="true">
               {{ initials(leader.name) }}

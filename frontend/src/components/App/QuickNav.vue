@@ -1,21 +1,6 @@
-<template>
-  <nav v-if="placement === 'bottom'" class="quick-nav" aria-label="Quick navigation">
-    <RouterLink
-      v-for="item in items"
-      :key="item.to"
-      :to="item.to"
-      class="quick-nav__link"
-      active-class="is-active"
-      :aria-label="item.label"
-      :title="item.label"
-    >
-      <i :class="['fa-solid', item.icon]" aria-hidden="true" />
-    </RouterLink>
-  </nav>
-</template>
-
 <script setup>
 import { computed } from 'vue'
+import Icon from '../../atoms/Icon.vue'
 import { t } from '../../i18n/i18n'
 
 defineProps({
@@ -27,13 +12,29 @@ defineProps({
 })
 
 const items = computed(() => [
-  { to: '/chats', icon: 'fa-comments', label: t('quickNav.chats') },
-  { to: '/my-places', icon: 'fa-store', label: t('nav.myPlaces') },
-  { to: '/map', icon: 'fa-map-location-dot', label: t('quickNav.map') },
-  { to: '/notifications', icon: 'fa-bell', label: t('quickNav.notifications') },
-  { to: '/profile', icon: 'fa-user', label: t('quickNav.profile') },
+  { to: '/chats', icon: 'comments', label: t('quickNav.chats') },
+  { to: '/my-places', icon: 'store', label: t('nav.myPlaces') },
+  { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
+  { to: '/notifications', icon: 'bell', label: t('quickNav.notifications') },
+  { to: '/profile', icon: 'user', label: t('quickNav.profile') },
 ])
 </script>
+
+<template>
+  <nav v-if="placement === 'bottom'" class="quick-nav" aria-label="Quick navigation">
+    <RouterLink
+      v-for="item in items"
+      :key="item.to"
+      :to="item.to"
+      class="quick-nav__link"
+      active-class="is-active"
+      :aria-label="item.label"
+      :title="item.label"
+    >
+      <Icon class="quick-nav__icon" :name="item.icon" aria-hidden="true" />
+    </RouterLink>
+  </nav>
+</template>
 
 <style lang="scss" scoped>
 .quick-nav {
@@ -68,9 +69,9 @@ const items = computed(() => [
     opacity: 1;
     color: var(--link);
   }
+}
 
-  i {
-    font-size: 1.2rem;
-  }
+.quick-nav__icon {
+  font-size: 1.2rem;
 }
 </style>

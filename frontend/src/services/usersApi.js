@@ -1,11 +1,24 @@
 import { apiJson, ensureCsrfCookie } from './api.js'
+import { cachedGet, invalidateCache } from './cachedApi.js'
 
 /**
  * @param {number|string} id
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function fetchUser(id) {
-  return apiJson('GET', `/api/users/${id}`)
+  return cachedGet(`/api/users/${encodeURIComponent(String(id))}`)
+}
+
+/**
+ * @param {number} [page]
+ * @param {number} [perPage]
+ */
+export async function fetchUsersPage(page = 1, perPage = 20) {
+  return cachedGet(`/api/users?page=${page}&per_page=${perPage}`)
+}
+
+export async function fetchInvitations() {
+  return cachedGet('/api/invitations')
 }
 
 /**
@@ -13,7 +26,11 @@ export async function fetchUser(id) {
  */
 export async function createUser(body) {
   await ensureCsrfCookie()
-  return apiJson('POST', '/api/users', body)
+  const result = await apiJson('POST', '/api/users', body)
+  if (result.ok) {
+    invalidateCache(/^\/api\/users/)
+  }
+  return result
 }
 
 /**
@@ -22,7 +39,13 @@ export async function createUser(body) {
  */
 export async function updateUser(id, body) {
   await ensureCsrfCookie()
-  return apiJson('PATCH', `/api/users/${id}`, body)
+  const slug = encodeURIComponent(String(id))
+  const result = await apiJson('PATCH', `/api/users/${slug}`, body)
+  if (result.ok) {
+    invalidateCache(/^\/api\/users/)
+    invalidateCache(`/api/users/${slug}`)
+  }
+  return result
 }
 
 /**

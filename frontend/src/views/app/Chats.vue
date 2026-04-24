@@ -5,9 +5,9 @@
       <details ref="addMenuEl" class="chats-add">
         <summary class="chats-add__summary btn btn--primary btn--md">
           <span class="chats-add__summaryInner">
-            <i class="fa-solid fa-plus" aria-hidden="true" />
+            <Icon class="chats-add__glyph" name="plus" aria-hidden="true" />
             {{ t('chats.add') }}
-            <i class="fa-solid fa-chevron-down chats-add__chev" aria-hidden="true" />
+            <Icon class="chats-add__glyph chats-add__chev" name="chevron-down" aria-hidden="true" />
           </span>
         </summary>
         <div class="chats-add__menu" role="menu">
@@ -17,7 +17,7 @@
             role="menuitem"
             @click="addConversation"
           >
-            <i class="fa-solid fa-comments" aria-hidden="true" />
+            <Icon class="chats-add__glyph" name="comments" aria-hidden="true" />
             {{ t('chats.addConversation') }}
           </button>
           <button
@@ -26,7 +26,7 @@
             role="menuitem"
             @click="addList"
           >
-            <i class="fa-solid fa-list" aria-hidden="true" />
+            <Icon class="chats-add__glyph" name="list" aria-hidden="true" />
             {{ t('chats.addList') }}
           </button>
           <button
@@ -35,7 +35,7 @@
             role="menuitem"
             @click="addNote"
           >
-            <i class="fa-solid fa-note-sticky" aria-hidden="true" />
+            <Icon class="chats-add__glyph" name="note-sticky" aria-hidden="true" />
             {{ t('chats.addNote') }}
           </button>
           <button
@@ -44,7 +44,7 @@
             role="menuitem"
             @click="addFolder"
           >
-            <i class="fa-solid fa-folder" aria-hidden="true" />
+            <Icon class="chats-add__glyph" name="folder" aria-hidden="true" />
             {{ t('chats.addFolder') }}
           </button>
         </div>
@@ -62,7 +62,7 @@
         class="chats-folder"
       >
         <div class="chats-folder__header">
-          <i class="fa-solid fa-folder chats-folder__folderIcon" aria-hidden="true" />
+          <Icon class="chats-folder__folderIcon" name="folder" aria-hidden="true" />
           <template v-if="section.key === 'unfiled'">
             <span class="chats-folder__name">{{ section.label }}</span>
           </template>
@@ -101,9 +101,9 @@
               class="chats-file"
             >
               <div class="chats-file__row">
-                <i
-                  class="chats-file__icon fa-solid"
-                  :class="fileIcon(item.kind)"
+                <Icon
+                  class="chats-file__icon"
+                  :name="fileIcon(item.kind)"
                   aria-hidden="true"
                 />
                 <div class="chats-file__main">
@@ -139,7 +139,7 @@
                     class="chats-kebab__trigger"
                     :aria-label="t('chats.actionsMenu')"
                   >
-                    <i class="fa-solid fa-ellipsis-vertical" aria-hidden="true" />
+                    <Icon class="chats-kebab__glyph" name="ellipsis-vertical" aria-hidden="true" />
                   </summary>
                   <div
                     class="chats-kebab__menu"
@@ -152,7 +152,7 @@
                       role="menuitem"
                       @click="onRenameClick(item)"
                     >
-                      <i class="fa-solid fa-pen" aria-hidden="true" />
+                      <Icon class="chats-kebab__glyph" name="pen" aria-hidden="true" />
                       {{ t('chats.rename') }}
                     </button>
                     <button
@@ -161,7 +161,7 @@
                       role="menuitem"
                       @click="openMoveModal(item)"
                     >
-                      <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true" />
+                      <Icon class="chats-kebab__glyph" name="arrow-right-arrow-left" aria-hidden="true" />
                       {{ t('chats.moveToFolder') }}
                     </button>
                     <button
@@ -170,7 +170,7 @@
                       role="menuitem"
                       @click="onDeleteClick(item.id)"
                     >
-                      <i class="fa-solid fa-trash" aria-hidden="true" />
+                      <Icon class="chats-kebab__glyph" name="trash" aria-hidden="true" />
                       {{ t('chats.delete') }}
                     </button>
                   </div>
@@ -202,7 +202,7 @@
             class="chats-move-dialog__back btn btn--secondary btn--sm"
             @click="goBackMove"
           >
-            <i class="fa-solid fa-arrow-left" aria-hidden="true" />
+            <Icon class="chats-move-dialog__glyph" name="arrow-left" aria-hidden="true" />
             {{ t('chats.moveBack') }}
           </button>
           <span class="chats-move-dialog__path">{{ moveBreadcrumb }}</span>
@@ -216,7 +216,7 @@
               :class="{ 'is-selected': pendingFolderId === null }"
               @click="selectMoveUnfiled"
             >
-              <i class="fa-solid fa-folder-open chats-move-dialog__rowIcon" aria-hidden="true" />
+              <Icon class="chats-move-dialog__rowIcon" name="folder-open" aria-hidden="true" />
               <span class="chats-move-dialog__rowLabel">{{ t('chats.moveSelectUnfiled') }}</span>
             </button>
             <button
@@ -227,10 +227,10 @@
               :class="{ 'is-selected': pendingFolderId === f.id }"
               @click="navigateIntoFolder(f.id)"
             >
-              <i class="fa-solid fa-folder chats-move-dialog__rowIcon" aria-hidden="true" />
+              <Icon class="chats-move-dialog__rowIcon" name="folder" aria-hidden="true" />
               <span class="chats-move-dialog__rowLabel">{{ f.name }}</span>
               <span class="chats-move-dialog__open">{{ t('chats.moveOpenFolder') }}</span>
-              <i class="fa-solid fa-chevron-right chats-move-dialog__chev" aria-hidden="true" />
+              <Icon class="chats-move-dialog__chev" name="chevron-right" aria-hidden="true" />
             </button>
           </template>
           <template v-else>
@@ -245,10 +245,10 @@
               :class="{ 'is-selected': pendingFolderId === f.id }"
               @click="navigateIntoFolder(f.id)"
             >
-              <i class="fa-solid fa-folder chats-move-dialog__rowIcon" aria-hidden="true" />
+              <Icon class="chats-move-dialog__rowIcon" name="folder" aria-hidden="true" />
               <span class="chats-move-dialog__rowLabel">{{ f.name }}</span>
               <span class="chats-move-dialog__open">{{ t('chats.moveOpenFolder') }}</span>
-              <i class="fa-solid fa-chevron-right chats-move-dialog__chev" aria-hidden="true" />
+              <Icon class="chats-move-dialog__chev" name="chevron-right" aria-hidden="true" />
             </button>
           </template>
         </div>
@@ -268,8 +268,9 @@
 
 <script setup>
 import { computed, nextTick, ref } from 'vue'
-import { t } from '../../i18n/i18n'
+import Icon from '../../atoms/Icon.vue'
 import Title from '../../atoms/Title.vue'
+import { t } from '../../i18n/i18n'
 
 function uid() {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -529,9 +530,9 @@ function onDeleteClick(id) {
 }
 
 function fileIcon(kind) {
-  if (kind === 'conversation') return 'fa-file-lines'
-  if (kind === 'list') return 'fa-list'
-  return 'fa-note-sticky'
+  if (kind === 'conversation') return 'file-lines'
+  if (kind === 'list') return 'list'
+  return 'note-sticky'
 }
 
 function kindLabel(kind) {
@@ -610,6 +611,11 @@ seed()
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
+}
+
+.chats-add__glyph {
+  font-size: 1em;
+  flex-shrink: 0;
 }
 
 .chats-add__chev {
@@ -775,6 +781,7 @@ html[data-theme='dark'] .chats-folder__folderIcon {
 .chats-file__icon {
   flex-shrink: 0;
   width: 1.1rem;
+  height: 1.1rem;
   text-align: center;
   opacity: 0.88;
   font-size: 0.95rem;
@@ -834,6 +841,10 @@ html[data-theme='dark'] .chats-folder__folderIcon {
 
 .chats-kebab__trigger:hover {
   background: var(--btn-bg);
+}
+
+.chats-kebab__glyph {
+  font-size: 0.95rem;
 }
 
 .chats-kebab__menu {
@@ -926,6 +937,16 @@ html[data-theme='dark'] .chats-move-dialog::backdrop {
 
 .chats-move-dialog__back {
   margin: 0;
+}
+
+.chats-move-dialog__glyph {
+  font-size: 1rem;
+  margin-inline-end: 0.35rem;
+}
+
+.chats-move-dialog__rowIcon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
 }
 
 .chats-move-dialog__path {

@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { apiJson, ensureCsrfCookie } from '../services/api'
+import { clearAllCache } from '../services/cachedApi.js'
 
 export const sessionUser = ref(null)
 export const sessionStatus = ref('unknown')
@@ -65,6 +66,7 @@ export async function logoutRequest() {
   sessionUser.value = null
   sessionStatus.value = 'guest'
   clearHadAuthenticatedSession()
+  clearAllCache()
   return out
 }
 
@@ -72,6 +74,7 @@ export function setSessionFromLoginUser(user) {
   sessionUser.value = user
   sessionStatus.value = 'authenticated'
   markHadAuthenticatedSession()
+  clearAllCache()
 }
 
 /**
@@ -92,6 +95,7 @@ export async function applyUnauthorizedFromApi(path, method) {
   sessionUser.value = null
   sessionStatus.value = 'guest'
   clearHadAuthenticatedSession()
+  clearAllCache()
   const { default: router } = await import('../router/index.js')
   const route = router.currentRoute.value
   if (route.name === 'login' || !route.meta.requiresAuth) {

@@ -159,6 +159,7 @@ function setSchedule(next) {
           :src="logoPreviewSrc"
           alt=""
           class="place-basics-form__logo-preview"
+          loading="lazy"
         />
       </div>
       <input

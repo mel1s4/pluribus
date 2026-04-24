@@ -401,6 +401,7 @@ async function createRow() {
             :src="url"
             alt=""
             class="place-reqs__thumb"
+            loading="lazy"
           />
           <label class="place-reqs__check">
             <input

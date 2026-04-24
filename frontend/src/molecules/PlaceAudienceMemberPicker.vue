@@ -89,6 +89,7 @@ function setId(id, checked) {
                 :src="m.avatar_url"
                 alt=""
                 class="place-audience-member-picker__avatar-img"
+                loading="lazy"
               />
               <span
                 v-else

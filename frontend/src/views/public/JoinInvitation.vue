@@ -117,14 +117,14 @@ async function onRegister() {
   )
 }
 
-onMounted(() => {
-  applyJoinInvitationPageLanguage(pickLanguageForInvitePage(null))
+onMounted(async () => {
+  await applyJoinInvitationPageLanguage(pickLanguageForInvitePage(null))
   loadPreview()
 })
 
-watch(preview, (p) => {
+watch(preview, async (p) => {
   if (p !== null) {
-    applyJoinInvitationPageLanguage(pickLanguageForInvitePage(p))
+    await applyJoinInvitationPageLanguage(pickLanguageForInvitePage(p))
   }
 })
 

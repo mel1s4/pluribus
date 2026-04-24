@@ -118,6 +118,7 @@ load()
           :src="place.logo_url"
           alt=""
           class="place-view-page__logo"
+          loading="lazy"
         />
         <div>
           <h1 class="place-view-page__title">{{ place.name }}</h1>

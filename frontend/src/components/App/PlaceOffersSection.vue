@@ -278,6 +278,7 @@ async function createOffer() {
             :src="url"
             alt=""
             class="place-offers__thumb"
+            loading="lazy"
           />
           <label class="place-offers__check">
             <input

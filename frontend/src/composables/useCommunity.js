@@ -1,5 +1,5 @@
 import { computed, ref } from 'vue'
-import { apiJson } from '../services/api'
+import { cachedGet } from '../services/cachedApi.js'
 import { language, t } from '../i18n/i18n'
 
 export const communityName = ref(null)
@@ -26,7 +26,7 @@ export function useCommunity() {
 }
 
 export async function fetchCommunityBranding() {
-  const { ok, data } = await apiJson('GET', '/api/community/branding')
+  const { ok, data } = await cachedGet('/api/community/branding')
   if (!ok || !data || typeof data !== 'object' || !data.community) {
     communityName.value = null
     communityLogoUrl.value = null

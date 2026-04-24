@@ -1,24 +1,31 @@
 import { apiForm, apiJson, ensureCsrfCookie } from './api.js'
+import { cachedGet, invalidateCache } from './cachedApi.js'
+
+function invalidatePlacesCaches() {
+  invalidateCache(/^\/api\/places/)
+  invalidateCache('/api/community-map/places')
+  invalidateCache(/^\/api\/community-place-offers/)
+}
 
 /**
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function fetchPlaces() {
-  return apiJson('GET', '/api/places')
+  return cachedGet('/api/places')
 }
 
 /**
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function fetchCommunityPlacesMap() {
-  return apiJson('GET', '/api/community-map/places')
+  return cachedGet('/api/community-map/places')
 }
 
 /**
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function fetchPlace(id) {
-  return apiJson('GET', `/api/places/${id}`)
+  return cachedGet(`/api/places/${id}`)
 }
 
 /**
@@ -26,10 +33,11 @@ export async function fetchPlace(id) {
  */
 export async function createPlace(body) {
   await ensureCsrfCookie()
-  if (body instanceof FormData) {
-    return apiForm('POST', '/api/places', body)
-  }
-  return apiJson('POST', '/api/places', body)
+  const result = body instanceof FormData
+    ? await apiForm('POST', '/api/places', body)
+    : await apiJson('POST', '/api/places', body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -38,10 +46,11 @@ export async function createPlace(body) {
  */
 export async function updatePlace(id, body) {
   await ensureCsrfCookie()
-  if (body instanceof FormData) {
-    return apiForm('PATCH', `/api/places/${id}`, body)
-  }
-  return apiJson('PATCH', `/api/places/${id}`, body)
+  const result = body instanceof FormData
+    ? await apiForm('PATCH', `/api/places/${id}`, body)
+    : await apiJson('PATCH', `/api/places/${id}`, body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -49,14 +58,16 @@ export async function updatePlace(id, body) {
  */
 export async function deletePlace(id) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${id}`)
+  const result = await apiJson('DELETE', `/api/places/${id}`)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
  * @param {number|string} placeId
  */
 export async function fetchOffers(placeId) {
-  return apiJson('GET', `/api/places/${placeId}/offers`)
+  return cachedGet(`/api/places/${placeId}/offers`)
 }
 
 /**
@@ -65,10 +76,11 @@ export async function fetchOffers(placeId) {
  */
 export async function createOffer(placeId, payload) {
   await ensureCsrfCookie()
-  if (payload instanceof FormData) {
-    return apiForm('POST', `/api/places/${placeId}/offers`, payload)
-  }
-  return apiJson('POST', `/api/places/${placeId}/offers`, payload)
+  const result = payload instanceof FormData
+    ? await apiForm('POST', `/api/places/${placeId}/offers`, payload)
+    : await apiJson('POST', `/api/places/${placeId}/offers`, payload)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -78,10 +90,11 @@ export async function createOffer(placeId, payload) {
  */
 export async function updateOffer(placeId, offerId, payload) {
   await ensureCsrfCookie()
-  if (payload instanceof FormData) {
-    return apiForm('PATCH', `/api/places/${placeId}/offers/${offerId}`, payload)
-  }
-  return apiJson('PATCH', `/api/places/${placeId}/offers/${offerId}`, payload)
+  const result = payload instanceof FormData
+    ? await apiForm('PATCH', `/api/places/${placeId}/offers/${offerId}`, payload)
+    : await apiJson('PATCH', `/api/places/${placeId}/offers/${offerId}`, payload)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -90,14 +103,16 @@ export async function updateOffer(placeId, offerId, payload) {
  */
 export async function deleteOffer(placeId, offerId) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${placeId}/offers/${offerId}`)
+  const result = await apiJson('DELETE', `/api/places/${placeId}/offers/${offerId}`)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
  * @param {number|string} placeId
  */
 export async function fetchRequirements(placeId) {
-  return apiJson('GET', `/api/places/${placeId}/requirements`)
+  return cachedGet(`/api/places/${placeId}/requirements`)
 }
 
 /**
@@ -106,10 +121,11 @@ export async function fetchRequirements(placeId) {
  */
 export async function createRequirement(placeId, payload) {
   await ensureCsrfCookie()
-  if (payload instanceof FormData) {
-    return apiForm('POST', `/api/places/${placeId}/requirements`, payload)
-  }
-  return apiJson('POST', `/api/places/${placeId}/requirements`, payload)
+  const result = payload instanceof FormData
+    ? await apiForm('POST', `/api/places/${placeId}/requirements`, payload)
+    : await apiJson('POST', `/api/places/${placeId}/requirements`, payload)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -119,10 +135,11 @@ export async function createRequirement(placeId, payload) {
  */
 export async function updateRequirement(placeId, requirementId, payload) {
   await ensureCsrfCookie()
-  if (payload instanceof FormData) {
-    return apiForm('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
-  }
-  return apiJson('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
+  const result = payload instanceof FormData
+    ? await apiForm('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
+    : await apiJson('PATCH', `/api/places/${placeId}/requirements/${requirementId}`, payload)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -131,7 +148,9 @@ export async function updateRequirement(placeId, requirementId, payload) {
  */
 export async function deleteRequirement(placeId, requirementId) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${placeId}/requirements/${requirementId}`)
+  const result = await apiJson('DELETE', `/api/places/${placeId}/requirements/${requirementId}`)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -143,7 +162,7 @@ export async function fetchCommunityPlaceOffers(params = {}) {
   if (params.page) q.set('page', String(params.page))
   const qs = q.toString()
   const suffix = qs ? `?${qs}` : ''
-  return apiJson('GET', `/api/community-place-offers${suffix}`)
+  return cachedGet(`/api/community-place-offers${suffix}`)
 }
 
 /**
@@ -153,10 +172,11 @@ export async function fetchCommunityPlaceOffers(params = {}) {
  */
 export async function createRequirementResponse(placeId, requirementId, payload) {
   await ensureCsrfCookie()
-  if (payload instanceof FormData) {
-    return apiForm('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
-  }
-  return apiJson('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
+  const result = payload instanceof FormData
+    ? await apiForm('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
+    : await apiJson('POST', `/api/places/${placeId}/requirements/${requirementId}/responses`, payload)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -166,21 +186,26 @@ export async function createRequirementResponse(placeId, requirementId, payload)
  */
 export async function deleteRequirementResponse(placeId, requirementId, responseId) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${placeId}/requirements/${requirementId}/responses/${responseId}`)
+  const result = await apiJson(
+    'DELETE',
+    `/api/places/${placeId}/requirements/${requirementId}/responses/${responseId}`,
+  )
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
  * @param {number|string} placeId
  */
 export async function fetchPlaceAudienceMembers(placeId) {
-  return apiJson('GET', `/api/places/${placeId}/audience-members`)
+  return cachedGet(`/api/places/${placeId}/audience-members`)
 }
 
 /**
  * @param {number|string} placeId
  */
 export async function fetchAudiences(placeId) {
-  return apiJson('GET', `/api/places/${placeId}/audiences`)
+  return cachedGet(`/api/places/${placeId}/audiences`)
 }
 
 /**
@@ -189,7 +214,9 @@ export async function fetchAudiences(placeId) {
  */
 export async function createAudience(placeId, body) {
   await ensureCsrfCookie()
-  return apiJson('POST', `/api/places/${placeId}/audiences`, body)
+  const result = await apiJson('POST', `/api/places/${placeId}/audiences`, body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -199,7 +226,9 @@ export async function createAudience(placeId, body) {
  */
 export async function updateAudience(placeId, audienceId, body) {
   await ensureCsrfCookie()
-  return apiJson('PATCH', `/api/places/${placeId}/audiences/${audienceId}`, body)
+  const result = await apiJson('PATCH', `/api/places/${placeId}/audiences/${audienceId}`, body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -208,14 +237,16 @@ export async function updateAudience(placeId, audienceId, body) {
  */
 export async function deleteAudience(placeId, audienceId) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${placeId}/audiences/${audienceId}`)
+  const result = await apiJson('DELETE', `/api/places/${placeId}/audiences/${audienceId}`)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
  * @param {number|string} placeId
  */
 export async function fetchPlaceAdministrators(placeId) {
-  return apiJson('GET', `/api/places/${placeId}/administrators`)
+  return cachedGet(`/api/places/${placeId}/administrators`)
 }
 
 /**
@@ -224,7 +255,9 @@ export async function fetchPlaceAdministrators(placeId) {
  */
 export async function addPlaceAdministrator(placeId, body) {
   await ensureCsrfCookie()
-  return apiJson('POST', `/api/places/${placeId}/administrators`, body)
+  const result = await apiJson('POST', `/api/places/${placeId}/administrators`, body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -234,7 +267,9 @@ export async function addPlaceAdministrator(placeId, body) {
  */
 export async function updatePlaceAdministrator(placeId, userId, body) {
   await ensureCsrfCookie()
-  return apiJson('PATCH', `/api/places/${placeId}/administrators/${userId}`, body)
+  const result = await apiJson('PATCH', `/api/places/${placeId}/administrators/${userId}`, body)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }
 
 /**
@@ -243,5 +278,7 @@ export async function updatePlaceAdministrator(placeId, userId, body) {
  */
 export async function removePlaceAdministrator(placeId, userId) {
   await ensureCsrfCookie()
-  return apiJson('DELETE', `/api/places/${placeId}/administrators/${userId}`)
+  const result = await apiJson('DELETE', `/api/places/${placeId}/administrators/${userId}`)
+  if (result.ok) invalidatePlacesCaches()
+  return result
 }

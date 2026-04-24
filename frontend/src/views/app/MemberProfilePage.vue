@@ -87,6 +87,7 @@ load()
             :src="member.avatar_url"
             alt=""
             class="member-profile-page__avatar"
+            loading="lazy"
           />
           <div v-else class="member-profile-page__avatar member-profile-page__avatar--placeholder">
             {{ (member.name || '?').slice(0, 1) }}
@@ -153,7 +154,12 @@ load()
               }"
             >
               <span v-if="pl.logo_url" class="member-profile-page__placeLogoWrap">
-                <img :src="pl.logo_url" alt="" class="member-profile-page__placeLogo" />
+                <img
+                  :src="pl.logo_url"
+                  alt=""
+                  class="member-profile-page__placeLogo"
+                  loading="lazy"
+                />
               </span>
               <span class="member-profile-page__placeText">
                 <span class="member-profile-page__placeName">{{ pl.name }}</span>

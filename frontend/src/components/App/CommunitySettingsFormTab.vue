@@ -7,6 +7,8 @@ import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../../i18n/locales'
+import { invalidateCache } from '../../services/cachedApi.js'
+import { fetchCommunity } from '../../services/communityApi.js'
 import { apiForm, apiJson } from '../../services/api'
 
 const form = reactive({
@@ -82,7 +84,7 @@ function apiErrorMessage(data, status, fallback) {
 async function load() {
   loadError.value = ''
   loading.value = true
-  const { ok, status, data } = await apiJson('GET', '/api/community')
+  const { ok, status, data } = await fetchCommunity()
   loading.value = false
   if (!ok) {
     loadError.value = apiErrorMessage(data, status, t('communitySettings.loadError'))
@@ -159,6 +161,8 @@ async function onSubmit() {
     saveError.value = apiErrorMessage(data, status, t('communitySettings.saveError'))
     return
   }
+  invalidateCache(/^\/api\/community/)
+  invalidateCache('/api/community/branding')
   await load()
   await fetchCommunityBranding()
 }
@@ -229,6 +233,7 @@ async function onSubmit() {
                 :src="logoPreviewSrc"
                 alt=""
                 class="community-settings-form-tab__logo-preview"
+                loading="lazy"
               />
             </div>
             <input

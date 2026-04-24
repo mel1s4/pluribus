@@ -155,6 +155,7 @@ async function submitAdd() {
                 :src="a.avatar_url"
                 alt=""
                 class="place-administrators__avatar-img"
+                loading="lazy"
               />
               <span v-else class="place-administrators__avatar-fallback">{{ initials(a.name) }}</span>
             </span>

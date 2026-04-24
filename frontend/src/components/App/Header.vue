@@ -1,3 +1,31 @@
+<script setup>
+import { computed, ref } from 'vue'
+import { useRoute } from 'vue-router'
+import Button from '../../atoms/Button.vue'
+import Icon from '../../atoms/Icon.vue'
+import { useAppShell } from '../../composables/useAppShell'
+import { t } from '../../i18n/i18n'
+
+const route = useRoute()
+const { sidebarOpen, toggleSidebar, headerActions } = useAppShell()
+
+const searchQuery = ref('')
+const sidebarControlsId = 'app-sidebar'
+
+const titleText = computed(() => {
+  const key = route.meta?.headerTitleKey
+  if (typeof key !== 'string' || !key.length) return ''
+  return t(key)
+})
+
+const quickItems = computed(() => [
+  { to: '/chats', icon: 'comments', label: t('quickNav.chats') },
+  { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
+  { to: '/notifications', icon: 'bell', label: t('quickNav.notifications') },
+  { to: '/profile', icon: 'user', label: t('quickNav.profile') },
+])
+</script>
+
 <template>
   <header class="app-header">
     <!-- Mobile: menu + title + route-driven actions -->
@@ -10,7 +38,7 @@
         :aria-label="t('nav.openNavigation')"
         @click="toggleSidebar"
       >
-        <i class="fa-solid fa-bars" aria-hidden="true" />
+        <Icon class="app-header__iconGlyph" name="bars" aria-hidden="true" />
       </button>
 
       <h1 v-if="titleText" class="app-header__title">{{ titleText }}</h1>
@@ -41,11 +69,15 @@
           :aria-label="t('nav.openNavigation')"
           @click="toggleSidebar"
         >
-          <i class="fa-solid fa-bars" aria-hidden="true" />
+          <Icon class="app-header__iconGlyph" name="bars" aria-hidden="true" />
         </button>
 
         <div class="app-header__search">
-          <i class="fa-solid fa-magnifying-glass app-header__searchIcon" aria-hidden="true" />
+          <Icon
+            class="app-header__searchIcon"
+            name="magnifying-glass"
+            aria-hidden="true"
+          />
           <input
             v-model="searchQuery"
             class="app-header__searchInput"
@@ -68,39 +100,12 @@
           :title="item.label"
           :aria-label="item.label"
         >
-          <i :class="['fa-solid', item.icon]" aria-hidden="true" />
+          <Icon class="app-header__iconGlyph" :name="item.icon" aria-hidden="true" />
         </RouterLink>
       </nav>
     </div>
   </header>
 </template>
-
-<script setup>
-import { computed, ref } from 'vue'
-import { useRoute } from 'vue-router'
-import Button from '../../atoms/Button.vue'
-import { t } from '../../i18n/i18n'
-import { useAppShell } from '../../composables/useAppShell'
-
-const route = useRoute()
-const { sidebarOpen, toggleSidebar, headerActions } = useAppShell()
-
-const searchQuery = ref('')
-const sidebarControlsId = 'app-sidebar'
-
-const titleText = computed(() => {
-  const key = route.meta?.headerTitleKey
-  if (typeof key !== 'string' || !key.length) return ''
-  return t(key)
-})
-
-const quickItems = computed(() => [
-  { to: '/chats', icon: 'fa-comments', label: t('quickNav.chats') },
-  { to: '/map', icon: 'fa-map-location-dot', label: t('quickNav.map') },
-  { to: '/notifications', icon: 'fa-bell', label: t('quickNav.notifications') },
-  { to: '/profile', icon: 'fa-user', label: t('quickNav.profile') },
-])
-</script>
 
 <style lang="scss" scoped>
 .app-header {
@@ -183,10 +188,10 @@ const quickItems = computed(() => [
   &:hover {
     background: var(--btn-bg-hover);
   }
+}
 
-  i {
-    font-size: 1.1rem;
-  }
+.app-header__iconGlyph {
+  font-size: 1.1rem;
 }
 
 .app-header__search {
@@ -254,10 +259,6 @@ const quickItems = computed(() => [
     html[data-theme='dark'] & {
       background: rgba(96, 165, 250, 0.12);
     }
-  }
-
-  i {
-    font-size: 1.1rem;
   }
 }
 </style>

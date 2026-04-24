@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import Icon from '../../atoms/Icon.vue'
 import { hasCapability } from '../../composables/useCapabilities'
 import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
@@ -19,34 +20,34 @@ const sidebarId = 'app-sidebar'
 
 const links = computed(() => {
   const all = [
-    { key: 'dashboard', to: '/dashboard', label: t('nav.dashboard'), icon: 'fa-gauge-high', capability: null },
+    { key: 'dashboard', to: '/dashboard', label: t('nav.dashboard'), icon: 'gauge-high', capability: null },
     {
       key: 'users',
       to: '/users',
       label: t('nav.users'),
-      icon: 'fa-users',
+      icon: 'users',
       capability: null,
     },
     {
       key: 'community-settings',
       to: '/community',
       label: t('nav.community'),
-      icon: 'fa-people-roof',
+      icon: 'people-roof',
       capability: null,
     },
-    { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'fa-plug', capability: null },
-    { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'fa-comments', capability: null },
-    { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'fa-store', capability: null },
-    { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'fa-map-location-dot', capability: null },
+    { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'plug', capability: null },
+    { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'comments', capability: null },
+    { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'store', capability: null },
+    { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'map-location-dot', capability: null },
     {
       key: 'notifications',
       to: '/notifications',
       label: t('quickNav.notifications'),
-      icon: 'fa-bell',
+      icon: 'bell',
       capability: null,
     },
-    { key: 'profile', to: '/profile', label: t('quickNav.profile'), icon: 'fa-user', capability: null },
-    { key: 'settings', to: '/settings', label: t('nav.settings'), icon: 'fa-gear', capability: null },
+    { key: 'profile', to: '/profile', label: t('quickNav.profile'), icon: 'user', capability: null },
+    { key: 'settings', to: '/settings', label: t('nav.settings'), icon: 'gear', capability: null },
   ]
   return all.filter((item) => !item.capability || hasCapability(item.capability))
 })
@@ -68,7 +69,7 @@ function maybeCloseMobile() {
         :aria-label="t('nav.closeNavigation')"
         @click="emit('close')"
       >
-        <i class="fa-solid fa-xmark" aria-hidden="true" />
+        <Icon class="app-sidebar__icon" name="xmark" aria-hidden="true" />
       </button>
     </div>
 
@@ -81,7 +82,7 @@ function maybeCloseMobile() {
         active-class="is-active"
         @click="maybeCloseMobile"
       >
-        <i :class="['fa-solid', link.icon]" aria-hidden="true" />
+        <Icon class="app-sidebar__icon" :name="link.icon" aria-hidden="true" />
         <span>{{ link.label }}</span>
       </RouterLink>
     </nav>
@@ -160,5 +161,10 @@ function maybeCloseMobile() {
     background: color-mix(in srgb, var(--border) 55%, transparent);
     font-weight: 600;
   }
+}
+
+.app-sidebar__icon {
+  font-size: 1.05rem;
+  flex-shrink: 0;
 }
 </style>

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from 'vue'
+import Icon from './Icon.vue'
 import { t } from '../i18n/i18n'
 
 const props = defineProps({
@@ -108,9 +109,9 @@ function togglePassword() {
           :aria-pressed="passwordVisible"
           @click="togglePassword"
         >
-          <span
-            class="field__toggleIcon fa-solid"
-            :class="passwordVisible ? 'fa-eye-slash' : 'fa-eye'"
+          <Icon
+            class="field__toggleIcon"
+            :name="passwordVisible ? 'eye-slash' : 'eye'"
             aria-hidden="true"
           />
         </button>
@@ -153,9 +154,9 @@ function togglePassword() {
         :aria-pressed="passwordVisible"
         @click="togglePassword"
       >
-        <span
-          class="field__toggleIcon fa-solid"
-          :class="passwordVisible ? 'fa-eye-slash' : 'fa-eye'"
+        <Icon
+          class="field__toggleIcon"
+          :name="passwordVisible ? 'eye-slash' : 'eye'"
           aria-hidden="true"
         />
       </button>

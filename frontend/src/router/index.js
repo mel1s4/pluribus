@@ -282,7 +282,11 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
-  if (sessionStatus.value === 'unknown' || to.meta.requiresAuth) {
+  const needsResolution =
+    sessionStatus.value === 'unknown'
+    || (to.meta.requiresAuth && sessionStatus.value !== 'authenticated')
+
+  if (needsResolution) {
     await resolveSession()
   }
   if (to.meta.requiresAuth && sessionStatus.value !== 'authenticated') {

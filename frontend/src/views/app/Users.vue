@@ -9,7 +9,9 @@ import { hasCapability } from '../../composables/useCapabilities'
 import { useAppShell } from '../../composables/useAppShell'
 import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
+import { invalidateCache } from '../../services/cachedApi.js'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
+import { fetchInvitations, fetchUsersPage } from '../../services/usersApi.js'
 
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
@@ -54,7 +56,7 @@ watch(showTabs, (visible) => {
 async function fetchPage(nextPage) {
   listError.value = ''
   listLoading.value = true
-  const { ok, status, data } = await apiJson('GET', `/api/users?page=${nextPage}&per_page=20`)
+  const { ok, status, data } = await fetchUsersPage(nextPage, 20)
   listLoading.value = false
   if (!ok) {
     listError.value =
@@ -70,7 +72,7 @@ async function fetchPage(nextPage) {
 async function fetchInvitations() {
   invitationsError.value = ''
   invitationsLoading.value = true
-  const { ok, status, data } = await apiJson('GET', '/api/invitations')
+  const { ok, status, data } = await fetchInvitations()
   invitationsLoading.value = false
   if (!ok) {
     invitations.value = []
@@ -139,6 +141,7 @@ async function onDeleteUser(target) {
       t('users.deleteError').replace('{status}', String(status))
     return
   }
+  invalidateCache(/^\/api\/users/)
   await fetchPage(page.value)
 }
 
@@ -189,6 +192,7 @@ async function onDeleteInvitation(row) {
       t('users.invitationsDeleteError').replace('{status}', String(status))
     return
   }
+  invalidateCache(/^\/api\/invitations/)
   await fetchInvitations()
 }
 
