@@ -11,7 +11,7 @@ import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { invalidateCache } from '../../services/cachedApi.js'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
-import { fetchInvitations, fetchUsersPage } from '../../services/usersApi.js'
+import { fetchInvitations as fetchInvitationsApi, fetchUsersPage } from '../../services/usersApi.js'
 
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
@@ -72,7 +72,7 @@ async function fetchPage(nextPage) {
 async function fetchInvitations() {
   invitationsError.value = ''
   invitationsLoading.value = true
-  const { ok, status, data } = await fetchInvitations()
+  const { ok, status, data } = await fetchInvitationsApi()
   invitationsLoading.value = false
   if (!ok) {
     invitations.value = []

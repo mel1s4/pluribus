@@ -23,10 +23,27 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-vue': ['vue', 'vue-router'],
-          'vendor-maps': ['leaflet', 'leaflet-draw'],
-          'vendor-realtime': ['laravel-echo', 'pusher-js'],
+        // Rolldown (Vite 8+) expects a function; object form is Rollup-only.
+        manualChunks(id) {
+          const norm = id.replace(/\\/g, '/')
+          if (
+            norm.includes('/node_modules/vue/') ||
+            norm.includes('/node_modules/vue-router/')
+          ) {
+            return 'vendor-vue'
+          }
+          if (
+            norm.includes('/node_modules/leaflet/') ||
+            norm.includes('/node_modules/leaflet-draw/')
+          ) {
+            return 'vendor-maps'
+          }
+          if (
+            norm.includes('/node_modules/laravel-echo/') ||
+            norm.includes('/node_modules/pusher-js/')
+          ) {
+            return 'vendor-realtime'
+          }
         },
       },
     },
