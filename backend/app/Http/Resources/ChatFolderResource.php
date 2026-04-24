@@ -18,6 +18,8 @@ class ChatFolderResource extends JsonResource
             'id' => $this->id,
             'user_id' => $this->user_id,
             'name' => $this->name,
+            'icon_emoji' => $this->icon_emoji,
+            'icon_bg_color' => $this->icon_bg_color,
             'parent_id' => $this->parent_id,
             'sort_order' => $this->sort_order,
             'created_at' => $this->created_at?->toIso8601String(),

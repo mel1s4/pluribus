@@ -37,6 +37,25 @@ class ChatApiTest extends TestCase
         $this->assertDatabaseHas('chat_members', ['chat_id' => $chatId, 'user_id' => $peer->id]);
     }
 
+    public function test_member_can_create_group_chat_with_only_owner_member_ids(): void
+    {
+        $owner = User::factory()->create(['user_type' => 'member']);
+        Community::current();
+
+        $response = $this->actingAs($owner)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/chats', [
+                'type' => Chat::TYPE_GROUP,
+                'title' => 'Solo',
+                'member_ids' => [],
+            ])
+            ->assertCreated();
+
+        $chatId = (int) $response->json('chat.id');
+        $this->assertDatabaseHas('chat_members', ['chat_id' => $chatId, 'user_id' => $owner->id]);
+        $this->assertDatabaseCount('chat_members', 1);
+    }
+
     public function test_member_can_send_message_to_joined_chat(): void
     {
         $owner = User::factory()->create(['user_type' => 'member']);

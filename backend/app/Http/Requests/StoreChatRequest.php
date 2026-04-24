@@ -24,7 +24,7 @@ class StoreChatRequest extends FormRequest
             'icon_emoji' => ['nullable', 'string', 'max:16'],
             'icon_bg_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'folder_id' => ['nullable', 'exists:chat_folders,id'],
-            'member_ids' => ['required', 'array', 'min:1'],
+            'member_ids' => ['sometimes', 'array'],
             'member_ids.*' => ['integer', 'exists:users,id'],
         ];
     }

@@ -13,10 +13,17 @@ const chats = ref([])
 const folder = computed(() => folders.value.find((item) => Number(item.id) === folderId.value) || null)
 const folderChats = computed(() => chats.value.filter((item) => Number(item.folder_id) === folderId.value))
 
+function unwrapList(payload) {
+  if (!payload || typeof payload !== 'object') return []
+  if (Array.isArray(payload)) return payload
+  if (Array.isArray(payload.data)) return payload.data
+  return []
+}
+
 async function load() {
   const [foldersRes, chatsRes] = await Promise.all([fetchChatFolders(), fetchChats()])
-  if (foldersRes.ok && Array.isArray(foldersRes.data)) folders.value = foldersRes.data
-  if (chatsRes.ok && Array.isArray(chatsRes.data)) chats.value = chatsRes.data
+  if (foldersRes.ok) folders.value = unwrapList(foldersRes.data)
+  if (chatsRes.ok) chats.value = unwrapList(chatsRes.data)
 }
 
 function openChat(chat) {

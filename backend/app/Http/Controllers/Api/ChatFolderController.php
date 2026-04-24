@@ -28,6 +28,8 @@ class ChatFolderController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'icon_emoji' => ['nullable', 'string', 'max:16'],
+            'icon_bg_color' => ['nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'parent_id' => ['nullable', 'exists:chat_folders,id'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
         ]);
@@ -35,6 +37,8 @@ class ChatFolderController extends Controller
         $folder = ChatFolder::query()->create([
             'user_id' => $request->user()->id,
             'name' => $validated['name'],
+            'icon_emoji' => $validated['icon_emoji'] ?? null,
+            'icon_bg_color' => $validated['icon_bg_color'] ?? null,
             'parent_id' => $validated['parent_id'] ?? null,
             'sort_order' => $validated['sort_order'] ?? 0,
         ]);
@@ -49,6 +53,8 @@ class ChatFolderController extends Controller
         abort_unless((int) $folder->user_id === (int) $request->user()->id, 404);
         $validated = $request->validate([
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'icon_emoji' => ['sometimes', 'nullable', 'string', 'max:16'],
+            'icon_bg_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'parent_id' => ['sometimes', 'nullable', Rule::notIn([$folder->id]), 'exists:chat_folders,id'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],
         ]);

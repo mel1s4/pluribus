@@ -19,7 +19,7 @@ class ChatController extends Controller
         $user = $request->user();
         $chats = Chat::query()
             ->visibleToUser((int) $user->id)
-            ->with(['members:id,name,avatar_path', 'folder:id,name,parent_id,sort_order,user_id'])
+            ->with(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id'])
             ->latest('updated_at')
             ->get();
 
@@ -31,7 +31,7 @@ class ChatController extends Controller
         $user = $request->user();
         $validated = $request->validated();
 
-        $memberIds = collect($validated['member_ids'])
+        $memberIds = collect($validated['member_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->push((int) $user->id)
             ->unique()
@@ -53,7 +53,7 @@ class ChatController extends Controller
             ])->all()
         );
 
-        $chat->load(['members:id,name,avatar_path', 'folder:id,name,parent_id,sort_order,user_id']);
+        $chat->load(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id']);
 
         return response()->json([
             'chat' => new ChatResource($chat),
@@ -63,7 +63,7 @@ class ChatController extends Controller
     public function show(Request $request, Chat $chat): JsonResponse
     {
         $this->authorize('view', $chat);
-        $chat->load(['members:id,name,avatar_path', 'folder:id,name,parent_id,sort_order,user_id']);
+        $chat->load(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id']);
 
         return response()->json([
             'chat' => new ChatResource($chat),
@@ -75,7 +75,7 @@ class ChatController extends Controller
         $this->authorize('update', $chat);
         $chat->fill($request->validated());
         $chat->save();
-        $chat->load(['members:id,name,avatar_path', 'folder:id,name,parent_id,sort_order,user_id']);
+        $chat->load(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id']);
 
         return response()->json([
             'chat' => new ChatResource($chat),

@@ -15,6 +15,8 @@ class ChatFolder extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'icon_emoji',
+        'icon_bg_color',
         'parent_id',
         'sort_order',
     ];
