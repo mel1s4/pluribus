@@ -13,8 +13,8 @@ const places = ref([])
 const loadError = ref('')
 const loading = ref(true)
 
-const userId = computed(() => {
-  const raw = route.params.userId
+const userSlug = computed(() => {
+  const raw = route.params.userSlug
   return typeof raw === 'string' ? raw : ''
 })
 
@@ -31,7 +31,7 @@ const displayEmails = computed(() => {
 })
 
 async function load() {
-  const id = userId.value
+  const id = userSlug.value
   if (!id) return
   loadError.value = ''
   loading.value = true
@@ -55,7 +55,7 @@ async function load() {
   }
 }
 
-watch(userId, () => {
+watch(userSlug, () => {
   load()
 })
 
@@ -149,7 +149,7 @@ load()
               :to="{
                 name: 'placeView',
                 params: { placeId: String(pl.id) },
-                query: { member: userId },
+                query: { member: userSlug },
               }"
             >
               <span v-if="pl.logo_url" class="member-profile-page__placeLogoWrap">

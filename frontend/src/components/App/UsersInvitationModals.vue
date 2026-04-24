@@ -3,7 +3,7 @@ import { nextTick, ref } from 'vue'
 import Button from '../../atoms/Button.vue'
 import Input from '../../atoms/Input.vue'
 import UsersInvitationMaxUsesFields from './UsersInvitationMaxUsesFields.vue'
-import { t } from '../../i18n/i18n'
+import { language, t } from '../../i18n/i18n'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
 
 const defaultUsage = () => ({ mode: 'unlimited', custom: 5 })
@@ -118,7 +118,10 @@ async function submitSendInvitation() {
   }
   sendLoading.value = true
   await ensureCsrfCookie()
-  const { ok, status, data } = await apiJson('POST', '/api/invitations', { email })
+  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
+    email,
+    join_url_locale: language.value,
+  })
   sendLoading.value = false
   if (!ok) {
     sendError.value =
@@ -148,7 +151,10 @@ async function submitCreateLink() {
   linkLoading.value = true
   await ensureCsrfCookie()
   const maxUses = inviteUsageToMaxUses(linkUsage.value)
-  const { ok, status, data } = await apiJson('POST', '/api/invitations', { max_uses: maxUses })
+  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
+    max_uses: maxUses,
+    join_url_locale: language.value,
+  })
   linkLoading.value = false
   if (!ok) {
     linkError.value =

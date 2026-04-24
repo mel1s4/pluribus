@@ -81,6 +81,36 @@ class MemberProfileApiTest extends TestCase
         $this->assertSame($place->id, $placesEd[0]['id']);
     }
 
+    public function test_member_profile_resolves_by_username(): void
+    {
+        $member = User::factory()->create([
+            'username' => 'member_handle',
+        ]);
+        $viewer = User::factory()->create();
+
+        $this->actingAs($viewer);
+
+        $this->statefulJson('GET', '/api/members/member_handle')
+            ->assertOk()
+            ->assertJsonPath('member.id', $member->id)
+            ->assertJsonPath('member.username', 'member_handle');
+    }
+
+    public function test_member_profile_resolves_by_profile_slug(): void
+    {
+        $member = User::factory()->create(['username' => null]);
+        $slug = $member->fresh()->profile_slug;
+        $this->assertNotNull($slug);
+        $viewer = User::factory()->create();
+
+        $this->actingAs($viewer);
+
+        $this->statefulJson('GET', '/api/members/'.$slug)
+            ->assertOk()
+            ->assertJsonPath('member.id', $member->id)
+            ->assertJsonPath('member.profile_slug', $slug);
+    }
+
     public function test_stranger_can_view_place_details(): void
     {
         $owner = User::factory()->create();

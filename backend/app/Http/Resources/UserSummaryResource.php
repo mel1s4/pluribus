@@ -23,6 +23,7 @@ class UserSummaryResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
+            'profile_slug' => $this->profile_slug,
             'phone_numbers' => is_array($this->phone_numbers) ? $this->phone_numbers : [],
             'contact_emails' => is_array($this->contact_emails) ? $this->contact_emails : [],
             'aliases' => is_array($this->aliases) ? $this->aliases : [],

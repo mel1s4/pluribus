@@ -27,6 +27,31 @@ export function setLanguage(nextLang) {
   document.documentElement.lang = lang
 }
 
+/** Snapshot for the public join-invitation page so we can restore after leaving. */
+let languageBeforeJoinInvitationPage = null
+
+/**
+ * Apply UI language for the invitation registration route (community default),
+ * without writing localStorage. Call {@link clearJoinInvitationPageLanguage} on unmount.
+ */
+export function applyJoinInvitationPageLanguage(lang) {
+  if (languageBeforeJoinInvitationPage === null) {
+    languageBeforeJoinInvitationPage = language.value
+  }
+  const next = typeof lang === 'string' && isSupportedLanguage(lang) ? lang : DEFAULT_LANGUAGE
+  language.value = next
+  document.documentElement.lang = next
+}
+
+export function clearJoinInvitationPageLanguage() {
+  if (languageBeforeJoinInvitationPage === null) {
+    return
+  }
+  language.value = languageBeforeJoinInvitationPage
+  document.documentElement.lang = languageBeforeJoinInvitationPage
+  languageBeforeJoinInvitationPage = null
+}
+
 export function t(key) {
   const langTable = messages[language.value] ?? messages.en
   return langTable?.[key] ?? messages.en?.[key] ?? key

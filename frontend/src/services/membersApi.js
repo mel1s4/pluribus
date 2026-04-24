@@ -1,9 +1,9 @@
 import { apiJson } from './api.js'
 
 /**
- * @param {number|string} userId
+ * @param {number|string} userSlug username, profile_slug UUID, or legacy numeric id
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
-export async function fetchMemberProfile(userId) {
-  return apiJson('GET', `/api/members/${userId}`)
+export async function fetchMemberProfile(userSlug) {
+  return apiJson('GET', `/api/members/${encodeURIComponent(String(userSlug))}`)
 }

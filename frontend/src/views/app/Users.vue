@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
@@ -14,6 +14,8 @@ import { apiJson, ensureCsrfCookie } from '../../services/api'
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
 
+const activeTab = ref('members')
+
 const rows = ref([])
 const meta = ref(null)
 const listError = ref('')
@@ -23,10 +25,31 @@ const page = ref(1)
 const deletingId = ref(null)
 const deleteError = ref('')
 
+const invitations = ref([])
+const invitationsLoading = ref(false)
+const invitationsError = ref('')
+const deletingInvitationId = ref(null)
+const invitationDeleteError = ref('')
+
 const canCreate = computed(() => hasCapability('users.create'))
 const canDelete = computed(() => hasCapability('users.delete'))
 const canEdit = computed(() => hasCapability('users.update'))
+const canManageInvitations = computed(() => hasCapability('invitations.manage'))
 const showRowActions = computed(() => canDelete.value || canEdit.value)
+const showTabs = computed(() => canManageInvitations.value)
+
+function setTab(id) {
+  activeTab.value = id
+  if (id === 'invitations') {
+    fetchInvitations()
+  }
+}
+
+watch(showTabs, (visible) => {
+  if (!visible && activeTab.value === 'invitations') {
+    activeTab.value = 'members'
+  }
+})
 
 async function fetchPage(nextPage) {
   listError.value = ''
@@ -42,6 +65,21 @@ async function fetchPage(nextPage) {
   rows.value = Array.isArray(data?.data) ? data.data : []
   meta.value = data?.meta ?? null
   page.value = nextPage
+}
+
+async function fetchInvitations() {
+  invitationsError.value = ''
+  invitationsLoading.value = true
+  const { ok, status, data } = await apiJson('GET', '/api/invitations')
+  invitationsLoading.value = false
+  if (!ok) {
+    invitations.value = []
+    invitationsError.value =
+      (data && typeof data === 'object' && data.message && String(data.message)) ||
+      t('users.invitationsLoadError').replace('{status}', String(status))
+    return
+  }
+  invitations.value = Array.isArray(data?.data) ? data.data : []
 }
 
 function goPrev() {
@@ -79,7 +117,11 @@ function editToFor(target) {
 }
 
 function memberProfileToFor(target) {
-  return { name: 'memberProfile', params: { userId: String(target.id) } }
+  const slug = target.username || target.profile_slug
+  if (!slug) {
+    return null
+  }
+  return { name: 'memberProfile', params: { userSlug: String(slug) } }
 }
 
 async function onDeleteUser(target) {
@@ -98,6 +140,56 @@ async function onDeleteUser(target) {
     return
   }
   await fetchPage(page.value)
+}
+
+function invitationKindLabel(row) {
+  return row.kind === 'email' ? t('users.invitationsKindEmail') : t('users.invitationsKindLink')
+}
+
+function invitationStatusLabel(row) {
+  if (row.is_usable) {
+    return t('users.invitationsStatusActive')
+  }
+  const reason = row.failure_reason
+  if (reason === 'expired') return t('users.invitationsStatusExpired')
+  if (reason === 'revoked') return t('users.invitationsStatusRevoked')
+  if (reason === 'exhausted') return t('users.invitationsStatusExhausted')
+  return t('users.invitationsStatusInactive')
+}
+
+function formatExpires(iso) {
+  if (!iso) return '-'
+  try {
+    return new Date(iso).toLocaleString()
+  } catch {
+    return iso
+  }
+}
+
+function formatUses(row) {
+  const n = row.uses_count
+  if (row.max_uses == null) {
+    return t('users.invitationsUsesUnlimited').replace('{n}', String(n))
+  }
+  return t('users.invitationsUsesOf').replace('{current}', String(n)).replace('{max}', String(row.max_uses))
+}
+
+async function onDeleteInvitation(row) {
+  if (!window.confirm(t('users.invitationsDeleteConfirm'))) {
+    return
+  }
+  invitationDeleteError.value = ''
+  deletingInvitationId.value = row.id
+  await ensureCsrfCookie()
+  const { ok, status, data } = await apiJson('DELETE', `/api/invitations/${row.id}`)
+  deletingInvitationId.value = null
+  if (!ok) {
+    invitationDeleteError.value =
+      (data && typeof data === 'object' && data.message && String(data.message)) ||
+      t('users.invitationsDeleteError').replace('{status}', String(status))
+    return
+  }
+  await fetchInvitations()
 }
 
 onMounted(() => {
@@ -122,85 +214,170 @@ onUnmounted(() => {
     <Title tag="h1">{{ t('users.title') }}</Title>
     <p class="page--users__intro">{{ t('users.intro') }}</p>
 
-    <UsersMembersToolbar v-if="canCreate" />
-
-    <h2 class="users-list__title">{{ t('users.listHeading') }}</h2>
-    <p v-if="listError" class="users-list__error" role="alert">
-      {{ listError }}
-    </p>
-    <p v-if="deleteError" class="users-list__error" role="alert">
-      {{ deleteError }}
-    </p>
-    <p v-if="!listLoading && !listError && rows.length === 0" class="users-list__empty">
-      {{ t('users.empty') }}
-    </p>
-
-    <div v-if="listLoading" class="users-list__loading">
-      {{ t('users.loading') }}
-    </div>
-
-    <div v-else-if="rows.length" class="users-list__tableWrap">
-      <table class="users-list__table">
-        <thead>
-          <tr>
-            <th class="users-list__th">{{ t('users.colName') }}</th>
-            <th class="users-list__th">{{ t('users.colEmail') }}</th>
-            <th class="users-list__th">{{ t('users.colUsername') }}</th>
-            <th class="users-list__th">{{ t('users.colType') }}</th>
-            <th class="users-list__th">{{ t('users.colRoot') }}</th>
-            <th v-if="showRowActions" class="users-list__th users-list__th--actions">
-              {{ t('users.colActions') }}
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <UsersTableRow
-            v-for="u in rows"
-            :key="u.id"
-            :user="u"
-            :member-profile-to="memberProfileToFor(u)"
-            :show-actions="showRowActions"
-            :show-edit="canEdit"
-            :edit-to="editToFor(u)"
-            :edit-disabled="rowEditDisabled(u)"
-            :edit-label="t('users.edit')"
-            :show-delete="canDelete"
-            :delete-disabled="rowDeleteDisabled(u)"
-            :delete-loading="deletingId === u.id"
-            :delete-label="t('users.delete')"
-            @delete="onDeleteUser"
-          />
-        </tbody>
-      </table>
-    </div>
-
-    <div v-if="meta && meta.last_page > 1" class="users-list__pager">
-      <Button
+    <div
+      v-if="showTabs"
+      class="page--users__tabs"
+      role="tablist"
+      :aria-label="t('users.tabsAria')"
+    >
+      <button
         type="button"
-        variant="secondary"
-        size="sm"
-        :disabled="meta.current_page <= 1 || listLoading"
-        @click="goPrev"
+        role="tab"
+        class="page--users__tab"
+        :class="{ 'page--users__tab--active': activeTab === 'members' }"
+        :aria-selected="activeTab === 'members'"
+        @click="setTab('members')"
       >
-        {{ t('users.prev') }}
-      </Button>
-      <span class="users-list__pageInfo">
-        {{
-          t('users.pageInfo')
-            .replace('{current}', String(meta.current_page))
-            .replace('{last}', String(meta.last_page))
-        }}
-      </span>
-      <Button
+        {{ t('users.tabMembers') }}
+      </button>
+      <button
         type="button"
-        variant="secondary"
-        size="sm"
-        :disabled="meta.current_page >= meta.last_page || listLoading"
-        @click="goNext"
+        role="tab"
+        class="page--users__tab"
+        :class="{ 'page--users__tab--active': activeTab === 'invitations' }"
+        :aria-selected="activeTab === 'invitations'"
+        @click="setTab('invitations')"
       >
-        {{ t('users.next') }}
-      </Button>
+        {{ t('users.tabInvitations') }}
+      </button>
     </div>
+
+    <template v-if="activeTab === 'members'">
+      <UsersMembersToolbar v-if="canCreate || canManageInvitations" />
+
+      <h2 class="users-list__title">{{ t('users.listHeading') }}</h2>
+      <p v-if="listError" class="users-list__error" role="alert">
+        {{ listError }}
+      </p>
+      <p v-if="deleteError" class="users-list__error" role="alert">
+        {{ deleteError }}
+      </p>
+      <p v-if="!listLoading && !listError && rows.length === 0" class="users-list__empty">
+        {{ t('users.empty') }}
+      </p>
+
+      <div v-if="listLoading" class="users-list__loading">
+        {{ t('users.loading') }}
+      </div>
+
+      <div v-else-if="rows.length" class="users-list__tableWrap">
+        <table class="users-list__table">
+          <thead>
+            <tr>
+              <th class="users-list__th">{{ t('users.colName') }}</th>
+              <th class="users-list__th">{{ t('users.colContact') }}</th>
+              <th v-if="showRowActions" class="users-list__th users-list__th--actions">
+                {{ t('users.colActions') }}
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <UsersTableRow
+              v-for="u in rows"
+              :key="u.id"
+              :user="u"
+              :member-profile-to="memberProfileToFor(u)"
+              :show-actions="showRowActions"
+              :show-edit="canEdit"
+              :edit-to="editToFor(u)"
+              :edit-disabled="rowEditDisabled(u)"
+              :edit-label="t('users.edit')"
+              :show-delete="canDelete"
+              :delete-disabled="rowDeleteDisabled(u)"
+              :delete-loading="deletingId === u.id"
+              :delete-label="t('users.delete')"
+              @delete="onDeleteUser"
+            />
+          </tbody>
+        </table>
+      </div>
+
+      <div v-if="meta && meta.last_page > 1" class="users-list__pager">
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          :disabled="meta.current_page <= 1 || listLoading"
+          @click="goPrev"
+        >
+          {{ t('users.prev') }}
+        </Button>
+        <span class="users-list__pageInfo">
+          {{
+            t('users.pageInfo')
+              .replace('{current}', String(meta.current_page))
+              .replace('{last}', String(meta.last_page))
+          }}
+        </span>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          :disabled="meta.current_page >= meta.last_page || listLoading"
+          @click="goNext"
+        >
+          {{ t('users.next') }}
+        </Button>
+      </div>
+    </template>
+
+    <template v-else-if="activeTab === 'invitations'">
+      <h2 class="users-list__title">{{ t('users.invitationsHeading') }}</h2>
+      <p class="page--users__panelIntro">{{ t('users.invitationsIntro') }}</p>
+      <p v-if="invitationsError" class="users-list__error" role="alert">
+        {{ invitationsError }}
+      </p>
+      <p v-if="invitationDeleteError" class="users-list__error" role="alert">
+        {{ invitationDeleteError }}
+      </p>
+      <p v-if="!invitationsLoading && !invitationsError && invitations.length === 0" class="users-list__empty">
+        {{ t('users.invitationsEmpty') }}
+      </p>
+      <div v-if="invitationsLoading" class="users-list__loading">
+        {{ t('users.invitationsLoading') }}
+      </div>
+      <div v-else-if="invitations.length" class="users-list__tableWrap">
+        <table class="users-list__table">
+          <thead>
+            <tr>
+              <th class="users-list__th">{{ t('users.invitationsColKind') }}</th>
+              <th class="users-list__th">{{ t('users.invitationsColEmail') }}</th>
+              <th class="users-list__th">{{ t('users.invitationsColUsed') }}</th>
+              <th class="users-list__th">{{ t('users.invitationsColUses') }}</th>
+              <th class="users-list__th">{{ t('users.invitationsColStatus') }}</th>
+              <th class="users-list__th">{{ t('users.invitationsColExpires') }}</th>
+              <th class="users-list__th users-list__th--actions">{{ t('users.colActions') }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="inv in invitations" :key="inv.id">
+              <td class="users-list__td">{{ invitationKindLabel(inv) }}</td>
+              <td class="users-list__td">
+                <span v-if="inv.email">{{ inv.email }}</span>
+                <span v-else class="users-list__muted">-</span>
+              </td>
+              <td class="users-list__td">
+                {{ inv.has_been_used ? t('users.invitationsUsedYes') : t('users.invitationsUsedNo') }}
+              </td>
+              <td class="users-list__td">{{ formatUses(inv) }}</td>
+              <td class="users-list__td">{{ invitationStatusLabel(inv) }}</td>
+              <td class="users-list__td">{{ formatExpires(inv.expires_at) }}</td>
+              <td class="users-list__td users-list__td--actions">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  :disabled="deletingInvitationId === inv.id"
+                  @click="onDeleteInvitation(inv)"
+                >
+                  {{ deletingInvitationId === inv.id ? t('users.invitationsDeleting') : t('users.invitationsDelete') }}
+                </Button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </template>
   </section>
 </template>
 
@@ -214,6 +391,36 @@ onUnmounted(() => {
 .page--users__intro {
   margin: 0 0 1.5rem;
   color: var(--muted, #4b5563);
+}
+
+.page--users__panelIntro {
+  margin: 0 0 1rem;
+  color: var(--muted, #6b7280);
+  font-size: 0.95rem;
+}
+
+.page--users__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0 0 1.25rem;
+}
+
+.page--users__tab {
+  cursor: pointer;
+  padding: 0.45rem 0.85rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  font: inherit;
+  font-size: 0.9rem;
+  color: inherit;
+}
+
+.page--users__tab--active {
+  font-weight: 600;
+  border-color: color-mix(in srgb, var(--border) 70%, #1d4ed8);
+  background: color-mix(in srgb, #1d4ed8 8%, var(--bg));
 }
 
 .users-list__title {
@@ -255,6 +462,21 @@ onUnmounted(() => {
 .users-list__th--actions {
   width: 1%;
   text-align: right;
+}
+
+.users-list__td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.users-list__td--actions {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.users-list__muted {
+  color: var(--muted, #9ca3af);
 }
 
 .users-list__pager {

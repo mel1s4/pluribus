@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class CommunityInvitationStoreApiTest extends TestCase
@@ -23,7 +24,7 @@ class CommunityInvitationStoreApiTest extends TestCase
         return ['Origin' => 'http://localhost:9123'];
     }
 
-    private function statefulJson(string $method, string $uri, array $data = []): \Illuminate\Testing\TestResponse
+    private function statefulJson(string $method, string $uri, array $data = []): TestResponse
     {
         return $this->withHeaders($this->statefulHeaders())
             ->withoutMiddleware(ValidateCsrfToken::class)
@@ -71,6 +72,22 @@ class CommunityInvitationStoreApiTest extends TestCase
         Mail::assertNothingSent();
     }
 
+    public function test_admin_can_create_link_invitation_via_invitations_manage_capability(): void
+    {
+        Mail::fake();
+
+        $admin = User::factory()->admin()->create();
+        $this->actingAs($admin);
+
+        $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 4,
+        ])->assertCreated()
+            ->assertJsonPath('invitation.max_uses', 4)
+            ->assertJsonPath('invitation.email', null);
+
+        Mail::assertNothingSent();
+    }
+
     public function test_join_url_uses_spanish_slug_when_community_default_language_is_spanish(): void
     {
         Mail::fake();
@@ -104,5 +121,57 @@ class CommunityInvitationStoreApiTest extends TestCase
         $joinUrl = $response->json('invitation.join_url');
         $this->assertIsString($joinUrl);
         $this->assertStringContainsString('/join/', $joinUrl);
+    }
+
+    public function test_join_url_prefers_join_url_locale_over_community_default(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        Community::current()->update(['default_language' => 'en']);
+        $this->actingAs($root);
+
+        $response = $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 3,
+            'join_url_locale' => 'es',
+        ])->assertCreated();
+
+        $joinUrl = $response->json('invitation.join_url');
+        $this->assertIsString($joinUrl);
+        $this->assertStringContainsString('/invitacion/', $joinUrl);
+        $this->assertStringNotContainsString('/join/', $joinUrl);
+    }
+
+    public function test_join_url_join_url_locale_en_overrides_spanish_community(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        Community::current()->update(['default_language' => 'es']);
+        $this->actingAs($root);
+
+        $response = $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 3,
+            'join_url_locale' => 'en',
+        ])->assertCreated();
+
+        $joinUrl = $response->json('invitation.join_url');
+        $this->assertIsString($joinUrl);
+        $this->assertStringContainsString('/join/', $joinUrl);
+        $this->assertStringNotContainsString('/invitacion/', $joinUrl);
+    }
+
+    public function test_member_cannot_create_invitation(): void
+    {
+        Mail::fake();
+
+        $member = User::factory()->create(['user_type' => 'member']);
+        $this->actingAs($member);
+
+        $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 2,
+        ])->assertForbidden();
+
+        Mail::assertNothingSent();
     }
 }

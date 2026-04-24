@@ -174,7 +174,7 @@ const routes = [
     },
   },
   {
-    path: '/members/:userId',
+    path: '/members/:userSlug',
     name: 'memberProfile',
     component: MemberProfilePage,
     meta: {

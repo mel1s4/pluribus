@@ -150,6 +150,18 @@
       }
     ]
   },
+  "invitations": {
+    "module": "invitations",
+    "capabilities": [
+      {
+        "id": "invitations.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": true,
+        "description": "List, inspect, and remove community join invitations."
+      }
+    ]
+  },
   "users": {
     "module": "users",
     "capabilities": [

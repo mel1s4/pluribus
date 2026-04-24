@@ -84,7 +84,7 @@ watch(placeId, () => {
 function goBack() {
   const mid = memberBackId.value
   if (mid) {
-    router.push({ name: 'memberProfile', params: { userId: mid } })
+    router.push({ name: 'memberProfile', params: { userSlug: mid } })
     return
   }
   router.push({ name: 'myPlaces' })

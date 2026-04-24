@@ -117,10 +117,41 @@ read_ftp_credentials() {
   fi
 }
 
+# --- Run command with max wall-clock seconds (GNU timeout, gtimeout, or macOS fallback) ---
+# On timeout: exit 124 (same as GNU timeout) so callers can detect it.
+run_with_timeout() {
+  local max_seconds="$1"
+  shift
+  if command -v timeout &>/dev/null; then
+    timeout "$max_seconds" "$@"
+    return $?
+  fi
+  if command -v gtimeout &>/dev/null; then
+    gtimeout "$max_seconds" "$@"
+    return $?
+  fi
+  "$@" &
+  local pid=$!
+  local elapsed=0
+  while kill -0 "$pid" 2>/dev/null; do
+    if (( elapsed >= max_seconds )); then
+      kill -TERM "$pid" 2>/dev/null || true
+      sleep 1
+      kill -KILL "$pid" 2>/dev/null || true
+      wait "$pid" 2>/dev/null || true
+      return 124
+    fi
+    sleep 1
+    elapsed=$((elapsed + 1))
+  done
+  wait "$pid"
+  return $?
+}
+
 # --- Check lftp is available ---
 check_lftp() {
   if ! command -v lftp &>/dev/null; then
-    print_error "lftp is required. Install with: sudo apt install lftp"
+    print_error "lftp is required. Install: macOS: brew install lftp  |  Debian/Ubuntu: sudo apt install lftp"
     exit 1
   fi
 }
@@ -165,7 +196,7 @@ bye
 EOF
   print_info "Listing $remote_path ..."
   echo ""
-  if timeout 60 lftp -f "$script" 2>&1; then
+  if run_with_timeout 60 lftp -f "$script" 2>&1; then
     echo ""
     print_success "Listing completed"
   else
@@ -180,21 +211,37 @@ ftp_cat() {
   [[ -z "$FTP_HOST" ]] && { print_error "FTP_HOST is not set."; exit 1; }
   local script
   local tmpfile
+  local remote_dir remote_name
+  remote_name="${remote_path##*/}"
+  remote_dir="${remote_path%/*}"
+  if [[ "$remote_dir" == "$remote_path" ]]; then
+    remote_dir="."
+  fi
   script="$(mktemp)"
   tmpfile="$(mktemp)"
   _CLEANUP_SCRIPT="$script"
   _CLEANUP_TMPFILE="$tmpfile"
   trap 'rm -f "$_CLEANUP_SCRIPT" "$_CLEANUP_TMPFILE"' RETURN
   lftp_preamble > "$script"
+  # mktemp creates an empty file; lftp get refuses to overwrite unless removed
+  rm -f "$tmpfile"
+  # cd into parent dir then get basename — some hosts reject full-path RETR
   cat >> "$script" <<EOF
 
-get "$remote_path" -o "$tmpfile"
+cd "$remote_dir"
+get "$remote_name" -o "$tmpfile"
 bye
 EOF
   print_info "Reading $remote_path ..."
   echo ""
-  if ! timeout 60 lftp -f "$script" >/dev/null 2>&1; then
-    print_error "Failed to read $remote_path"
+  local lftp_out lftp_exit
+  set +e
+  lftp_out="$(run_with_timeout 120 lftp -f "$script" 2>&1)"
+  lftp_exit=$?
+  set -e
+  if [[ $lftp_exit -ne 0 ]]; then
+    print_error "Failed to read $remote_path (lftp exit $lftp_exit)"
+    echo "$lftp_out"
     exit 1
   fi
   if [[ -f "$tmpfile" ]]; then
@@ -234,7 +281,7 @@ ftp_put_generic() {
     echo "cd $destination" >> "$check_script"
     echo "bye" >> "$check_script"
     local dest_exists=0
-    if timeout 30 lftp -f "$check_script" >/dev/null 2>&1; then
+    if run_with_timeout 30 lftp -f "$check_script" >/dev/null 2>&1; then
       dest_exists=1
     fi
     if [[ $dest_exists -eq 1 ]]; then
@@ -257,7 +304,7 @@ EOF
     print_info "Uploading directory $source -> $destination ..."
     local lftp_out lftp_exit
     set +e
-    lftp_out="$(timeout "$FTP_TIMEOUT" lftp -f "$script" 2>&1)"
+    lftp_out="$(run_with_timeout "$FTP_TIMEOUT" lftp -f "$script" 2>&1)"
     lftp_exit=$?
     set -e
     echo "$lftp_out"
@@ -297,7 +344,7 @@ put "$source" -o "$remote_file"
 bye
 EOF
     print_info "Uploading file $source -> $destination ..."
-    if timeout 300 lftp -f "$script" 2>&1; then
+    if run_with_timeout 300 lftp -f "$script" 2>&1; then
       print_success "Upload completed"
     else
       print_error "Upload failed"

@@ -1,11 +1,11 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\ChatBackupController;
 use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\ChatFolderController;
 use App\Http\Controllers\Api\ChatMessageController;
+use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\JoinInvitationController;
@@ -50,7 +50,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/members/{user}', [MemberProfileController::class, 'show']);
 
     Route::get('/users', [UserAdminController::class, 'index']);
+    Route::get('/invitations', [CommunityInvitationController::class, 'index']);
     Route::post('/invitations', [CommunityInvitationController::class, 'store']);
+    Route::delete('/invitations/{invitation}', [CommunityInvitationController::class, 'destroy']);
     Route::post('/users', [UserAdminController::class, 'store']);
     Route::get('/users/{user}', [UserAdminController::class, 'show']);
     Route::patch('/users/{user}', [UserAdminController::class, 'update']);

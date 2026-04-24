@@ -2,7 +2,6 @@
 import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import Button from '../../atoms/Button.vue'
-import { t } from '../../i18n/i18n'
 
 const props = defineProps({
   user: {
@@ -53,18 +52,17 @@ const props = defineProps({
 
 const emit = defineEmits(['delete'])
 
-const typeLabel = computed(() => {
-  if (props.user.is_root) {
-    return 'ROOT'
+const displayContact = computed(() => {
+  const emails = props.user.contact_emails
+  if (Array.isArray(emails) && emails.length && typeof emails[0] === 'string' && emails[0].trim()) {
+    return emails[0].trim()
   }
-  const ty = props.user.user_type
-  if (ty === 'admin') return t('users.typeAdmin')
-  if (ty === 'developer') return t('users.typeDeveloper')
-  if (ty === 'member') return t('users.typeMember')
-  return ty ?? '—'
+  const phones = props.user.phone_numbers
+  if (Array.isArray(phones) && phones.length && typeof phones[0] === 'string' && phones[0].trim()) {
+    return phones[0].trim()
+  }
+  return '—'
 })
-
-const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
 </script>
 
 <template>
@@ -79,12 +77,16 @@ const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
       </RouterLink>
       <span v-else>{{ user.name }}</span>
     </td>
-    <td class="users-table-row__cell">{{ user.email }}</td>
-    <td class="users-table-row__cell">{{ user.username || '—' }}</td>
-    <td class="users-table-row__cell">{{ typeLabel }}</td>
-    <td class="users-table-row__cell">
-      <span v-if="rootLabel" class="users-table-row__badge">{{ rootLabel }}</span>
-      <span v-else class="users-table-row__dash">—</span>
+    <td class="users-table-row__cell users-table-row__cell--contact">
+      <RouterLink
+        v-if="memberProfileTo"
+        class="users-table-row__profileLink users-table-row__profileLink--contact"
+        :class="{ 'users-table-row__dash': displayContact === '—' }"
+        :to="memberProfileTo"
+      >
+        {{ displayContact }}
+      </RouterLink>
+      <span v-else :class="{ 'users-table-row__dash': displayContact === '—' }">{{ displayContact }}</span>
     </td>
     <td v-if="showActions" class="users-table-row__cell users-table-row__cell--actions">
       <div class="users-table-row__actions">
@@ -135,6 +137,14 @@ const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
   font-weight: 600;
 }
 
+.users-table-row__profileLink--contact {
+  font-weight: 400;
+}
+
+.users-table-row__profileLink--contact.users-table-row__dash {
+  color: var(--muted, #6b7280);
+}
+
 .users-table-row__profileLink:hover {
   text-decoration: underline;
   color: #1d4ed8;
@@ -167,16 +177,6 @@ const rootLabel = computed(() => (props.user.is_root ? 'ROOT' : null))
 .users-table-row__editMuted {
   font-size: 0.85rem;
   color: var(--muted, #9ca3af);
-}
-
-.users-table-row__badge {
-  display: inline-block;
-  padding: 0.15rem 0.45rem;
-  border-radius: 0.35rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: rgba(37, 99, 235, 0.12);
-  color: #1d4ed8;
 }
 
 .users-table-row__dash {

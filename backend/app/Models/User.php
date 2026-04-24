@@ -4,29 +4,38 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
-#[Fillable([
-    'name',
-    'email',
-    'username',
-    'avatar_path',
-    'phone_numbers',
-    'contact_emails',
-    'aliases',
-    'external_links',
-    'password',
-    'is_root',
-    'user_type',
-])]
-#[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
+    /** @var list<string> */
+    protected $fillable = [
+        'name',
+        'email',
+        'username',
+        'profile_slug',
+        'avatar_path',
+        'phone_numbers',
+        'contact_emails',
+        'aliases',
+        'external_links',
+        'password',
+        'is_root',
+        'user_type',
+    ];
+
+    /**
+     * @var list<string>
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     /** Stored on users who are not root; root accounts use {@see $is_root}. */
     public const USER_TYPES = ['root', 'admin', 'member', 'developer'];
 
@@ -35,6 +44,42 @@ class User extends Authenticatable
 
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    protected static function booted(): void
+    {
+        static::creating(function (User $user): void {
+            if (empty($user->username) && empty($user->profile_slug)) {
+                $user->profile_slug = (string) Str::uuid();
+            }
+        });
+
+        static::updating(function (User $user): void {
+            if (empty($user->username) && empty($user->profile_slug)) {
+                $user->profile_slug = (string) Str::uuid();
+            }
+        });
+    }
+
+    /**
+     * Resolve member profile routes: username, stable profile_slug, or numeric id.
+     *
+     * @param  mixed  $value
+     * @param  string|null  $field
+     */
+    public function resolveRouteBinding($value, $field = null)
+    {
+        $user = static::query()->where('username', $value)->first();
+        if ($user !== null) {
+            return $user;
+        }
+
+        $user = static::query()->where('profile_slug', $value)->first();
+        if ($user !== null) {
+            return $user;
+        }
+
+        return static::query()->where('id', $value)->firstOrFail();
+    }
 
     /**
      * Get the attributes that should be cast.

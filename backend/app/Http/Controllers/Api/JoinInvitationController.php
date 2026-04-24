@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\RegisterViaInvitationRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Community;
 use App\Models\CommunityInvitation;
 use App\Models\User;
+use App\Support\LocaleOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,12 +42,14 @@ class JoinInvitationController extends Controller
                 'valid' => false,
                 'reason' => $reason,
                 'community_name' => $invitation->community?->name,
+                'default_language' => $this->inviteUiLanguage($invitation->community),
             ]);
         }
 
         return response()->json([
             'valid' => true,
             'community_name' => $invitation->community?->name,
+            'default_language' => $this->inviteUiLanguage($invitation->community),
             'max_uses' => $invitation->max_uses,
             'uses_count' => $invitation->uses_count,
             'uses_remaining' => $invitation->usesRemaining(),
@@ -119,5 +123,15 @@ class JoinInvitationController extends Controller
         $len = strlen($token);
 
         return $len >= 16 && $len <= 200 && preg_match('/^[A-Za-z0-9]+$/', $token) === 1;
+    }
+
+    private function inviteUiLanguage(?Community $community): string
+    {
+        if ($community === null) {
+            return LocaleOptions::default();
+        }
+        $code = (string) $community->default_language;
+
+        return in_array($code, LocaleOptions::codes(), true) ? $code : LocaleOptions::default();
     }
 }

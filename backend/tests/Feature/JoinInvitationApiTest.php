@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Community;
 use App\Models\CommunityInvitation;
 use App\Models\User;
+use App\Support\LocaleOptions;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 class JoinInvitationApiTest extends TestCase
@@ -21,7 +23,7 @@ class JoinInvitationApiTest extends TestCase
         return ['Origin' => 'http://localhost:9123'];
     }
 
-    private function statefulJson(string $method, string $uri, array $data = []): \Illuminate\Testing\TestResponse
+    private function statefulJson(string $method, string $uri, array $data = []): TestResponse
     {
         return $this->withHeaders($this->statefulHeaders())
             ->withoutMiddleware(ValidateCsrfToken::class)
@@ -49,7 +51,31 @@ class JoinInvitationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('valid', true)
             ->assertJsonPath('community_name', 'Test Commons')
-            ->assertJsonPath('uses_remaining', 3);
+            ->assertJsonPath('uses_remaining', 3)
+            ->assertJsonPath('default_language', LocaleOptions::default());
+    }
+
+    public function test_preview_includes_default_language_for_spanish_community(): void
+    {
+        $community = Community::current();
+        $community->update(['default_language' => 'es']);
+        $admin = User::factory()->create(['user_type' => 'admin']);
+        $plain = str_repeat('e', 48);
+        CommunityInvitation::query()->create([
+            'community_id' => $community->id,
+            'created_by' => $admin->id,
+            'token_hash' => CommunityInvitation::hashPlainToken($plain),
+            'email' => null,
+            'max_uses' => 3,
+            'uses_count' => 0,
+            'expires_at' => now()->addDay(),
+            'revoked_at' => null,
+        ]);
+
+        $this->statefulJson('GET', '/api/join-invitations/'.$plain)
+            ->assertOk()
+            ->assertJsonPath('valid', true)
+            ->assertJsonPath('default_language', 'es');
     }
 
     public function test_register_increments_uses_and_exhausts_single_use_invitation(): void

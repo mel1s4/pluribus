@@ -1,12 +1,18 @@
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Input from '../../atoms/Input.vue'
 import Title from '../../atoms/Title.vue'
+import { communityDefaultLanguage } from '../../composables/useCommunity'
 import { setSessionFromLoginUser } from '../../composables/useSession'
-import { t } from '../../i18n/i18n'
+import {
+  applyJoinInvitationPageLanguage,
+  clearJoinInvitationPageLanguage,
+  t,
+} from '../../i18n/i18n'
+import { DEFAULT_LANGUAGE, isSupportedLanguage } from '../../i18n/locales'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
 import { userApiErrorMessage } from '../../services/usersApi.js'
 
@@ -47,6 +53,18 @@ const reasonMessage = computed(() => {
 })
 
 const canRegister = computed(() => preview.value?.valid === true)
+
+function pickLanguageForInvitePage(data) {
+  const fromApi = data?.default_language
+  if (typeof fromApi === 'string' && isSupportedLanguage(fromApi)) {
+    return fromApi
+  }
+  const fromBranding = communityDefaultLanguage.value
+  if (typeof fromBranding === 'string' && isSupportedLanguage(fromBranding)) {
+    return fromBranding
+  }
+  return DEFAULT_LANGUAGE
+}
 
 function applyPreview(data) {
   preview.value = data
@@ -100,7 +118,18 @@ async function onRegister() {
 }
 
 onMounted(() => {
+  applyJoinInvitationPageLanguage(pickLanguageForInvitePage(null))
   loadPreview()
+})
+
+watch(preview, (p) => {
+  if (p !== null) {
+    applyJoinInvitationPageLanguage(pickLanguageForInvitePage(p))
+  }
+})
+
+onUnmounted(() => {
+  clearJoinInvitationPageLanguage()
 })
 </script>
 
