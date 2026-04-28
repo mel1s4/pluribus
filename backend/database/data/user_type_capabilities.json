@@ -33,6 +33,14 @@
       "settings.update_own",
       "settings.update_any",
       "i18n.manage_strings",
+      "groups.view",
+      "groups.manage",
+      "tasks.view",
+      "tasks.manage",
+      "posts.view",
+      "posts.manage",
+      "calendars.view",
+      "calendars.manage",
       "system.config",
       "system.view_logs"
     ]
@@ -66,6 +74,14 @@
       "settings.update_own",
       "settings.update_any",
       "i18n.manage_strings",
+      "groups.view",
+      "groups.manage",
+      "tasks.view",
+      "tasks.manage",
+      "posts.view",
+      "posts.manage",
+      "calendars.view",
+      "calendars.manage",
       "system.config",
       "system.view_logs"
     ]
@@ -85,7 +101,15 @@
       "map.share_location",
       "offers.view",
       "notifications.view",
-      "settings.update_own"
+      "settings.update_own",
+      "groups.view",
+      "groups.manage",
+      "tasks.view",
+      "tasks.manage",
+      "posts.view",
+      "posts.manage",
+      "calendars.view",
+      "calendars.manage"
     ]
   },
   "developer": {
@@ -103,7 +127,15 @@
       "map.share_location",
       "offers.view",
       "notifications.view",
-      "settings.update_own"
+      "settings.update_own",
+      "groups.view",
+      "groups.manage",
+      "tasks.view",
+      "tasks.manage",
+      "posts.view",
+      "posts.manage",
+      "calendars.view",
+      "calendars.manage"
     ]
   }
 }

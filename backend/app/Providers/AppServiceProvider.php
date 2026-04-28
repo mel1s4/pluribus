@@ -4,9 +4,17 @@ namespace App\Providers;
 
 use App\Models\Place;
 use App\Models\Chat;
+use App\Models\Calendar;
+use App\Models\Group;
+use App\Models\Post;
+use App\Models\Task;
 use App\Models\User;
+use App\Policies\CalendarPolicy;
 use App\Policies\ChatPolicy;
+use App\Policies\GroupPolicy;
 use App\Policies\PlacePolicy;
+use App\Policies\PostPolicy;
+use App\Policies\TaskPolicy;
 use App\Support\CapabilityResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -31,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(Place::class, PlacePolicy::class);
         Gate::policy(Chat::class, ChatPolicy::class);
+        Gate::policy(Group::class, GroupPolicy::class);
+        Gate::policy(Calendar::class, CalendarPolicy::class);
+        Gate::policy(Post::class, PostPolicy::class);
+        Gate::policy(Task::class, TaskPolicy::class);
 
         Gate::before(function ($user, string $_ability) {
             if ($user instanceof User && $user->isRoot()) {

@@ -119,4 +119,28 @@ class User extends Authenticatable
     {
         return $this->hasMany(Chat::class, 'owner_id');
     }
+
+    /**
+     * @return HasMany<Group, $this>
+     */
+    public function ownedGroups(): HasMany
+    {
+        return $this->hasMany(Group::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<Calendar, $this>
+     */
+    public function calendars(): HasMany
+    {
+        return $this->hasMany(Calendar::class, 'owner_id');
+    }
+
+    /**
+     * @return HasMany<Post, $this>
+     */
+    public function posts(): HasMany
+    {
+        return $this->hasMany(Post::class, 'author_id');
+    }
 }

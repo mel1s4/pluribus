@@ -11,7 +11,7 @@ import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { invalidateCache } from '../../services/cachedApi.js'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
-import { fetchInvitations, fetchUsersPage } from '../../services/usersApi.js'
+import { fetchInvitations as fetchInvitationsApi, fetchUsersPage } from '../../services/usersApi.js'
 
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
@@ -43,7 +43,7 @@ const showTabs = computed(() => canManageInvitations.value)
 function setTab(id) {
   activeTab.value = id
   if (id === 'invitations') {
-    fetchInvitations()
+    loadInvitations()
   }
 }
 
@@ -69,10 +69,10 @@ async function fetchPage(nextPage) {
   page.value = nextPage
 }
 
-async function fetchInvitations() {
+async function loadInvitations() {
   invitationsError.value = ''
   invitationsLoading.value = true
-  const { ok, status, data } = await fetchInvitations()
+  const { ok, status, data } = await fetchInvitationsApi()
   invitationsLoading.value = false
   if (!ok) {
     invitations.value = []
@@ -193,7 +193,7 @@ async function onDeleteInvitation(row) {
     return
   }
   invalidateCache(/^\/api\/invitations/)
-  await fetchInvitations()
+  await loadInvitations()
 }
 
 onMounted(() => {

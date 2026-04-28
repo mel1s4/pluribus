@@ -18,6 +18,10 @@ const ChatsView = () => import('../views/app/ChatsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
 const ChatFolderPage = () => import('../views/app/ChatFolderPage.vue')
 const MapView = () => import('../views/app/MapView.vue')
+const TasksPage = () => import('../views/app/TasksPage.vue')
+const CalendarPage = () => import('../views/app/CalendarPage.vue')
+const PostsPage = () => import('../views/app/PostsPage.vue')
+const MyGroupsPage = () => import('../views/app/MyGroups.vue')
 const NotificationsView = () => import('../views/app/Notifications.vue')
 const ProfileView = () => import('../views/app/Profile.vue')
 const ApiTestView = () => import('../views/app/ApiTest.vue')
@@ -138,6 +142,50 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'map.title',
+    },
+  },
+  {
+    path: '/tasks',
+    name: 'tasks',
+    component: TasksPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'tasks.title',
+    },
+  },
+  {
+    path: '/calendar',
+    name: 'calendar',
+    component: CalendarPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'calendar.title',
+    },
+  },
+  {
+    path: '/posts',
+    name: 'posts',
+    component: PostsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'posts.title',
+    },
+  },
+  {
+    path: '/my-groups',
+    name: 'myGroups',
+    component: MyGroupsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'groups.title',
     },
   },
   {

@@ -37,6 +37,10 @@ const links = computed(() => {
     },
     { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'plug', capability: null },
     { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'comments', capability: null },
+    { key: 'tasks', to: '/tasks', label: t('tasks.title'), icon: 'list-check', capability: null },
+    { key: 'calendar', to: '/calendar', label: t('calendar.title'), icon: 'calendar-days', capability: null },
+    { key: 'posts', to: '/posts', label: t('posts.title'), icon: 'newspaper', capability: null },
+    { key: 'my-groups', to: '/my-groups', label: t('groups.title'), icon: 'people-group', capability: null },
     { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'store', capability: null },
     { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'map-location-dot', capability: null },
     {

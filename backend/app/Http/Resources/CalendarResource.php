@@ -2,12 +2,12 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ChatFolder;
+use App\Models\Calendar;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin ChatFolder */
-class ChatFolderResource extends JsonResource
+/** @mixin Calendar */
+class CalendarResource extends JsonResource
 {
     /**
      * @return array<string, mixed>
@@ -16,15 +16,16 @@ class ChatFolderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'user_id' => $this->user_id,
+            'community_id' => $this->community_id,
+            'owner_id' => $this->owner_id,
             'shared_group_id' => $this->shared_group_id,
             'name' => $this->name,
-            'icon_emoji' => $this->icon_emoji,
-            'icon_bg_color' => $this->icon_bg_color,
-            'parent_id' => $this->parent_id,
-            'sort_order' => $this->sort_order,
+            'color' => $this->color,
+            'visibility_scope' => $this->visibility_scope,
+            'is_default' => (bool) $this->is_default,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
     }
 }
+

@@ -252,6 +252,82 @@
       }
     ]
   },
+  "groups": {
+    "module": "groups",
+    "capabilities": [
+      {
+        "id": "groups.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View groups where you are a member or owner."
+      },
+      {
+        "id": "groups.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create groups and manage group members and ownership."
+      }
+    ]
+  },
+  "tasks": {
+    "module": "tasks",
+    "capabilities": [
+      {
+        "id": "tasks.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View tasks you own or can access through shared groups."
+      },
+      {
+        "id": "tasks.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create and update tasks and their scheduling details."
+      }
+    ]
+  },
+  "posts": {
+    "module": "posts",
+    "capabilities": [
+      {
+        "id": "posts.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View posts in discovery and map feeds."
+      },
+      {
+        "id": "posts.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create and edit posts, event details, and influence areas."
+      }
+    ]
+  },
+  "calendars": {
+    "module": "calendars",
+    "capabilities": [
+      {
+        "id": "calendars.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View accessible calendars and calendar discovery."
+      },
+      {
+        "id": "calendars.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create and manage private, community, and group calendars."
+      }
+    ]
+  },
   "system": {
     "module": "system",
     "capabilities": [

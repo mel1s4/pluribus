@@ -14,6 +14,7 @@ class ChatFolder extends Model
      */
     protected $fillable = [
         'user_id',
+        'shared_group_id',
         'name',
         'icon_emoji',
         'icon_bg_color',
@@ -27,6 +28,14 @@ class ChatFolder extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Group, $this>
+     */
+    public function sharedGroup(): BelongsTo
+    {
+        return $this->belongsTo(Group::class, 'shared_group_id');
     }
 
     /**
@@ -53,8 +62,27 @@ class ChatFolder extends Model
         return $this->hasMany(Chat::class, 'folder_id');
     }
 
+    /**
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class, 'folder_id');
+    }
+
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);
+    }
+
+    public function scopeVisibleToUser(Builder $query, int $userId): Builder
+    {
+        return $query->where(function (Builder $q) use ($userId): void {
+            $q->where('user_id', $userId)
+                ->orWhere(function (Builder $g) use ($userId): void {
+                    $g->whereNotNull('shared_group_id')
+                        ->whereHas('sharedGroup.members', fn (Builder $m) => $m->where('users.id', $userId));
+                });
+        });
     }
 }
