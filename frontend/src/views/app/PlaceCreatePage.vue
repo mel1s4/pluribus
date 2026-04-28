@@ -28,6 +28,7 @@ async function onSubmit() {
     ? placeCreateToFormData(d)
     : {
         name: d.name.trim(),
+        slug: d.slug.trim(),
         description: d.description?.trim() || null,
         tags: Array.isArray(d.tags) ? d.tags : [],
         service_schedule: normalizeServiceSchedule(d.service_schedule),

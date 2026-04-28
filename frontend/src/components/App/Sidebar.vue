@@ -35,7 +35,6 @@ const links = computed(() => {
       icon: 'people-roof',
       capability: null,
     },
-    { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'plug', capability: null },
     { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'comments', capability: null },
     { key: 'tasks', to: '/tasks', label: t('tasks.title'), icon: 'list-check', capability: null },
     { key: 'calendar', to: '/calendar', label: t('calendar.title'), icon: 'calendar-days', capability: null },

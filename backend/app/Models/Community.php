@@ -19,6 +19,9 @@ class Community extends Model
         'rules',
         'logo',
         'default_language',
+        'currency_code',
+        'latitude',
+        'longitude',
     ];
 
     /**

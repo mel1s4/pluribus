@@ -8,6 +8,7 @@ export function emptyPlaceDraft() {
   return {
     id: null,
     name: '',
+    slug: '',
     description: '',
     tags: [],
     latitude: null,
@@ -18,6 +19,7 @@ export function emptyPlaceDraft() {
     area_geojson: null,
     service_schedule: emptyServiceSchedule(),
     logo_url: null,
+    logo_background_color: null,
     logoFile: null,
     removeLogo: false,
   }
@@ -31,6 +33,9 @@ export function emptyPlaceDraft() {
 export function placeToFormData(draft) {
   const fd = new FormData()
   fd.append('name', draft.name.trim())
+  if (typeof draft.slug === 'string' && draft.slug.trim() !== '') {
+    fd.append('slug', draft.slug.trim())
+  }
   if (draft.description != null && draft.description !== '') {
     fd.append('description', String(draft.description))
   }
@@ -52,6 +57,11 @@ export function placeToFormData(draft) {
   if (draft.logoFile instanceof File) {
     fd.append('logo', draft.logoFile)
   }
+  if (draft.logo_background_color) {
+    fd.append('logo_background_color', String(draft.logo_background_color))
+  } else {
+    fd.append('logo_background_color', '')
+  }
   if (draft.removeLogo) {
     fd.append('remove_logo', '1')
   }
@@ -69,6 +79,9 @@ export function placeToFormData(draft) {
 export function placeCreateToFormData(draft) {
   const fd = new FormData()
   fd.append('name', draft.name.trim())
+  if (typeof draft.slug === 'string' && draft.slug.trim() !== '') {
+    fd.append('slug', draft.slug.trim())
+  }
   if (draft.description != null && draft.description !== '') {
     fd.append('description', String(draft.description))
   }

@@ -22,9 +22,11 @@ class PlaceDirectoryResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'slug' => $this->slug,
             'description' => $this->description,
             'tags' => $this->tags ?? [],
             'logo_url' => PlaceMedia::publicUrl($this->logo_path),
+            'logo_background_color' => $this->logo_background_color,
         ];
     }
 }

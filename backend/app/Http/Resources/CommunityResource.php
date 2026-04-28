@@ -24,6 +24,9 @@ class CommunityResource extends JsonResource
             'logo' => $this->logo,
             'logo_url' => $this->resolveLogoUrl($this->logo),
             'default_language' => $this->default_language,
+            'currency_code' => $this->currency_code,
+            'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
+            'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

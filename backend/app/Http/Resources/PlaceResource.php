@@ -36,6 +36,7 @@ class PlaceResource extends JsonResource
             'viewer_place_role' => $viewerRole,
             'can_manage_admins' => $canManageAdmins,
             'name' => $this->name,
+            'slug' => $this->slug,
             'description' => $this->description,
             'tags' => $this->tags ?? [],
             'location' => [
@@ -50,6 +51,7 @@ class PlaceResource extends JsonResource
             'area_geojson' => $this->area_geojson,
             'logo_path' => $this->logo_path,
             'logo_url' => PlaceMedia::publicUrl($this->logo_path),
+            'logo_background_color' => $this->logo_background_color,
             'service_schedule' => PlaceServiceScheduleNormalizer::normalize(
                 is_array($this->service_schedule) ? $this->service_schedule : []
             ),

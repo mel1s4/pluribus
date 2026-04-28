@@ -20,6 +20,7 @@ use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -37,6 +38,14 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Route::bind('place', function (string $value) {
+            if (ctype_digit($value)) {
+                return Place::query()->where('id', (int) $value)->firstOrFail();
+            }
+
+            return Place::query()->where('slug', $value)->firstOrFail();
+        });
+
         Gate::policy(Place::class, PlacePolicy::class);
         Gate::policy(Chat::class, ChatPolicy::class);
         Gate::policy(Group::class, GroupPolicy::class);

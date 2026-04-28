@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import PlaceLocationPicker from '../../organisms/PlaceLocationPicker.vue'
@@ -105,9 +105,18 @@ load()
       <button type="button" class="place-view-page__back" @click="goBack">
         {{ memberBackId ? t('places.viewBackToMember') : t('places.viewBackToPlaces') }}
       </button>
-      <Button v-if="canManage" type="button" variant="primary" @click="goEdit">
-        {{ t('places.viewManage') }}
-      </Button>
+      <div class="place-view-page__toolbarRight">
+        <RouterLink
+          v-if="place?.slug"
+          class="place-view-page__link btn btn--secondary btn--sm"
+          :to="{ name: 'placePublic', params: { slug: place.slug } }"
+        >
+          {{ t('places.viewOpenStorefront') }}
+        </RouterLink>
+        <Button v-if="canManage" type="button" variant="primary" @click="goEdit">
+          {{ t('places.viewManage') }}
+        </Button>
+      </div>
     </div>
 
     <p v-if="loading" class="place-view-page__muted">{{ t('places.viewLoading') }}</p>
@@ -180,7 +189,21 @@ load()
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  justify-content: space-between;
   margin-bottom: 1rem;
+}
+
+.place-view-page__toolbarRight {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.place-view-page__link {
+  text-decoration: none;
+  text-align: center;
 }
 
 .place-view-page__back {

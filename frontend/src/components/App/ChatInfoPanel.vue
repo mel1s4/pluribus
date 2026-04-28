@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { t } from '../../i18n/i18n'
 import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
 import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
@@ -50,7 +50,15 @@ async function createBackup() {
 }
 
 syncForm()
-loadBackups()
+void loadBackups()
+
+watch(
+  () => props.chat.id,
+  () => {
+    syncForm()
+    void loadBackups()
+  },
+)
 </script>
 
 <template>

@@ -114,6 +114,11 @@ function onClearLogo() {
 function setSchedule(next) {
   patch({ service_schedule: next })
 }
+
+function onLogoBackgroundColorInput(ev) {
+  const value = (ev.target).value.trim()
+  patch({ logo_background_color: value || null })
+}
 </script>
 
 <template>
@@ -127,6 +132,23 @@ function setSchedule(next) {
       maxlength="255"
       @input="patch({ name: ($event.target).value })"
     />
+
+    <label class="place-basics-form__label" for="place-slug-input">{{ t('myPlaces.fieldSlug') }}</label>
+    <input
+      id="place-slug-input"
+      :value="modelValue.slug ?? ''"
+      class="place-basics-form__input"
+      type="text"
+      required
+      maxlength="64"
+      pattern="[a-z0-9]+(-[a-z0-9]+)*"
+      autocomplete="off"
+      spellcheck="false"
+      :placeholder="t('myPlaces.fieldSlugPlaceholder')"
+      :aria-describedby="'place-slug-hint'"
+      @input="patch({ slug: ($event.target).value })"
+    />
+    <p id="place-slug-hint" class="place-basics-form__hint">{{ t('myPlaces.slugHint') }}</p>
 
     <label class="place-basics-form__label">{{ t('myPlaces.fieldDescription') }}</label>
     <textarea
@@ -170,6 +192,19 @@ function setSchedule(next) {
         @change="onLogoFile"
       />
       <p class="place-basics-form__logo-hint">{{ t('myPlaces.placeLogoHint') }}</p>
+      <label class="place-basics-form__label" for="place-logo-background-color">
+        {{ t('myPlaces.fieldPlaceLogoBackgroundColor') }}
+      </label>
+      <input
+        id="place-logo-background-color"
+        class="place-basics-form__input place-basics-form__color-input"
+        type="text"
+        :value="modelValue.logo_background_color ?? ''"
+        :placeholder="t('myPlaces.placeLogoBackgroundColorPlaceholder')"
+        :disabled="saveLoading"
+        @input="onLogoBackgroundColorInput"
+      />
+      <p class="place-basics-form__logo-hint">{{ t('myPlaces.placeLogoBackgroundColorHint') }}</p>
       <button
         v-if="logoPreviewSrc || modelValue.logoFile || (modelValue.logo_url && !modelValue.removeLogo)"
         type="button"
@@ -227,6 +262,12 @@ function setSchedule(next) {
   font-size: 0.85rem;
 }
 
+.place-basics-form__hint {
+  margin: -0.25rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted, #64748b);
+}
+
 .place-basics-form__input,
 .place-basics-form__textarea {
   max-width: 28rem;
@@ -282,6 +323,10 @@ function setSchedule(next) {
 .place-basics-form__file {
   max-width: 24rem;
   font-size: 0.85rem;
+}
+
+.place-basics-form__color-input {
+  max-width: 12rem;
 }
 
 .place-basics-form__logo-hint {

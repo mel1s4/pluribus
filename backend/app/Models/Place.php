@@ -48,6 +48,7 @@ class Place extends Model
     protected $fillable = [
         'user_id',
         'name',
+        'slug',
         'description',
         'tags',
         'latitude',
@@ -57,6 +58,7 @@ class Place extends Model
         'radius_meters',
         'area_geojson',
         'logo_path',
+        'logo_background_color',
         'service_schedule',
     ];
 

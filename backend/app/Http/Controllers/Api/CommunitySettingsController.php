@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateCommunityCurrencyRequest;
 use App\Http\Requests\UpdateSingletonCommunityRequest;
 use App\Http\Resources\CommunityLeaderResource;
 use App\Http\Resources\CommunityResource;
@@ -33,7 +34,7 @@ class CommunitySettingsController extends Controller
         $payload = (new CommunityResource($community))->toArray($request);
 
         return response()->json([
-            'community' => Arr::only($payload, ['name', 'logo_url', 'default_language']),
+            'community' => Arr::only($payload, ['name', 'logo_url', 'default_language', 'currency_code']),
         ]);
     }
 
@@ -90,13 +91,43 @@ class CommunitySettingsController extends Controller
             }
         }
 
-        $community->fill([
+        $fill = [
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'rules' => $validated['rules'] ?? null,
             'logo' => $nextLogo,
             'default_language' => $validated['default_language'] ?? $community->default_language,
+        ];
+        if (array_key_exists('latitude', $validated)) {
+            $fill['latitude'] = $validated['latitude'];
+        }
+        if (array_key_exists('longitude', $validated)) {
+            $fill['longitude'] = $validated['longitude'];
+        }
+        if (array_key_exists('currency_code', $validated)) {
+            $fill['currency_code'] = $validated['currency_code'];
+        }
+        $community->fill($fill);
+        $community->save();
+
+        return response()->json([
+            'community' => new CommunityResource($community->fresh()),
         ]);
+    }
+
+    public function updateCurrency(UpdateCommunityCurrencyRequest $request): JsonResponse
+    {
+        $actor = $request->user();
+        if ($actor === null) {
+            abort(401);
+        }
+        if (! $actor->isRoot() && $actor->user_type !== 'admin') {
+            abort(403, 'Only root or community admins can update currency.');
+        }
+
+        $community = Community::current();
+        $validated = $request->validated();
+        $community->currency_code = $validated['currency_code'] ?? null;
         $community->save();
 
         return response()->json([

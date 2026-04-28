@@ -16,8 +16,17 @@ class UserAdminController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $perPage = min(max((int) $request->query('per_page', 20), 1), 100);
+        $search = trim((string) $request->query('search', ''));
 
-        $paginator = User::query()
+        $query = User::query();
+        if ($search !== '') {
+            $query->where(function ($q) use ($search): void {
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('email', 'like', '%'.$search.'%');
+            });
+        }
+
+        $paginator = $query
             ->orderBy('id')
             ->paginate($perPage);
 

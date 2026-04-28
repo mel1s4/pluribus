@@ -1,9 +1,17 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { t } from '../i18n/i18n'
+import { useCommunity } from '../composables/useCommunity'
 import { resolveSession, sessionUser } from '../composables/useSession'
-import PlaceRequirementOfferResponseDialog from './PlaceRequirementOfferResponseDialog.vue'
+import { t } from '../i18n/i18n'
 import { deleteRequirementResponse } from '../services/placesApi.js'
+import { formatOfferPrice } from '../utils/formatPrice'
+import PlaceRequirementOfferResponseDialog from './PlaceRequirementOfferResponseDialog.vue'
+
+const { communityCurrencyCode } = useCommunity()
+
+function formatPrice(amount) {
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
 
 const props = defineProps({
   placeId: {
@@ -130,7 +138,7 @@ onMounted(() => {
                 <p v-if="r.example_offer.source_place?.name" class="place-reqs-public__examplePlace">
                   {{ t('places.viewRequirementExampleFrom').replace('{name}', r.example_offer.source_place.name) }}
                 </p>
-                <p class="place-reqs-public__examplePrice">{{ r.example_offer.price }}</p>
+                <p class="place-reqs-public__examplePrice">{{ formatPrice(r.example_offer.price) }}</p>
               </div>
             </div>
           </div>
@@ -144,7 +152,7 @@ onMounted(() => {
                   <p v-if="resp.user?.name" class="place-reqs-public__respBy">
                     {{ t('places.viewRequirementResponseBy').replace('{name}', resp.user.name) }}
                   </p>
-                  <p class="place-reqs-public__respPrice">{{ resp.price }}</p>
+                  <p class="place-reqs-public__respPrice">{{ formatPrice(resp.price) }}</p>
                 </div>
                 <button
                   v-if="meId != null && Number(resp.user?.id) === meId"
@@ -169,7 +177,7 @@ onMounted(() => {
             <ul class="place-reqs-public__madeList">
               <li v-for="resp in r.offers_made" :key="'m-'+resp.id" class="place-reqs-public__madeRow">
                 <span class="place-reqs-public__madeTitle">{{ resp.title }}</span>
-                <span class="place-reqs-public__madePrice">{{ resp.price }}</span>
+                <span class="place-reqs-public__madePrice">{{ formatPrice(resp.price) }}</span>
                 <span class="place-reqs-public__madeVis">
                   {{ resp.visibility === 'community' ? t('myPlaces.requirementVisibilityCommunity') : t('myPlaces.requirementVisibilityCreator') }}
                 </span>

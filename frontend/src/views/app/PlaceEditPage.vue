@@ -24,7 +24,23 @@ const loading = ref(true)
 const saveError = ref('')
 const saveLoading = ref(false)
 const pickerKey = ref(0)
-const tab = ref('edit')
+
+const tab = computed(() => {
+  const raw = route.params.tab
+  if (
+    raw === 'edit'
+    || raw === 'offers'
+    || raw === 'requirements'
+    || raw === 'audiences'
+    || raw === 'administrators'
+  ) {
+    return raw
+  }
+  if (raw === undefined) {
+    return 'edit'
+  }
+  return 'edit'
+})
 
 const canManageAdmins = computed(() => Boolean(place.value?.can_manage_admins))
 
@@ -38,6 +54,7 @@ function draftFromPlace(p) {
   return {
     id: p.id,
     name: p.name,
+    slug: p.slug ?? '',
     description: p.description ?? '',
     tags: Array.isArray(p.tags) ? [...p.tags] : [],
     latitude: loc.latitude ?? p.latitude ?? null,
@@ -47,6 +64,7 @@ function draftFromPlace(p) {
     radius_meters: p.radius_meters,
     area_geojson: p.area_geojson,
     logo_url: p.logo_url ?? null,
+    logo_background_color: p.logo_background_color ?? null,
     logoFile: null,
     removeLogo: false,
     service_schedule: normalizeServiceSchedule(p.service_schedule),
@@ -78,14 +96,39 @@ async function load() {
   place.value = p
   draft.value = draftFromPlace(p)
   pickerKey.value += 1
-  tab.value = 'edit'
 }
 
-watch([canManageAdmins, tab], () => {
+function goToTab(next) {
+  if (next === 'edit') {
+    router.push({ name: 'placeEdit', params: { placeId: placeId.value } })
+  } else {
+    router.push({ name: 'placeEdit', params: { placeId: placeId.value, tab: next } })
+  }
+}
+
+watch([canManageAdmins, tab, place], () => {
   if (tab.value === 'administrators' && place.value && !canManageAdmins.value) {
-    tab.value = 'edit'
+    goToTab('edit')
   }
 })
+
+watch(
+  () => [route.params.tab, placeId.value],
+  ([pTab, id]) => {
+    if (!id) return
+    if (
+      pTab != null
+      && pTab !== 'edit'
+      && pTab !== 'offers'
+      && pTab !== 'requirements'
+      && pTab !== 'audiences'
+      && pTab !== 'administrators'
+    ) {
+      router.replace({ name: 'placeEdit', params: { placeId: id } })
+    }
+  },
+  { immediate: true },
+)
 
 watch(placeId, () => {
   load()
@@ -101,6 +144,7 @@ async function onSubmit() {
     ? placeToFormData(d)
     : {
         name: d.name.trim(),
+        slug: d.slug.trim(),
         description: d.description?.trim() || null,
         tags: Array.isArray(d.tags) ? d.tags : [],
         latitude: d.latitude,
@@ -109,6 +153,7 @@ async function onSubmit() {
         service_area_type: d.service_area_type,
         radius_meters: d.radius_meters,
         area_geojson: d.area_geojson,
+        logo_background_color: d.logo_background_color || null,
         service_schedule: normalizeServiceSchedule(d.service_schedule),
       }
   const { ok, status, data } = await updatePlace(d.id, payload)
@@ -138,7 +183,7 @@ function goBack() {
 }
 
 function onTabClick(next) {
-  tab.value = next
+  goToTab(next)
 }
 
 function setDraft(next) {

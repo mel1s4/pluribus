@@ -16,6 +16,7 @@ const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
 const ChatsView = () => import('../views/app/ChatsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
+const ChatInfoPage = () => import('../views/app/ChatInfoPage.vue')
 const ChatFolderPage = () => import('../views/app/ChatFolderPage.vue')
 const MapView = () => import('../views/app/MapView.vue')
 const TasksPage = () => import('../views/app/TasksPage.vue')
@@ -31,6 +32,7 @@ const UserEditPage = () => import('../views/app/UserEditPage.vue')
 const MemberProfilePage = () => import('../views/app/MemberProfilePage.vue')
 const MyPlacesView = () => import('../views/app/MyPlaces.vue')
 const PlaceViewPage = () => import('../views/app/PlaceViewPage.vue')
+const PlacePublicPage = () => import('../views/app/PlacePublicPage.vue')
 const PlaceCreatePage = () => import('../views/app/PlaceCreatePage.vue')
 const PlaceEditPage = () => import('../views/app/PlaceEditPage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
@@ -123,18 +125,29 @@ const routes = [
     },
   },
   {
+    path: '/chats/:chatId/info',
+    name: 'chatInfo',
+    component: ChatInfoPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'chats.info.title',
+    },
+  },
+  {
     path: '/chats/:chatId',
     name: 'chatThread',
     component: ChatThreadPage,
     meta: {
       layout: 'app',
       requiresAuth: true,
-      hideHeader: true,
+      hideHeader: false,
       headerTitleKey: 'chats.thread.title',
     },
   },
   {
-    path: '/map',
+    path: '/map/:placeId?/:tab?',
     name: 'map',
     component: MapView,
     meta: {
@@ -233,6 +246,17 @@ const routes = [
     },
   },
   {
+    path: '/place/:slug',
+    name: 'placePublic',
+    component: PlacePublicPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'places.storefrontPageTitle',
+    },
+  },
+  {
     path: '/places/:placeId',
     name: 'placeView',
     component: PlaceViewPage,
@@ -256,7 +280,7 @@ const routes = [
     },
   },
   {
-    path: '/users/:userId',
+    path: '/users/:userId(\\d+)',
     name: 'userEdit',
     component: UserEditPage,
     meta: {
@@ -268,7 +292,7 @@ const routes = [
     },
   },
   {
-    path: '/users',
+    path: '/users/:tab?',
     name: 'users',
     component: UsersView,
     meta: {
@@ -279,7 +303,7 @@ const routes = [
     },
   },
   {
-    path: '/community',
+    path: '/community/:tab?',
     name: 'communitySettings',
     component: CommunitySettingsPage,
     meta: {
@@ -301,7 +325,7 @@ const routes = [
     },
   },
   {
-    path: '/my-places/:placeId',
+    path: '/my-places/:placeId/:tab?',
     name: 'placeEdit',
     component: PlaceEditPage,
     meta: {

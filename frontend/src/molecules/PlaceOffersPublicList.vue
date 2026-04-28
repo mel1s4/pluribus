@@ -1,6 +1,14 @@
 <script setup>
 import { computed } from 'vue'
+import { useCommunity } from '../composables/useCommunity'
 import { t } from '../i18n/i18n'
+import { formatOfferPrice } from '../utils/formatPrice'
+
+const { communityCurrencyCode } = useCommunity()
+
+function formatPrice(amount) {
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
 
 const props = defineProps({
   offers: {
@@ -30,7 +38,7 @@ const list = computed(() => (Array.isArray(props.offers) ? props.offers : []))
         <div class="place-offers-public__body">
           <h3 class="place-offers-public__title">{{ o.title }}</h3>
           <p v-if="o.description" class="place-offers-public__desc">{{ o.description }}</p>
-          <p class="place-offers-public__price">{{ o.price }}</p>
+          <p class="place-offers-public__price">{{ formatPrice(o.price) }}</p>
           <ul
             v-if="Array.isArray(o.tags) && o.tags.length"
             class="place-offers-public__tags"

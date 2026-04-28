@@ -1,15 +1,38 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import Title from '../../atoms/Title.vue'
 import CommunityLeadershipTab from '../../components/App/CommunityLeadershipTab.vue'
 import CommunitySettingsFormTab from '../../components/App/CommunitySettingsFormTab.vue'
 import { t } from '../../i18n/i18n'
 
-const activeTab = ref('leadership')
+const route = useRoute()
+const router = useRouter()
+
+const activeTab = computed(() => {
+  const raw = route.params.tab
+  if (raw === 'settings') return 'settings'
+  if (raw === 'leadership' || raw === undefined) return 'leadership'
+  return 'leadership'
+})
 
 function setTab(id) {
-  activeTab.value = id
+  if (id === 'leadership') {
+    router.push({ name: 'communitySettings' })
+  } else {
+    router.push({ name: 'communitySettings', params: { tab: id } })
+  }
 }
+
+watch(
+  () => route.params.tab,
+  (t) => {
+    if (t != null && t !== 'leadership' && t !== 'settings') {
+      router.replace({ name: 'communitySettings' })
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\CalendarController;
 use App\Http\Controllers\Api\DiscoveryController;
+use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\GroupMemberController;
 use App\Http\Controllers\Api\JoinInvitationController;
@@ -67,8 +68,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/community', [CommunitySettingsController::class, 'show']);
     Route::get('/community/leadership', [CommunitySettingsController::class, 'leadership']);
     Route::patch('/community', [CommunitySettingsController::class, 'update']);
+    Route::patch('/community/currency', [CommunitySettingsController::class, 'updateCurrency']);
 
     Route::get('/community-place-offers', [CommunityPlaceOfferController::class, 'index']);
+    Route::get('/global-search', [GlobalSearchController::class, 'index']);
     Route::get('/community-map/places', [PlaceController::class, 'mapIndex']);
     Route::get('/discovery/calendar', [DiscoveryController::class, 'calendar']);
     Route::get('/discovery/map', [DiscoveryController::class, 'map']);

@@ -22,6 +22,15 @@ class UpdatePlaceRequest extends FormRequest
     {
         $rules = [
             'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'min:2',
+                'max:64',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique('places', 'slug')->ignore($this->route('place')),
+            ],
             'description' => ['nullable', 'string', 'max:10000'],
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],
@@ -33,6 +42,7 @@ class UpdatePlaceRequest extends FormRequest
             'area_geojson' => ['nullable', 'array'],
             'logo' => ['nullable', 'file', 'image', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
+            'logo_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
         ];
 
         $time = ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
@@ -68,6 +78,9 @@ class UpdatePlaceRequest extends FormRequest
         }
         if ($this->has('radius_meters') && $this->input('radius_meters') === '') {
             $merge['radius_meters'] = null;
+        }
+        if ($this->has('logo_background_color') && trim((string) $this->input('logo_background_color')) === '') {
+            $merge['logo_background_color'] = null;
         }
         if ($this->has('service_schedule')) {
             $raw = $this->input('service_schedule');
