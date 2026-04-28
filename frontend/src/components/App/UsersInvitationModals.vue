@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, ref } from 'vue'
+import QRCode from 'qrcode'
 import Button from '../../atoms/Button.vue'
 import Input from '../../atoms/Input.vue'
 import UsersInvitationMaxUsesFields from './UsersInvitationMaxUsesFields.vue'
@@ -35,6 +36,7 @@ function validateCustomUsage(usage) {
 
 const sendDialog = ref(null)
 const linkDialog = ref(null)
+const qrDialog = ref(null)
 
 const sendEmail = ref('')
 const sendError = ref('')
@@ -49,8 +51,16 @@ const linkLoading = ref(false)
 const linkResultUrl = ref('')
 const linkResultMaxUses = ref(null)
 
+const qrUsage = ref(defaultUsage())
+const qrError = ref('')
+const qrLoading = ref(false)
+const qrResultUrl = ref('')
+const qrResultMaxUses = ref(null)
+const qrDataUrl = ref('')
+
 const sendCopyHint = ref('')
 const linkCopyHint = ref('')
+const qrCopyHint = ref('')
 
 function resetSendState() {
   sendEmail.value = ''
@@ -71,6 +81,16 @@ function resetLinkState() {
   linkCopyHint.value = ''
 }
 
+function resetQrState() {
+  qrUsage.value = defaultUsage()
+  qrError.value = ''
+  qrLoading.value = false
+  qrResultUrl.value = ''
+  qrResultMaxUses.value = null
+  qrDataUrl.value = ''
+  qrCopyHint.value = ''
+}
+
 async function openSend() {
   resetSendState()
   await nextTick()
@@ -83,7 +103,13 @@ async function openLink() {
   linkDialog.value?.showModal()
 }
 
-defineExpose({ openSend, openLink })
+async function openQr() {
+  resetQrState()
+  await nextTick()
+  qrDialog.value?.showModal()
+}
+
+defineExpose({ openSend, openLink, openQr })
 
 function closeSendDialog() {
   sendDialog.value?.close()
@@ -91,6 +117,10 @@ function closeSendDialog() {
 
 function closeLinkDialog() {
   linkDialog.value?.close()
+}
+
+function closeQrDialog() {
+  qrDialog.value?.close()
 }
 
 function onSendDialogClick(ev) {
@@ -102,6 +132,12 @@ function onSendDialogClick(ev) {
 function onLinkDialogClick(ev) {
   if (ev.target === linkDialog.value) {
     closeLinkDialog()
+  }
+}
+
+function onQrDialogClick(ev) {
+  if (ev.target === qrDialog.value) {
+    closeQrDialog()
   }
 }
 
@@ -170,8 +206,62 @@ async function submitCreateLink() {
   }
 }
 
+async function submitCreateQr() {
+  qrError.value = ''
+  qrResultUrl.value = ''
+  qrResultMaxUses.value = null
+  qrDataUrl.value = ''
+  qrCopyHint.value = ''
+  const usageErr = validateCustomUsage(qrUsage.value)
+  if (usageErr) {
+    qrError.value = usageErr
+    return
+  }
+  qrLoading.value = true
+  await ensureCsrfCookie()
+  const maxUses = inviteUsageToMaxUses(qrUsage.value)
+  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
+    max_uses: maxUses,
+    join_url_locale: language.value,
+  })
+  qrLoading.value = false
+  if (!ok) {
+    qrError.value =
+      (data && typeof data === 'object' && data.message && String(data.message)) ||
+      t('users.inviteCreateError').replace('{status}', String(status))
+    return
+  }
+  const inv = data?.invitation
+  if (inv && typeof inv.join_url === 'string') {
+    qrResultUrl.value = inv.join_url
+    qrResultMaxUses.value =
+      inv.max_uses === null || inv.max_uses === undefined ? null : Number(inv.max_uses)
+    try {
+      qrDataUrl.value = await QRCode.toDataURL(inv.join_url, {
+        width: 280,
+        margin: 2,
+        errorCorrectionLevel: 'M',
+      })
+    } catch {
+      qrError.value = t('users.inviteQrGenerateError')
+    }
+  }
+}
+
+function downloadQr() {
+  if (!qrDataUrl.value) return
+  const a = document.createElement('a')
+  a.href = qrDataUrl.value
+  a.download = 'invitation-qr.png'
+  a.rel = 'noopener'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+}
+
 async function copyUrl(url, which) {
-  const hintRef = which === 'send' ? sendCopyHint : linkCopyHint
+  const hintRef =
+    which === 'send' ? sendCopyHint : which === 'link' ? linkCopyHint : qrCopyHint
   hintRef.value = ''
   try {
     await navigator.clipboard.writeText(url)
@@ -309,6 +399,78 @@ async function copyUrl(url, which) {
         </div>
       </div>
     </dialog>
+
+    <dialog
+      ref="qrDialog"
+      class="users-invitation-modals__dialog"
+      @click="onQrDialogClick"
+    >
+      <div class="users-invitation-modals__panel">
+        <h2 class="users-invitation-modals__title">{{ t('users.inviteQrTitle') }}</h2>
+        <p class="users-invitation-modals__intro">{{ t('users.inviteQrIntro') }}</p>
+        <UsersInvitationMaxUsesFields
+          v-model="qrUsage"
+          name-prefix="invite-qr"
+          :disabled="qrLoading || Boolean(qrResultUrl)"
+        />
+        <p v-if="qrError" class="users-invitation-modals__error" role="alert">
+          {{ qrError }}
+        </p>
+        <div v-if="qrResultUrl" class="users-invitation-modals__result">
+          <template v-if="qrDataUrl">
+            <p class="users-invitation-modals__resultLabel">{{ t('users.inviteQrImageLabel') }}</p>
+            <img
+              class="users-invitation-modals__qrImg"
+              :src="qrDataUrl"
+              :alt="t('users.inviteQrImageAlt')"
+            />
+            <div class="users-invitation-modals__resultRow">
+              <Button type="button" variant="secondary" size="sm" @click="downloadQr">
+                {{ t('users.inviteQrDownload') }}
+              </Button>
+            </div>
+          </template>
+          <p class="users-invitation-modals__resultLabel">{{ t('users.inviteJoinUrlLabel') }}</p>
+          <div class="users-invitation-modals__resultRow">
+            <code class="users-invitation-modals__code">{{ qrResultUrl }}</code>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              @click="copyUrl(qrResultUrl, 'qr')"
+            >
+              {{ t('users.inviteCopy') }}
+            </Button>
+          </div>
+          <p v-if="qrResultMaxUses === null" class="users-invitation-modals__hint">
+            {{ t('users.inviteResultMaxUsesUnlimited') }}
+          </p>
+          <p v-else-if="qrResultMaxUses === 1" class="users-invitation-modals__hint">
+            {{ t('users.inviteResultMaxUsesOnce') }}
+          </p>
+          <p v-else class="users-invitation-modals__hint">
+            {{
+              t('users.inviteResultMaxUses').replace('{n}', String(qrResultMaxUses))
+            }}
+          </p>
+        </div>
+        <p v-if="qrCopyHint" class="users-invitation-modals__hint">{{ qrCopyHint }}</p>
+        <div class="users-invitation-modals__actions">
+          <Button type="button" variant="secondary" @click="closeQrDialog">
+            {{ qrResultUrl ? t('users.inviteClose') : t('users.inviteCancel') }}
+          </Button>
+          <Button
+            v-if="!qrResultUrl"
+            type="button"
+            variant="primary"
+            :loading="qrLoading"
+            @click="submitCreateQr"
+          >
+            {{ t('users.inviteQrSubmit') }}
+          </Button>
+        </div>
+      </div>
+    </dialog>
   </div>
 </template>
 
@@ -372,6 +534,15 @@ async function copyUrl(url, which) {
   font-size: 0.78rem;
   word-break: break-all;
   background: var(--table-head, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+}
+
+.users-invitation-modals__qrImg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 0.35rem;
 }

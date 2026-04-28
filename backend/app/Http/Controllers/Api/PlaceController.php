@@ -56,6 +56,7 @@ class PlaceController extends Controller
         $place = Place::query()->create([
             'user_id' => $request->user()->id,
             'name' => $validated['name'],
+            'slug' => $validated['slug'],
             'description' => $validated['description'] ?? null,
             'tags' => $tags === [] ? null : $tags,
             'latitude' => null,

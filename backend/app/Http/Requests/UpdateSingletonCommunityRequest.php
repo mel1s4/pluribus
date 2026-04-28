@@ -20,6 +20,14 @@ class UpdateSingletonCommunityRequest extends FormRequest
                 $merge[$key] = null;
             }
         }
+        foreach (['latitude', 'longitude'] as $key) {
+            if ($this->has($key) && ($this->input($key) === '' || $this->input($key) === null)) {
+                $merge[$key] = null;
+            }
+        }
+        if ($this->has('currency_code') && $this->input('currency_code') === '') {
+            $merge['currency_code'] = null;
+        }
         if ($merge !== []) {
             $this->merge($merge);
         }
@@ -38,6 +46,9 @@ class UpdateSingletonCommunityRequest extends FormRequest
             'logo_upload' => ['nullable', 'file', 'image', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
             'default_language' => ['sometimes', 'string', 'in:'.implode(',', LocaleOptions::codes())],
+            'currency_code' => ['nullable', 'string', 'max:4'],
+            'latitude' => ['nullable', 'required_with:longitude', 'numeric', 'between:-90,90'],
+            'longitude' => ['nullable', 'required_with:latitude', 'numeric', 'between:-180,180'],
         ];
     }
 }

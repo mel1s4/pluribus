@@ -5,6 +5,8 @@ import { language, t } from '../i18n/i18n'
 export const communityName = ref(null)
 export const communityLogoUrl = ref(null)
 export const communityDefaultLanguage = ref(null)
+/** @type {import('vue').Ref<string | null>} */
+export const communityCurrencyCode = ref(null)
 
 export function useCommunity() {
   const displayName = computed(() => {
@@ -20,6 +22,7 @@ export function useCommunity() {
     communityName,
     communityLogoUrl,
     communityDefaultLanguage,
+    communityCurrencyCode,
     displayName,
     fetchCommunityBranding,
   }
@@ -31,6 +34,7 @@ export async function fetchCommunityBranding() {
     communityName.value = null
     communityLogoUrl.value = null
     communityDefaultLanguage.value = null
+    communityCurrencyCode.value = null
     return
   }
   const c = data.community
@@ -40,4 +44,6 @@ export async function fetchCommunityBranding() {
   communityLogoUrl.value = typeof logo === 'string' && logo.length ? logo : null
   const defaultLanguage = c.default_language
   communityDefaultLanguage.value = typeof defaultLanguage === 'string' ? defaultLanguage : null
+  const cur = c.currency_code
+  communityCurrencyCode.value = typeof cur === 'string' && cur.trim().length ? cur.trim() : null
 }

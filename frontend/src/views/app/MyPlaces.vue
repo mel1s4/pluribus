@@ -82,7 +82,20 @@ onMounted(() => {
           class="my-places__link"
           @click="goEdit(p.id)"
         >
-          <span class="my-places__link-name">{{ p.name }}</span>
+          <span class="my-places__link-top">
+            <span class="my-places__logo-wrap">
+              <img
+                v-if="p.logo_url"
+                :src="p.logo_url"
+                :alt="`${p.name} logo`"
+                class="my-places__logo"
+              >
+              <span v-else class="my-places__logo my-places__logo--fallback" aria-hidden="true">
+                {{ (p.name || '?').charAt(0).toUpperCase() }}
+              </span>
+            </span>
+            <span class="my-places__link-name">{{ p.name }}</span>
+          </span>
           <span v-if="placeRoleLabel(p)" class="my-places__link-role">{{ placeRoleLabel(p) }}</span>
           <span v-if="tagsPreview(p)" class="my-places__link-meta">{{ tagsPreview(p) }}</span>
         </button>
@@ -159,6 +172,34 @@ onMounted(() => {
   cursor: pointer;
   font: inherit;
   color: inherit;
+}
+
+.my-places__link-top {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.my-places__logo-wrap {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+}
+
+.my-places__logo {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
+.my-places__logo--fallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  background: var(--surface, #eef2ff);
 }
 
 .my-places__link:hover {

@@ -1,7 +1,15 @@
 <script setup>
 import { ref, watch } from 'vue'
+import { useCommunity } from '../composables/useCommunity'
 import { t } from '../i18n/i18n'
 import { fetchCommunityPlaceOffers } from '../services/placesApi.js'
+import { formatOfferPrice } from '../utils/formatPrice'
+
+const { communityCurrencyCode } = useCommunity()
+
+function formatPrice(amount) {
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
 
 const props = defineProps({
   modelValue: {
@@ -89,7 +97,7 @@ runSearch()
         <span v-if="selectedPreview.place?.name" class="req-ex-offer__pickedPlace">
           {{ selectedPreview.place.name }}
         </span>
-        <span class="req-ex-offer__pickedPrice">{{ selectedPreview.price }}</span>
+        <span class="req-ex-offer__pickedPrice">{{ formatPrice(selectedPreview.price) }}</span>
       </div>
       <button type="button" class="req-ex-offer__clear" @click="clearSelection">
         {{ t('myPlaces.requirementExampleOfferClear') }}
@@ -113,7 +121,7 @@ runSearch()
         <button type="button" class="req-ex-offer__pick" @click="pickOffer(o)">
           <span class="req-ex-offer__hitTitle">{{ o.title }}</span>
           <span v-if="o.place?.name" class="req-ex-offer__hitPlace">{{ o.place.name }}</span>
-          <span class="req-ex-offer__hitPrice">{{ o.price }}</span>
+          <span class="req-ex-offer__hitPrice">{{ formatPrice(o.price) }}</span>
         </button>
       </li>
     </ul>

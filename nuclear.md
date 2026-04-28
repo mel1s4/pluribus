@@ -28,3 +28,11 @@ php artisan optimize:clear
 php artisan config:cache
 php artisan route:cache
 php artisan up
+
+
+# normal
+php artisan migrate
+php artisan optimize:clear
+php artisan config:cache
+php artisan route:cache
+php artisan up

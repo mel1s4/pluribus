@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePlaceRequest extends FormRequest
 {
@@ -19,6 +20,14 @@ class StorePlaceRequest extends FormRequest
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
+            'slug' => [
+                'required',
+                'string',
+                'min:2',
+                'max:64',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique('places', 'slug'),
+            ],
             'description' => ['nullable', 'string', 'max:10000'],
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],

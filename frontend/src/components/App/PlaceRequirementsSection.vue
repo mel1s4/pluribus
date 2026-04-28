@@ -1,6 +1,8 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
+import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
+import { formatOfferPrice } from '../../utils/formatPrice'
 import Title from '../../atoms/Title.vue'
 import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
 import PlaceRequirementRecurrenceFields from '../../molecules/PlaceRequirementRecurrenceFields.vue'
@@ -46,6 +48,13 @@ const createPhoto = ref(null)
 const createGallery = ref(null)
 const editTagsRef = ref(null)
 const createTagsRef = ref(null)
+const createDialogRef = ref(null)
+
+const { communityCurrencyCode } = useCommunity()
+
+function formatPrice(amount) {
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
 
 const createForm = ref({
   title: '',
@@ -198,6 +207,33 @@ async function removeResponse(req, resp) {
   emit('changed')
 }
 
+function resetCreateRequirementForm() {
+  createForm.value = {
+    title: '',
+    description: '',
+    quantity: '',
+    unit: '',
+    recurrence_mode: 'once',
+    recurrence_weekdays: [],
+    tags: [],
+    example_place_offer_id: null,
+    visibility_scope: 'public',
+    audience_ids: [],
+  }
+  if (createPhoto.value) createPhoto.value.value = ''
+  if (createGallery.value) createGallery.value.value = ''
+}
+
+function onCreateDialogBackdrop(e) {
+  if (e.target === createDialogRef.value) createDialogRef.value?.close()
+}
+
+async function openCreateRequirementDialog() {
+  resetCreateRequirementForm()
+  await nextTick()
+  createDialogRef.value?.showModal()
+}
+
 async function createRow() {
   createTagsRef.value?.commit?.()
   const hasFiles =
@@ -240,20 +276,8 @@ async function createRow() {
       return
     }
   }
-  createForm.value = {
-    title: '',
-    description: '',
-    quantity: '',
-    unit: '',
-    recurrence_mode: 'once',
-    recurrence_weekdays: [],
-    tags: [],
-    example_place_offer_id: null,
-    visibility_scope: 'public',
-    audience_ids: [],
-  }
-  if (createPhoto.value) createPhoto.value.value = ''
-  if (createGallery.value) createGallery.value.value = ''
+  resetCreateRequirementForm()
+  createDialogRef.value?.close()
   await load()
   emit('changed')
 }
@@ -261,7 +285,17 @@ async function createRow() {
 
 <template>
   <section class="place-reqs">
-    <Title tag="h3" class="place-reqs__title">{{ t('myPlaces.requirementsHeading') }}</Title>
+    <div class="place-reqs__head">
+      <Title tag="h3" class="place-reqs__title">{{ t('myPlaces.requirementsHeading') }}</Title>
+      <button
+        v-if="!editing"
+        type="button"
+        class="btn btn--primary btn--sm"
+        @click="openCreateRequirementDialog"
+      >
+        {{ t('myPlaces.addRequirement') }}
+      </button>
+    </div>
     <p v-if="error" class="place-reqs__error">{{ error }}</p>
 
     <ul v-if="rows.length" class="place-reqs__list">
@@ -295,7 +329,7 @@ async function createRow() {
           <ul class="place-reqs__madeList">
             <li v-for="resp in r.offers_made" :key="resp.id" class="place-reqs__madeRow">
               <span class="place-reqs__madeName">{{ resp.title }}</span>
-              <span class="place-reqs__madePrice">{{ resp.price }}</span>
+              <span class="place-reqs__madePrice">{{ formatPrice(resp.price) }}</span>
               <span class="place-reqs__madeVis">{{ resp.visibility === 'community' ? t('myPlaces.requirementVisibilityCommunity') : t('myPlaces.requirementVisibilityCreator') }}</span>
               <button
                 type="button"
@@ -423,87 +457,104 @@ async function createRow() {
       </div>
     </form>
 
-    <form v-else class="place-reqs__form" @submit.prevent="createRow">
-      <Title tag="h4" class="place-reqs__subtitle">{{ t('myPlaces.newRequirement') }}</Title>
-      <label class="place-reqs__label">{{ t('myPlaces.requirementTitle') }}</label>
-      <input
-        v-model="createForm.title"
-        class="place-reqs__input"
-        type="text"
-        required
-      />
-      <label class="place-reqs__label">{{ t('myPlaces.requirementDescription') }}</label>
-      <textarea
-        v-model="createForm.description"
-        class="place-reqs__textarea"
-        rows="2"
-      />
-      <label class="place-reqs__label">{{ t('myPlaces.requirementQuantity') }}</label>
-      <input
-        v-model="createForm.quantity"
-        class="place-reqs__input"
-        type="number"
-        min="0"
-        step="any"
-        required
-      />
-      <label class="place-reqs__label">{{ t('myPlaces.requirementUnit') }}</label>
-      <input
-        v-model="createForm.unit"
-        class="place-reqs__input"
-        type="text"
-        required
-      />
-      <PlaceRequirementRecurrenceFields
-        :recurrence-mode="createForm.recurrence_mode"
-        :weekdays="createForm.recurrence_weekdays"
-        @update:recurrence-mode="createForm.recurrence_mode = $event"
-        @update:weekdays="createForm.recurrence_weekdays = $event"
-      />
-      <PlaceRequirementExampleOfferField
-        :model-value="createForm.example_place_offer_id"
-        @update:model-value="createForm.example_place_offer_id = $event"
-      />
-      <PlaceTagsField
-        ref="createTagsRef"
-        :model-value="createForm.tags"
-        :label="t('myPlaces.requirementTags')"
-        :hint="t('myPlaces.requirementTagsHint')"
-        @update:model-value="createForm.tags = $event"
-      />
-      <label class="place-reqs__label">{{ t('myPlaces.postVisibilityScope') }}</label>
-      <select v-model="createForm.visibility_scope" class="place-reqs__input">
-        <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
-        <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
-      </select>
-      <label v-if="createForm.visibility_scope === 'audience'" class="place-reqs__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
-      <select
-        v-if="createForm.visibility_scope === 'audience'"
-        v-model="createForm.audience_ids"
-        class="place-reqs__input"
-        multiple
-      >
-        <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
-      <label class="place-reqs__label">{{ t('myPlaces.requirementPhoto') }}</label>
-      <input
-        ref="createPhoto"
-        class="place-reqs__file"
-        type="file"
-        accept="image/*"
-      />
-      <label class="place-reqs__label">{{ t('myPlaces.requirementGallery') }}</label>
-      <input
-        ref="createGallery"
-        class="place-reqs__file"
-        type="file"
-        accept="image/*"
-        multiple
-      />
-      <button type="submit" class="place-reqs__btn place-reqs__btn--primary">
-        {{ t('myPlaces.addRequirement') }}
-      </button>
-    </form>
+    <dialog
+      v-if="!editing"
+      ref="createDialogRef"
+      class="place-reqs__dialog"
+      aria-labelledby="place-reqs-create-title"
+      @click="onCreateDialogBackdrop"
+    >
+      <div class="place-reqs__dialogPanel" @click.stop>
+        <h2 id="place-reqs-create-title" class="place-reqs__dialogTitle">
+          {{ t('myPlaces.newRequirement') }}
+        </h2>
+        <form class="place-reqs__form place-reqs__form--dialog" @submit.prevent="createRow">
+          <label class="place-reqs__label">{{ t('myPlaces.requirementTitle') }}</label>
+          <input
+            v-model="createForm.title"
+            class="place-reqs__input"
+            type="text"
+            required
+          >
+          <label class="place-reqs__label">{{ t('myPlaces.requirementDescription') }}</label>
+          <textarea
+            v-model="createForm.description"
+            class="place-reqs__textarea"
+            rows="2"
+          />
+          <label class="place-reqs__label">{{ t('myPlaces.requirementQuantity') }}</label>
+          <input
+            v-model="createForm.quantity"
+            class="place-reqs__input"
+            type="number"
+            min="0"
+            step="any"
+            required
+          >
+          <label class="place-reqs__label">{{ t('myPlaces.requirementUnit') }}</label>
+          <input
+            v-model="createForm.unit"
+            class="place-reqs__input"
+            type="text"
+            required
+          >
+          <PlaceRequirementRecurrenceFields
+            :recurrence-mode="createForm.recurrence_mode"
+            :weekdays="createForm.recurrence_weekdays"
+            @update:recurrence-mode="createForm.recurrence_mode = $event"
+            @update:weekdays="createForm.recurrence_weekdays = $event"
+          />
+          <PlaceRequirementExampleOfferField
+            :model-value="createForm.example_place_offer_id"
+            @update:model-value="createForm.example_place_offer_id = $event"
+          />
+          <PlaceTagsField
+            ref="createTagsRef"
+            :model-value="createForm.tags"
+            :label="t('myPlaces.requirementTags')"
+            :hint="t('myPlaces.requirementTagsHint')"
+            @update:model-value="createForm.tags = $event"
+          />
+          <label class="place-reqs__label">{{ t('myPlaces.postVisibilityScope') }}</label>
+          <select v-model="createForm.visibility_scope" class="place-reqs__input">
+            <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
+            <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
+          </select>
+          <label v-if="createForm.visibility_scope === 'audience'" class="place-reqs__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
+          <select
+            v-if="createForm.visibility_scope === 'audience'"
+            v-model="createForm.audience_ids"
+            class="place-reqs__input"
+            multiple
+          >
+            <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
+          </select>
+          <label class="place-reqs__label">{{ t('myPlaces.requirementPhoto') }}</label>
+          <input
+            ref="createPhoto"
+            class="place-reqs__file"
+            type="file"
+            accept="image/*"
+          >
+          <label class="place-reqs__label">{{ t('myPlaces.requirementGallery') }}</label>
+          <input
+            ref="createGallery"
+            class="place-reqs__file"
+            type="file"
+            accept="image/*"
+            multiple
+          >
+          <div class="place-reqs__dialogActions">
+            <button type="button" class="place-reqs__btn" @click="createDialogRef?.close()">
+              {{ t('myPlaces.cancel') }}
+            </button>
+            <button type="submit" class="place-reqs__btn place-reqs__btn--primary">
+              {{ t('myPlaces.addRequirement') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
   </section>
 </template>
 
@@ -515,6 +566,14 @@ async function createRow() {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.place-reqs__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .place-reqs__title {
@@ -628,6 +687,52 @@ async function createRow() {
   flex-direction: column;
   gap: 0.35rem;
   max-width: 28rem;
+}
+
+.place-reqs__form--dialog {
+  max-width: none;
+}
+
+.place-reqs__dialog {
+  margin: auto;
+  padding: 0;
+  max-width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.place-reqs__dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-theme='dark'] .place-reqs__dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.place-reqs__dialogPanel {
+  padding: 1.25rem 1.25rem 1rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+.place-reqs__dialogTitle {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.place-reqs__dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .place-reqs__label {

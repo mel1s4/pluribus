@@ -1,6 +1,8 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { nextTick, ref, watch } from 'vue'
+import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
+import { formatOfferPrice } from '../../utils/formatPrice'
 import Title from '../../atoms/Title.vue'
 import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
 import {
@@ -32,6 +34,13 @@ const createPhoto = ref(null)
 const createGallery = ref(null)
 const editTagsRef = ref(null)
 const createTagsRef = ref(null)
+const createDialogRef = ref(null)
+
+const { communityCurrencyCode } = useCommunity()
+
+function formatPrice(amount) {
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
 
 const createForm = ref({
   title: '',
@@ -125,6 +134,22 @@ async function removeOffer(o) {
   emit('changed')
 }
 
+function resetCreateOfferForm() {
+  createForm.value = { title: '', description: '', price: '', tags: [], visibility_scope: 'public', audience_ids: [] }
+  if (createPhoto.value) createPhoto.value.value = ''
+  if (createGallery.value) createGallery.value.value = ''
+}
+
+function onCreateDialogBackdrop(e) {
+  if (e.target === createDialogRef.value) createDialogRef.value?.close()
+}
+
+async function openCreateOfferDialog() {
+  resetCreateOfferForm()
+  await nextTick()
+  createDialogRef.value?.showModal()
+}
+
 async function createOffer() {
   createTagsRef.value?.commit?.()
   const hasFiles =
@@ -165,9 +190,8 @@ async function createOffer() {
       return
     }
   }
-  createForm.value = { title: '', description: '', price: '', tags: [], visibility_scope: 'public', audience_ids: [] }
-  if (createPhoto.value) createPhoto.value.value = ''
-  if (createGallery.value) createGallery.value.value = ''
+  resetCreateOfferForm()
+  createDialogRef.value?.close()
   await load()
   emit('changed')
 }
@@ -175,7 +199,17 @@ async function createOffer() {
 
 <template>
   <section class="place-offers">
-    <Title tag="h3" class="place-offers__title">{{ t('myPlaces.offersHeading') }}</Title>
+    <div class="place-offers__head">
+      <Title tag="h3" class="place-offers__title">{{ t('myPlaces.offersHeading') }}</Title>
+      <button
+        v-if="!editing"
+        type="button"
+        class="btn btn--primary btn--sm"
+        @click="openCreateOfferDialog"
+      >
+        {{ t('myPlaces.addOffer') }}
+      </button>
+    </div>
     <p v-if="error" class="place-offers__error">{{ error }}</p>
 
     <ul v-if="offers.length" class="place-offers__list">
@@ -185,7 +219,7 @@ async function createOffer() {
         class="place-offers__row"
       >
         <span class="place-offers__name">{{ o.title }}</span>
-        <span class="place-offers__price">{{ o.price }}</span>
+        <span class="place-offers__price">{{ formatPrice(o.price) }}</span>
         <span v-if="o.tags?.length" class="place-offers__tags">{{ o.tags.join(', ') }}</span>
         <button
           type="button"
@@ -300,70 +334,87 @@ async function createOffer() {
       </div>
     </form>
 
-    <form v-else class="place-offers__form" @submit.prevent="createOffer">
-      <Title tag="h4" class="place-offers__subtitle">{{ t('myPlaces.newOffer') }}</Title>
-      <label class="place-offers__label">{{ t('myPlaces.offerTitle') }}</label>
-      <input
-        v-model="createForm.title"
-        class="place-offers__input"
-        type="text"
-        required
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerDescription') }}</label>
-      <textarea
-        v-model="createForm.description"
-        class="place-offers__textarea"
-        rows="2"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerPrice') }}</label>
-      <input
-        v-model="createForm.price"
-        class="place-offers__input"
-        type="number"
-        min="0"
-        step="0.01"
-        required
-      />
-      <PlaceTagsField
-        ref="createTagsRef"
-        :model-value="createForm.tags"
-        :label="t('myPlaces.offerTags')"
-        :hint="t('myPlaces.offerTagsHint')"
-        @update:model-value="createForm.tags = $event"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
-      <select v-model="createForm.visibility_scope" class="place-offers__input">
-        <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
-        <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
-      </select>
-      <label v-if="createForm.visibility_scope === 'audience'" class="place-offers__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
-      <select
-        v-if="createForm.visibility_scope === 'audience'"
-        v-model="createForm.audience_ids"
-        class="place-offers__input"
-        multiple
-      >
-        <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
-      <label class="place-offers__label">{{ t('myPlaces.offerPhoto') }}</label>
-      <input
-        ref="createPhoto"
-        class="place-offers__file"
-        type="file"
-        accept="image/*"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerGallery') }}</label>
-      <input
-        ref="createGallery"
-        class="place-offers__file"
-        type="file"
-        accept="image/*"
-        multiple
-      />
-      <button type="submit" class="place-offers__btn place-offers__btn--primary">
-        {{ t('myPlaces.addOffer') }}
-      </button>
-    </form>
+    <dialog
+      v-if="!editing"
+      ref="createDialogRef"
+      class="place-offers__dialog"
+      aria-labelledby="place-offers-create-title"
+      @click="onCreateDialogBackdrop"
+    >
+      <div class="place-offers__dialogPanel" @click.stop>
+        <h2 id="place-offers-create-title" class="place-offers__dialogTitle">
+          {{ t('myPlaces.newOffer') }}
+        </h2>
+        <form class="place-offers__form place-offers__form--dialog" @submit.prevent="createOffer">
+          <label class="place-offers__label">{{ t('myPlaces.offerTitle') }}</label>
+          <input
+            v-model="createForm.title"
+            class="place-offers__input"
+            type="text"
+            required
+          >
+          <label class="place-offers__label">{{ t('myPlaces.offerDescription') }}</label>
+          <textarea
+            v-model="createForm.description"
+            class="place-offers__textarea"
+            rows="2"
+          />
+          <label class="place-offers__label">{{ t('myPlaces.offerPrice') }}</label>
+          <input
+            v-model="createForm.price"
+            class="place-offers__input"
+            type="number"
+            min="0"
+            step="0.01"
+            required
+          >
+          <PlaceTagsField
+            ref="createTagsRef"
+            :model-value="createForm.tags"
+            :label="t('myPlaces.offerTags')"
+            :hint="t('myPlaces.offerTagsHint')"
+            @update:model-value="createForm.tags = $event"
+          />
+          <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
+          <select v-model="createForm.visibility_scope" class="place-offers__input">
+            <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
+            <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
+          </select>
+          <label v-if="createForm.visibility_scope === 'audience'" class="place-offers__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
+          <select
+            v-if="createForm.visibility_scope === 'audience'"
+            v-model="createForm.audience_ids"
+            class="place-offers__input"
+            multiple
+          >
+            <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
+          </select>
+          <label class="place-offers__label">{{ t('myPlaces.offerPhoto') }}</label>
+          <input
+            ref="createPhoto"
+            class="place-offers__file"
+            type="file"
+            accept="image/*"
+          >
+          <label class="place-offers__label">{{ t('myPlaces.offerGallery') }}</label>
+          <input
+            ref="createGallery"
+            class="place-offers__file"
+            type="file"
+            accept="image/*"
+            multiple
+          >
+          <div class="place-offers__dialogActions">
+            <button type="button" class="place-offers__btn" @click="createDialogRef?.close()">
+              {{ t('myPlaces.cancel') }}
+            </button>
+            <button type="submit" class="place-offers__btn place-offers__btn--primary">
+              {{ t('myPlaces.addOffer') }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </dialog>
   </section>
 </template>
 
@@ -375,6 +426,14 @@ async function createOffer() {
   margin-top: 1rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.place-offers__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
 }
 
 .place-offers__title {
@@ -433,6 +492,52 @@ async function createOffer() {
   flex-direction: column;
   gap: 0.35rem;
   max-width: 28rem;
+}
+
+.place-offers__form--dialog {
+  max-width: none;
+}
+
+.place-offers__dialog {
+  margin: auto;
+  padding: 0;
+  max-width: min(28rem, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  background: var(--bg);
+  color: var(--text);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.2);
+}
+
+.place-offers__dialog::backdrop {
+  background: rgba(15, 23, 42, 0.45);
+}
+
+html[data-theme='dark'] .place-offers__dialog::backdrop {
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.place-offers__dialogPanel {
+  padding: 1.25rem 1.25rem 1rem;
+  max-height: calc(100vh - 3rem);
+  overflow-y: auto;
+}
+
+.place-offers__dialogTitle {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.place-offers__dialogActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
 }
 
 .place-offers__label {

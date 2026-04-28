@@ -1,8 +1,6 @@
 import { watch } from 'vue'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import 'leaflet-draw/dist/leaflet.draw.css'
-import '../lib/leaflet-draw-patch.js'
+import L from '../lib/leaflet-init.js'
+import { loadLeafletDraw } from '../lib/leaflet-draw-loader.js'
 
 const MARKER_COLOR = '#3388ff'
 
@@ -142,9 +140,12 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
 
   function teardownDraw() {
     if (!map) return
-    map.off(L.Draw.Event.CREATED)
-    map.off(L.Draw.Event.EDITED)
-    map.off(L.Draw.Event.DELETED)
+    const drawEvent = typeof L !== 'undefined' && L.Draw?.Event
+    if (drawEvent) {
+      map.off(drawEvent.CREATED)
+      map.off(drawEvent.EDITED)
+      map.off(drawEvent.DELETED)
+    }
     if (drawControl) {
       try {
         map.removeControl(drawControl)
@@ -187,12 +188,18 @@ export function usePlaceLeafletMap(mapContainerRef, ctx) {
     }
   }
 
-  function setupDrawControls() {
+  async function setupDrawControls() {
     if (!map) return
     if (readOnly) {
       addReadonlyPolygonLayer()
       return
     }
+
+    // Load leaflet-draw only if needed
+    if (ctx.getAreaType() === 'polygon') {
+      await loadLeafletDraw()
+    }
+
     teardownDraw()
     if (!drawnItems) {
       drawnItems = new L.FeatureGroup()

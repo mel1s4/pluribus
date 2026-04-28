@@ -1,10 +1,11 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
+import UsersInvitationsToolbar from '../../components/App/UsersInvitationsToolbar.vue'
 import UsersMembersToolbar from '../../components/App/UsersMembersToolbar.vue'
-import UsersTableRow from '../../components/App/UsersTableRow.vue'
+import UserCard from '../../components/App/UserCard.vue'
 import { hasCapability } from '../../composables/useCapabilities'
 import { useAppShell } from '../../composables/useAppShell'
 import { sessionUser } from '../../composables/useSession'
@@ -13,10 +14,16 @@ import { invalidateCache } from '../../services/cachedApi.js'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
 import { fetchInvitations as fetchInvitationsApi, fetchUsersPage } from '../../services/usersApi.js'
 
+const route = useRoute()
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
 
-const activeTab = ref('members')
+const activeTab = computed(() => {
+  const raw = route.params.tab
+  if (raw === 'invitations') return 'invitations'
+  if (raw === 'members' || raw === undefined) return 'members'
+  return 'members'
+})
 
 const rows = ref([])
 const meta = ref(null)
@@ -41,17 +48,41 @@ const showRowActions = computed(() => canDelete.value || canEdit.value)
 const showTabs = computed(() => canManageInvitations.value)
 
 function setTab(id) {
-  activeTab.value = id
-  if (id === 'invitations') {
-    fetchInvitations()
+  if (id === 'members') {
+    router.push({ name: 'users' })
+  } else {
+    router.push({ name: 'users', params: { tab: id } })
   }
 }
 
-watch(showTabs, (visible) => {
-  if (!visible && activeTab.value === 'invitations') {
-    activeTab.value = 'members'
-  }
-})
+watch(
+  () => [showTabs.value, activeTab.value],
+  ([visible, tabId]) => {
+    if (!visible && tabId === 'invitations') {
+      router.replace({ name: 'users' })
+    }
+  },
+)
+
+watch(
+  () => route.params.tab,
+  (t) => {
+    if (t != null && t !== 'members' && t !== 'invitations') {
+      router.replace({ name: 'users' })
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  activeTab,
+  (tabId) => {
+    if (tabId === 'invitations') {
+      fetchInvitations()
+    }
+  },
+  { immediate: true },
+)
 
 async function fetchPage(nextPage) {
   listError.value = ''
@@ -247,7 +278,7 @@ onUnmounted(() => {
     </div>
 
     <template v-if="activeTab === 'members'">
-      <UsersMembersToolbar v-if="canCreate || canManageInvitations" />
+      <UsersMembersToolbar v-if="canCreate" />
 
       <h2 class="users-list__title">{{ t('users.listHeading') }}</h2>
       <p v-if="listError" class="users-list__error" role="alert">
@@ -264,36 +295,23 @@ onUnmounted(() => {
         {{ t('users.loading') }}
       </div>
 
-      <div v-else-if="rows.length" class="users-list__tableWrap">
-        <table class="users-list__table">
-          <thead>
-            <tr>
-              <th class="users-list__th">{{ t('users.colName') }}</th>
-              <th class="users-list__th">{{ t('users.colContact') }}</th>
-              <th v-if="showRowActions" class="users-list__th users-list__th--actions">
-                {{ t('users.colActions') }}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            <UsersTableRow
-              v-for="u in rows"
-              :key="u.id"
-              :user="u"
-              :member-profile-to="memberProfileToFor(u)"
-              :show-actions="showRowActions"
-              :show-edit="canEdit"
-              :edit-to="editToFor(u)"
-              :edit-disabled="rowEditDisabled(u)"
-              :edit-label="t('users.edit')"
-              :show-delete="canDelete"
-              :delete-disabled="rowDeleteDisabled(u)"
-              :delete-loading="deletingId === u.id"
-              :delete-label="t('users.delete')"
-              @delete="onDeleteUser"
-            />
-          </tbody>
-        </table>
+      <div v-else-if="rows.length" class="users-list__grid">
+        <UserCard
+          v-for="u in rows"
+          :key="u.id"
+          :user="u"
+          :member-profile-to="memberProfileToFor(u)"
+          :show-actions="showRowActions"
+          :show-edit="canEdit"
+          :edit-to="editToFor(u)"
+          :edit-disabled="rowEditDisabled(u)"
+          :edit-label="t('users.edit')"
+          :show-delete="canDelete"
+          :delete-disabled="rowDeleteDisabled(u)"
+          :delete-loading="deletingId === u.id"
+          :delete-label="t('users.delete')"
+          @delete="onDeleteUser"
+        />
       </div>
 
       <div v-if="meta && meta.last_page > 1" class="users-list__pager">
@@ -326,6 +344,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else-if="activeTab === 'invitations'">
+      <UsersInvitationsToolbar v-if="canManageInvitations" />
       <h2 class="users-list__title">{{ t('users.invitationsHeading') }}</h2>
       <p class="page--users__panelIntro">{{ t('users.invitationsIntro') }}</p>
       <p v-if="invitationsError" class="users-list__error" role="alert">
@@ -388,7 +407,7 @@ onUnmounted(() => {
 <style lang="scss" scoped>
 .page--users {
   padding: 2rem;
-  max-width: 960px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -441,6 +460,30 @@ onUnmounted(() => {
 .users-list__loading {
   margin: 0;
   color: var(--muted, #6b7280);
+}
+
+.users-list__grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (min-width: 640px) {
+  .users-list__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .users-list__grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .users-list__grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .users-list__tableWrap {

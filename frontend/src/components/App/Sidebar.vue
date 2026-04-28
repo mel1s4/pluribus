@@ -35,7 +35,6 @@ const links = computed(() => {
       icon: 'people-roof',
       capability: null,
     },
-    { key: 'api-test', to: '/api-test', label: t('nav.apiTest'), icon: 'plug', capability: null },
     { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'comments', capability: null },
     { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'store', capability: null },
     { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'map-location-dot', capability: null },

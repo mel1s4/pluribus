@@ -38,7 +38,7 @@ class CommunitySingletonApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('community.name', 'Riverbend Commons')
             ->assertJsonPath('community.default_language', LocaleOptions::default())
-            ->assertJsonStructure(['community' => ['name', 'logo_url', 'default_language']]);
+            ->assertJsonStructure(['community' => ['name', 'logo_url', 'default_language', 'currency_code']]);
     }
 
     public function test_authenticated_member_can_get_community(): void
@@ -49,7 +49,7 @@ class CommunitySingletonApiTest extends TestCase
 
         $this->statefulJson('GET', '/api/community')
             ->assertOk()
-            ->assertJsonStructure(['community' => ['id', 'name', 'description', 'rules', 'logo', 'logo_url', 'default_language']]);
+            ->assertJsonStructure(['community' => ['id', 'name', 'description', 'rules', 'logo', 'logo_url', 'default_language', 'currency_code']]);
     }
 
     public function test_root_can_patch_community(): void
@@ -65,18 +65,21 @@ class CommunitySingletonApiTest extends TestCase
             'rules' => 'Be kind.',
             'logo' => 'https://example.com/logo.png',
             'default_language' => 'es',
+            'currency_code' => 'EUR',
         ])
             ->assertOk()
             ->assertJsonPath('community.name', 'Renamed Community')
             ->assertJsonPath('community.rules', 'Be kind.')
             ->assertJsonPath('community.logo', 'https://example.com/logo.png')
             ->assertJsonPath('community.logo_url', 'https://example.com/logo.png')
-            ->assertJsonPath('community.default_language', 'es');
+            ->assertJsonPath('community.default_language', 'es')
+            ->assertJsonPath('community.currency_code', 'EUR');
 
         $this->assertDatabaseHas('communities', [
             'id' => $community->id,
             'name' => 'Renamed Community',
             'default_language' => 'es',
+            'currency_code' => 'EUR',
         ]);
     }
 
@@ -93,6 +96,62 @@ class CommunitySingletonApiTest extends TestCase
             'logo' => null,
             'default_language' => LocaleOptions::default(),
         ])->assertForbidden();
+    }
+
+    public function test_admin_can_patch_community_currency(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $community = Community::current();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_code' => 'USD',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.currency_code', 'USD');
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->id,
+            'currency_code' => 'USD',
+        ]);
+    }
+
+    public function test_member_cannot_patch_community_currency(): void
+    {
+        $member = User::factory()->create(['user_type' => 'member']);
+
+        $this->actingAs($member);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_code' => 'EUR',
+        ])->assertForbidden();
+    }
+
+    public function test_root_can_patch_community_currency_via_dedicated_route(): void
+    {
+        $root = User::factory()->root()->create();
+
+        $this->actingAs($root);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_code' => '$',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.currency_code', '$');
+    }
+
+    public function test_patch_community_currency_truncates_to_four_characters(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_code' => 'ABCDE',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.currency_code', 'ABCD');
     }
 
     public function test_root_can_upload_community_logo_via_multipart_patch(): void

@@ -18,6 +18,14 @@ const userSlug = computed(() => {
   return typeof raw === 'string' ? raw : ''
 })
 
+function placeLinkTo(pl) {
+  const q = { member: userSlug.value }
+  if (pl?.slug) {
+    return { name: 'placePublic', params: { slug: pl.slug }, query: q }
+  }
+  return { name: 'placeView', params: { placeId: String(pl.id) }, query: q }
+}
+
 const displayEmails = computed(() => {
   const m = member.value
   if (!m) return []
@@ -147,11 +155,7 @@ load()
           <li v-for="pl in places" :key="pl.id" class="member-profile-page__placeRow">
             <RouterLink
               class="member-profile-page__placeLink"
-              :to="{
-                name: 'placeView',
-                params: { placeId: String(pl.id) },
-                query: { member: userSlug },
-              }"
+              :to="placeLinkTo(pl)"
             >
               <span v-if="pl.logo_url" class="member-profile-page__placeLogoWrap">
                 <img

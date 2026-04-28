@@ -29,6 +29,14 @@ export async function fetchPlace(id) {
 }
 
 /**
+ * @param {string} slug
+ * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
+ */
+export async function fetchPlaceBySlug(slug) {
+  return fetchPlace(slug)
+}
+
+/**
  * @param {Record<string, unknown>|FormData} body
  */
 export async function createPlace(body) {

@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import Card from '../../atoms/Card.vue'
 import PlaceOffersPublicList from '../../molecules/PlaceOffersPublicList.vue'
 import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublicList.vue'
@@ -11,20 +12,26 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  activeTab: {
+    type: String,
+    default: 'overview',
+  },
 })
 
-const emit = defineEmits(['close'])
-const activeTab = ref('overview')
+const emit = defineEmits(['close', 'selectTab'])
 const tabs = ['overview', 'offers', 'requirements']
 
 const hasPlace = computed(() => Boolean(props.place))
+const activeTab = computed(() => {
+  if (props.activeTab === 'offers' || props.activeTab === 'requirements' || props.activeTab === 'overview') {
+    return props.activeTab
+  }
+  return 'overview'
+})
 
-watch(
-  () => props.place?.id,
-  () => {
-    activeTab.value = 'overview'
-  },
-)
+function onTabClick(tab) {
+  emit('selectTab', tab)
+}
 </script>
 
 <template>
@@ -35,9 +42,18 @@ watch(
     <div v-else class="place-map-sidebar__content">
       <div class="place-map-sidebar__header">
         <h2 class="place-map-sidebar__title">{{ place.name }}</h2>
-        <button type="button" class="place-map-sidebar__close" @click="emit('close')">
-          {{ t('myPlaces.cancel') }}
-        </button>
+        <div class="place-map-sidebar__headerActions">
+          <RouterLink
+            v-if="place.slug"
+            class="place-map-sidebar__storefront btn btn--primary btn--sm"
+            :to="{ name: 'placePublic', params: { slug: place.slug } }"
+          >
+            {{ t('places.viewOpenStorefront') }}
+          </RouterLink>
+          <button type="button" class="place-map-sidebar__close" @click="emit('close')">
+            {{ t('myPlaces.cancel') }}
+          </button>
+        </div>
       </div>
       <p v-if="place.description" class="place-map-sidebar__description">{{ place.description }}</p>
 
@@ -50,7 +66,7 @@ watch(
           class="place-map-sidebar__tab"
           :class="{ 'place-map-sidebar__tab--active': activeTab === tab }"
           :aria-selected="activeTab === tab"
-          @click="activeTab = tab"
+          @click="onTabClick(tab)"
         >
           {{
             tab === 'overview'
@@ -131,6 +147,20 @@ watch(
 .place-map-sidebar__title {
   margin: 0;
   font-size: 1.1rem;
+}
+
+.place-map-sidebar__headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.place-map-sidebar__storefront {
+  text-decoration: none;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .place-map-sidebar__close {

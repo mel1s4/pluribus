@@ -17,6 +17,15 @@ export async function fetchUsersPage(page = 1, perPage = 20) {
   return cachedGet(`/api/users?page=${page}&per_page=${perPage}`)
 }
 
+/**
+ * @param {string} query
+ * @param {number} [perPage]
+ */
+export async function searchUsers(query, perPage = 10) {
+  const q = encodeURIComponent(String(query || '').trim())
+  return cachedGet(`/api/users?search=${q}&per_page=${perPage}`)
+}
+
 export async function fetchInvitations() {
   return cachedGet('/api/invitations')
 }
