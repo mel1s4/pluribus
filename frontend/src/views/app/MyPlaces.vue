@@ -1,7 +1,9 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { fetchPlaces } from '../../services/placesApi.js'
 import { placeApiErrorMessage } from '../../utils/placeForm.js'
@@ -52,20 +54,22 @@ onMounted(() => {
 
 <template>
   <section class="page page--my-places">
-    <Title tag="h1">{{ t('myPlaces.title') }}</Title>
+    <PageToolbarTitle route-key="my-places">
+      <Title tag="h1">{{ t('myPlaces.title') }}</Title>
+    </PageToolbarTitle>
     <p class="page__muted">{{ t('myPlaces.intro') }}</p>
 
     <p v-if="listError" class="my-places__error">{{ listError }}</p>
 
     <div class="my-places__toolbar">
-      <button
+      <Button
         type="button"
-        class="my-places__btn my-places__btn--primary"
+        variant="primary"
         :disabled="listLoading"
         @click="goCreate"
       >
         {{ t('myPlaces.addPlace') }}
-      </button>
+      </Button>
     </div>
 
     <p v-if="listLoading" class="page__muted">{{ t('myPlaces.loading') }}</p>
@@ -128,21 +132,6 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-
-.my-places__btn {
-  cursor: pointer;
-  padding: 0.45rem 0.85rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-  font: inherit;
-}
-
-.my-places__btn--primary {
-  border-color: var(--accent, #3b5bdb);
-  background: var(--accent, #3b5bdb);
-  color: #fff;
 }
 
 .my-places__list {

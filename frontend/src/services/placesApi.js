@@ -8,6 +8,15 @@ function invalidatePlacesCaches() {
 }
 
 /**
+ * @param {string} slug
+ * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
+ */
+export async function fetchPublicPlaceBySlug(slug) {
+  const encoded = encodeURIComponent(slug)
+  return cachedGet(`/api/places/${encoded}/public`, { skipCache: true })
+}
+
+/**
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function fetchPlaces() {

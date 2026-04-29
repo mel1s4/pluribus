@@ -1,8 +1,9 @@
 <script setup>
 import { computed } from 'vue'
 import Icon from '../../atoms/Icon.vue'
-import { hasCapability } from '../../composables/useCapabilities'
+import FavoritesList from './FavoritesList.vue'
 import { useCommunity } from '../../composables/useCommunity'
+import { SIDEBAR_LINK_DEFS, isSidebarLinkDefAccessible } from '../../navigation/sidebarLinks'
 import { t } from '../../i18n/i18n'
 
 const { displayName } = useCommunity()
@@ -18,42 +19,15 @@ const emit = defineEmits(['close'])
 
 const sidebarId = 'app-sidebar'
 
-const links = computed(() => {
-  const all = [
-    { key: 'dashboard', to: '/dashboard', label: t('nav.dashboard'), icon: 'gauge-high', capability: null },
-    {
-      key: 'users',
-      to: '/users',
-      label: t('nav.users'),
-      icon: 'users',
-      capability: null,
-    },
-    {
-      key: 'community-settings',
-      to: '/community',
-      label: t('nav.community'),
-      icon: 'people-roof',
-      capability: null,
-    },
-    { key: 'chats', to: '/chats', label: t('quickNav.chats'), icon: 'comments', capability: null },
-    { key: 'tasks', to: '/tasks', label: t('tasks.title'), icon: 'list-check', capability: null },
-    { key: 'calendar', to: '/calendar', label: t('calendar.title'), icon: 'calendar-days', capability: null },
-    { key: 'posts', to: '/posts', label: t('posts.title'), icon: 'newspaper', capability: null },
-    { key: 'my-groups', to: '/my-groups', label: t('groups.title'), icon: 'people-group', capability: null },
-    { key: 'my-places', to: '/my-places', label: t('nav.myPlaces'), icon: 'store', capability: null },
-    { key: 'map', to: '/map', label: t('quickNav.map'), icon: 'map-location-dot', capability: null },
-    {
-      key: 'notifications',
-      to: '/notifications',
-      label: t('quickNav.notifications'),
-      icon: 'bell',
-      capability: null,
-    },
-    { key: 'profile', to: '/profile', label: t('quickNav.profile'), icon: 'user', capability: null },
-    { key: 'settings', to: '/settings', label: t('nav.settings'), icon: 'gear', capability: null },
-  ]
-  return all.filter((item) => !item.capability || hasCapability(item.capability))
-})
+const links = computed(() =>
+  SIDEBAR_LINK_DEFS.filter((item) => isSidebarLinkDefAccessible(item)).map((item) => ({
+    key: item.key,
+    to: item.to,
+    label: t(item.labelKey),
+    icon: item.icon,
+    capability: item.capability,
+  })),
+)
 
 function maybeCloseMobile() {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
@@ -75,6 +49,8 @@ function maybeCloseMobile() {
         <Icon class="app-sidebar__icon" name="xmark" aria-hidden="true" />
       </button>
     </div>
+
+    <FavoritesList class="app-sidebar__favorites" @navigate="maybeCloseMobile" />
 
     <nav class="app-sidebar__nav" aria-label="Main">
       <RouterLink
@@ -133,6 +109,10 @@ function maybeCloseMobile() {
   @media (max-width: 1023px) {
     display: inline-flex;
   }
+}
+
+.app-sidebar__favorites {
+  flex-shrink: 0;
 }
 
 .app-sidebar__nav {

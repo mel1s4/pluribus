@@ -5,7 +5,7 @@ import Icon from '../../atoms/Icon.vue'
 import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
 import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
 import { t } from '../../i18n/i18n'
-import { deleteChat, fetchChatFolders, fetchChats, updateChat } from '../../services/chatApi.js'
+import { deleteChat, fetchFolders, fetchChats, updateChat } from '../../services/chatApi.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -24,7 +24,7 @@ function unwrapList(payload) {
 }
 
 async function load() {
-  const [foldersRes, chatsRes] = await Promise.all([fetchChatFolders(), fetchChats()])
+  const [foldersRes, chatsRes] = await Promise.all([fetchFolders(), fetchChats()])
   if (foldersRes.ok) folders.value = unwrapList(foldersRes.data)
   if (chatsRes.ok) chats.value = unwrapList(chatsRes.data)
 }

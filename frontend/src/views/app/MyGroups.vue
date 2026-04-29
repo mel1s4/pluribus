@@ -1,9 +1,10 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { createGroup, fetchGroupMembers, fetchGroups, removeGroupMember } from '../../services/contentApi'
-import { fetchUsers } from '../../services/usersApi'
+import { fetchUsersPage } from '../../services/usersApi'
 import { sessionUser } from '../../composables/useSession'
 
 const groups = ref([])
@@ -25,7 +26,7 @@ function unwrapList(payload) {
 async function load() {
   loading.value = true
   error.value = ''
-  const [groupsRes, usersRes] = await Promise.all([fetchGroups(), fetchUsers({ per_page: 100 })])
+  const [groupsRes, usersRes] = await Promise.all([fetchGroups(), fetchUsersPage(1, 100)])
   loading.value = false
   if (!groupsRes.ok) {
     error.value = `HTTP ${groupsRes.status}`
@@ -74,7 +75,9 @@ onMounted(load)
 <template>
   <section class="page page--groups">
     <header class="page__header">
-      <Title tag="h1">{{ t('groups.title') }}</Title>
+      <PageToolbarTitle route-key="my-groups">
+        <Title tag="h1">{{ t('groups.title') }}</Title>
+      </PageToolbarTitle>
       <p class="page__muted">{{ t('groups.intro') }}</p>
     </header>
 

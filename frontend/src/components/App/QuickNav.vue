@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import Icon from '../../atoms/Icon.vue'
+import { useFavorites } from '../../composables/useFavorites'
 import { t } from '../../i18n/i18n'
 
 defineProps({
@@ -11,20 +12,34 @@ defineProps({
   },
 })
 
-const items = computed(() => [
+const { quickNavFavoriteItems } = useFavorites()
+
+const defaultItems = computed(() => [
   { to: '/chats', icon: 'comments', label: t('quickNav.chats') },
   { to: '/my-places', icon: 'store', label: t('nav.myPlaces') },
   { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
   { to: '/notifications', icon: 'bell', label: t('quickNav.notifications') },
   { to: '/profile', icon: 'user', label: t('quickNav.profile') },
 ])
+
+const items = computed(() => {
+  const fav = quickNavFavoriteItems.value
+  if (fav.length > 0) {
+    return fav.map((item) => ({
+      to: item.to,
+      icon: item.icon,
+      label: item.label,
+    }))
+  }
+  return defaultItems.value
+})
 </script>
 
 <template>
   <nav v-if="placement === 'bottom'" class="quick-nav" aria-label="Quick navigation">
     <RouterLink
       v-for="item in items"
-      :key="item.to"
+      :key="item.to + item.label"
       :to="item.to"
       class="quick-nav__link"
       active-class="is-active"

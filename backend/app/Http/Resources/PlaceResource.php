@@ -37,6 +37,7 @@ class PlaceResource extends JsonResource
             'can_manage_admins' => $canManageAdmins,
             'name' => $this->name,
             'slug' => $this->slug,
+            'is_public' => (bool) $this->is_public,
             'description' => $this->description,
             'tags' => $this->tags ?? [],
             'location' => [

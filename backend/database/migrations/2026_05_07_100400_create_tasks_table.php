@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('tasks', function (Blueprint $table) {
             $table->id();
             $table->foreignId('post_id')->constrained('posts')->cascadeOnDelete();
-            $table->foreignId('folder_id')->nullable()->constrained('chat_folders')->nullOnDelete();
+            $table->foreignId('folder_id')->nullable()->constrained('folders')->nullOnDelete();
             $table->foreignId('assignee_id')->nullable()->constrained('users')->nullOnDelete();
             $table->unsignedInteger('position')->default(0);
             $table->timestamp('completed_at')->nullable();

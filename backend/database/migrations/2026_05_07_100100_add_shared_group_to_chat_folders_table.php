@@ -8,7 +8,7 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::table('chat_folders', function (Blueprint $table) {
+        Schema::table('folders', function (Blueprint $table) {
             $table->foreignId('shared_group_id')
                 ->nullable()
                 ->after('user_id')
@@ -20,7 +20,7 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::table('chat_folders', function (Blueprint $table) {
+        Schema::table('folders', function (Blueprint $table) {
             $table->dropIndex(['shared_group_id', 'sort_order']);
             $table->dropConstrainedForeignId('shared_group_id');
         });

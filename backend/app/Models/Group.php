@@ -72,11 +72,11 @@ class Group extends Model
     }
 
     /**
-     * @return HasMany<ChatFolder, $this>
+     * @return HasMany<Folder, $this>
      */
     public function sharedFolders(): HasMany
     {
-        return $this->hasMany(ChatFolder::class, 'shared_group_id');
+        return $this->hasMany(Folder::class, 'shared_group_id');
     }
 
     public function scopeVisibleToUser(Builder $query, int $userId): Builder

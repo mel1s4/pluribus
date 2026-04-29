@@ -7,7 +7,7 @@ function invalidateContentCaches() {
   invalidateCache(/^\/api\/posts/)
   invalidateCache(/^\/api\/tasks/)
   invalidateCache(/^\/api\/discovery\//)
-  invalidateCache(/^\/api\/chat-folders/)
+  invalidateCache(/^\/api\/folders/)
 }
 
 export function fetchGroups() {

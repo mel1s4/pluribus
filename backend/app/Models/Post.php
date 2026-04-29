@@ -5,18 +5,15 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Post extends Model
 {
-    public const TYPE_TASK = 'task';
     public const TYPE_EVENT = 'event';
     public const TYPE_ANNOUNCEMENT = 'announcement';
     public const TYPE_INFO = 'info';
 
     /** @var list<string> */
     public const TYPES = [
-        self::TYPE_TASK,
         self::TYPE_EVENT,
         self::TYPE_ANNOUNCEMENT,
         self::TYPE_INFO,
@@ -124,14 +121,6 @@ class Post extends Model
     public function place(): BelongsTo
     {
         return $this->belongsTo(Place::class);
-    }
-
-    /**
-     * @return HasOne<Task, $this>
-     */
-    public function task(): HasOne
-    {
-        return $this->hasOne(Task::class);
     }
 
     public function scopeVisibleToUser(Builder $query, int $userId): Builder

@@ -49,6 +49,7 @@ class Place extends Model
         'user_id',
         'name',
         'slug',
+        'is_public',
         'description',
         'tags',
         'latitude',
@@ -68,6 +69,7 @@ class Place extends Model
     protected function casts(): array
     {
         return [
+            'is_public' => 'boolean',
             'latitude' => 'float',
             'longitude' => 'float',
             'radius_meters' => 'integer',

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('title')->nullable();
             $table->string('icon_emoji', 16)->nullable();
             $table->string('icon_bg_color', 7)->nullable();
-            $table->foreignId('folder_id')->nullable()->constrained('chat_folders')->nullOnDelete();
+            $table->foreignId('folder_id')->nullable()->constrained('folders')->nullOnDelete();
             $table->timestamps();
 
             $table->index(['community_id', 'type']);

@@ -10,6 +10,7 @@
     "analyze": "vite build && du -sh dist && du -sh dist/assets/* | sort -hr | head -20"
   },
   "dependencies": {
+    "vue-draggable-next": "^2.2.1",
     "laravel-echo": "^2.2.4",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",

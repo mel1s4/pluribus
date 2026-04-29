@@ -2,12 +2,12 @@
 
 namespace App\Http\Resources;
 
-use App\Models\ChatFolder;
+use App\Models\Folder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-/** @mixin ChatFolder */
-class ChatFolderResource extends JsonResource
+/** @mixin Folder */
+class FolderResource extends JsonResource
 {
     /**
      * @return array<string, mixed>

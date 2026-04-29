@@ -7,8 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ChatFolder extends Model
+class Folder extends Model
 {
+    /**
+     * @var string
+     */
+    protected $table = 'folders';
+
     /**
      * @var list<string>
      */
@@ -39,7 +44,7 @@ class ChatFolder extends Model
     }
 
     /**
-     * @return BelongsTo<ChatFolder, $this>
+     * @return BelongsTo<Folder, $this>
      */
     public function parent(): BelongsTo
     {
@@ -47,7 +52,7 @@ class ChatFolder extends Model
     }
 
     /**
-     * @return HasMany<ChatFolder, $this>
+     * @return HasMany<Folder, $this>
      */
     public function children(): HasMany
     {

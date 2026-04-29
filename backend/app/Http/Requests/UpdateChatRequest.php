@@ -20,7 +20,7 @@ class UpdateChatRequest extends FormRequest
             'title' => ['sometimes', 'nullable', 'string', 'max:255'],
             'icon_emoji' => ['sometimes', 'nullable', 'string', 'max:16'],
             'icon_bg_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'folder_id' => ['sometimes', 'nullable', 'exists:chat_folders,id'],
+            'folder_id' => ['sometimes', 'nullable', 'exists:folders,id'],
         ];
     }
 }

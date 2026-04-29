@@ -20,14 +20,13 @@ class DiscoveryController extends Controller
 
         $posts = Post::query()
             ->visibleToUser($userId)
-            ->whereIn('type', [Post::TYPE_TASK, Post::TYPE_EVENT, Post::TYPE_ANNOUNCEMENT, Post::TYPE_INFO])
+            ->whereIn('type', [Post::TYPE_EVENT, Post::TYPE_ANNOUNCEMENT, Post::TYPE_INFO])
             ->when($start, fn ($q) => $q->where(function ($q2) use ($start): void {
                 $q2->whereNull('end_at')->orWhere('end_at', '>=', $start);
             }))
             ->when($end, fn ($q) => $q->where(function ($q2) use ($end): void {
                 $q2->whereNull('start_at')->orWhere('start_at', '<=', $end);
             }))
-            ->with('task')
             ->orderBy('start_at')
             ->get();
 

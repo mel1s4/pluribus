@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { fetchMapDiscovery } from '../../services/contentApi'
 import { fetchCommunity } from '../../services/communityApi.js'
 import { useCommunityPlacesMap } from '../../composables/useCommunityPlacesMap.js'
@@ -144,7 +145,9 @@ onBeforeUnmount(() => {
 <template>
   <section class="page page--map">
     <div class="map-view__head">
-      <Title tag="h1">{{ t('map.title') }}</Title>
+      <PageToolbarTitle class="map-view__titleRow" route-key="map">
+        <Title tag="h1">{{ t('map.title') }}</Title>
+      </PageToolbarTitle>
       <p class="page__muted">{{ t('map.discoveryIntro') }}</p>
       <div class="map-view__filters">
         <select v-model="filterEntity" @change="loadPlaces">
@@ -218,6 +221,10 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.map-view__titleRow {
+  width: 100%;
 }
 
 .map-view__layout {

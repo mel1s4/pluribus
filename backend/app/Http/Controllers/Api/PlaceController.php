@@ -7,10 +7,12 @@ use App\Http\Requests\StorePlaceRequest;
 use App\Http\Requests\UpdatePlaceRequest;
 use App\Http\Resources\PlaceResource;
 use App\Models\Place;
+use App\Models\User;
 use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class PlaceController extends Controller
@@ -51,12 +53,13 @@ class PlaceController extends Controller
 
         $schedule = array_key_exists('service_schedule', $validated)
             ? PlaceServiceScheduleNormalizer::normalize($validated['service_schedule'])
-            : null;
+            : PlaceServiceScheduleNormalizer::normalize([]);
 
         $place = Place::query()->create([
             'user_id' => $request->user()->id,
             'name' => $validated['name'],
             'slug' => $validated['slug'],
+            'is_public' => (bool) ($validated['is_public'] ?? false),
             'description' => $validated['description'] ?? null,
             'tags' => $tags === [] ? null : $tags,
             'latitude' => null,
@@ -100,6 +103,45 @@ class PlaceController extends Controller
             },
             'administrators' => fn ($q) => $q->where('users.id', $uid),
         ]);
+        foreach ($place->requirements as $req) {
+            $req->setRelation('place', $place);
+        }
+
+        return response()->json([
+            'place' => new PlaceResource($place),
+        ]);
+    }
+
+    /**
+     * Storefront / unauthenticated-friendly place detail (same JSON shape as {@see show} when allowed).
+     */
+    public function showPublic(Request $request, Place $place): JsonResponse
+    {
+        abort_unless(Gate::forUser($request->user())->allows('view', $place), 403);
+
+        $user = $request->user();
+        $uid = $user instanceof User ? (int) $user->id : 0;
+        $canManage = $user instanceof User && $user->can('update', $place);
+
+        $relations = [
+            'offers' => function ($q) use ($uid, $canManage): void {
+                $q->with('audiences:id')->orderBy('id');
+                if (! $canManage) {
+                    $q->visibleToUser($uid);
+                }
+            },
+            'requirements' => function ($q) use ($uid, $canManage): void {
+                $q->with(['responses.user', 'exampleOffer.place', 'audiences:id'])->orderBy('id');
+                if (! $canManage) {
+                    $q->visibleToUser($uid);
+                }
+            },
+        ];
+        if ($user instanceof User) {
+            $relations['administrators'] = fn ($q) => $q->where('users.id', $uid);
+        }
+
+        $place->load($relations);
         foreach ($place->requirements as $req) {
             $req->setRelation('place', $place);
         }

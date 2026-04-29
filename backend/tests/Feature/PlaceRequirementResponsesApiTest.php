@@ -193,7 +193,7 @@ class PlaceRequirementResponsesApiTest extends TestCase
         $this->assertSame($offerB->id, (int) $row->example_place_offer_id);
     }
 
-    public function test_non_manager_cannot_list_requirements_index(): void
+    public function test_non_manager_can_list_public_requirements_index(): void
     {
         $owner = User::factory()->create(['user_type' => 'member']);
         $stranger = User::factory()->create(['user_type' => 'member']);
@@ -209,11 +209,14 @@ class PlaceRequirementResponsesApiTest extends TestCase
             'gallery_paths' => null,
             'tags' => null,
             'example_place_offer_id' => null,
+            'visibility_scope' => PlaceRequirement::VISIBILITY_SCOPE_PUBLIC,
         ]);
 
-        $this->actingAs($stranger)
+        $res = $this->actingAs($stranger)
             ->withoutMiddleware(ValidateCsrfToken::class)
-            ->getJson('/api/places/'.$place->id.'/requirements')
-            ->assertForbidden();
+            ->getJson('/api/places/'.$place->id.'/requirements');
+
+        $res->assertOk();
+        $this->assertCount(1, $res->json('data'));
     }
 }

@@ -50,11 +50,11 @@ class Chat extends Model
     }
 
     /**
-     * @return BelongsTo<ChatFolder, $this>
+     * @return BelongsTo<Folder, $this>
      */
     public function folder(): BelongsTo
     {
-        return $this->belongsTo(ChatFolder::class, 'folder_id');
+        return $this->belongsTo(Folder::class, 'folder_id');
     }
 
     /**

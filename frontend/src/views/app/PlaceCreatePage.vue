@@ -32,6 +32,7 @@ async function onSubmit() {
         description: d.description?.trim() || null,
         tags: Array.isArray(d.tags) ? d.tags : [],
         service_schedule: normalizeServiceSchedule(d.service_schedule),
+        is_public: Boolean(d.is_public),
       }
   const { ok, status, data } = await createPlace(payload)
   saveLoading.value = false

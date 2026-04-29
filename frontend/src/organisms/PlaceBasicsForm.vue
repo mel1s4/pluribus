@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onUnmounted, ref, watch } from 'vue'
+import Button from '../atoms/Button.vue'
 import PlaceLocationPicker from './PlaceLocationPicker.vue'
 import PlaceServiceScheduleEditor from '../molecules/PlaceServiceScheduleEditor.vue'
 import PlaceTagsField from '../molecules/PlaceTagsField.vue'
@@ -150,6 +151,18 @@ function onLogoBackgroundColorInput(ev) {
     />
     <p id="place-slug-hint" class="place-basics-form__hint">{{ t('myPlaces.slugHint') }}</p>
 
+    <label class="place-basics-form__checkLabel">
+      <input
+        type="checkbox"
+        class="place-basics-form__check"
+        :checked="Boolean(modelValue.is_public)"
+        :disabled="saveLoading"
+        @change="patch({ is_public: ($event.target).checked })"
+      />
+      <span>{{ t('myPlaces.fieldIsPublic') }}</span>
+    </label>
+    <p class="place-basics-form__hint">{{ t('myPlaces.isPublicHint') }}</p>
+
     <label class="place-basics-form__label">{{ t('myPlaces.fieldDescription') }}</label>
     <textarea
       :value="modelValue.description ?? ''"
@@ -205,15 +218,16 @@ function onLogoBackgroundColorInput(ev) {
         @input="onLogoBackgroundColorInput"
       />
       <p class="place-basics-form__logo-hint">{{ t('myPlaces.placeLogoBackgroundColorHint') }}</p>
-      <button
+      <Button
         v-if="logoPreviewSrc || modelValue.logoFile || (modelValue.logo_url && !modelValue.removeLogo)"
         type="button"
-        class="place-basics-form__btn place-basics-form__btn--ghost"
+        variant="ghost"
+        size="sm"
         :disabled="saveLoading"
         @click="onClearLogo"
       >
         {{ t('myPlaces.removePlaceLogo') }}
-      </button>
+      </Button>
     </div>
 
     <PlaceLocationPicker
@@ -225,22 +239,22 @@ function onLogoBackgroundColorInput(ev) {
     <p v-if="saveError" class="place-basics-form__error">{{ saveError }}</p>
 
     <div class="place-basics-form__actions">
-      <button
+      <Button
         type="submit"
-        class="place-basics-form__btn place-basics-form__btn--primary"
+        variant="primary"
         :disabled="saveLoading"
       >
         {{ mode === 'create' ? t('myPlaces.createSubmit') : t('myPlaces.savePlace') }}
-      </button>
-      <button
+      </Button>
+      <Button
         v-if="mode === 'edit'"
         type="button"
-        class="place-basics-form__btn place-basics-form__btn--danger"
+        variant="danger"
         :disabled="saveLoading"
         @click="emit('delete')"
       >
         {{ t('myPlaces.deletePlace') }}
-      </button>
+      </Button>
     </div>
   </form>
 </template>
@@ -268,6 +282,20 @@ function onLogoBackgroundColorInput(ev) {
   color: var(--muted, #64748b);
 }
 
+.place-basics-form__checkLabel {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+  max-width: 28rem;
+}
+
+.place-basics-form__check {
+  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
 .place-basics-form__input,
 .place-basics-form__textarea {
   max-width: 28rem;
@@ -280,25 +308,6 @@ function onLogoBackgroundColorInput(ev) {
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
-}
-
-.place-basics-form__btn {
-  cursor: pointer;
-  padding: 0.4rem 0.75rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.place-basics-form__btn--primary {
-  border-color: var(--accent, #3b5bdb);
-  background: var(--accent, #3b5bdb);
-  color: #fff;
-}
-
-.place-basics-form__btn--danger {
-  border-color: #c62828;
-  color: #c62828;
 }
 
 .place-basics-form__logo {
@@ -333,9 +342,5 @@ function onLogoBackgroundColorInput(ev) {
   margin: 0;
   font-size: 0.8rem;
   opacity: 0.75;
-}
-
-.place-basics-form__btn--ghost {
-  align-self: flex-start;
 }
 </style>

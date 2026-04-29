@@ -31,7 +31,7 @@ class ChatResource extends JsonResource
                 'name' => $member->name,
                 'avatar_path' => $member->avatar_path,
             ])->values()),
-            'folder' => $this->whenLoaded('folder', fn () => $this->folder ? new ChatFolderResource($this->folder) : null),
+            'folder' => $this->whenLoaded('folder', fn () => $this->folder ? new FolderResource($this->folder) : null),
             'last_message_at' => $this->when(isset($this->last_message_at), fn () => $this->last_message_at),
             'unread_count' => $this->when(isset($this->unread_count), fn () => (int) $this->unread_count),
         ];

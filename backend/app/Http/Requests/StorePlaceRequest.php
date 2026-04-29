@@ -32,6 +32,7 @@ class StorePlaceRequest extends FormRequest
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],
             'logo' => ['nullable', 'file', 'image', 'max:5120'],
+            'is_public' => ['sometimes', 'boolean'],
         ];
 
         $time = ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
@@ -53,6 +54,17 @@ class StorePlaceRequest extends FormRequest
             } else {
                 $decoded = json_decode($raw, true);
                 $this->merge(['tags' => is_array($decoded) ? $decoded : []]);
+            }
+        }
+        if ($this->has('is_public')) {
+            $raw = $this->input('is_public');
+            if (is_string($raw)) {
+                $lower = strtolower(trim($raw));
+                if (in_array($lower, ['1', 'true', 'yes', 'on'], true)) {
+                    $this->merge(['is_public' => true]);
+                } elseif (in_array($lower, ['0', 'false', 'no', 'off', ''], true)) {
+                    $this->merge(['is_public' => false]);
+                }
             }
         }
         if ($this->has('service_schedule')) {

@@ -22,6 +22,7 @@ export function emptyPlaceDraft() {
     logo_background_color: null,
     logoFile: null,
     removeLogo: false,
+    is_public: false,
   }
 }
 
@@ -69,6 +70,7 @@ export function placeToFormData(draft) {
     'service_schedule',
     JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
   )
+  fd.append('is_public', draft.is_public ? '1' : '0')
   return fd
 }
 
@@ -93,6 +95,7 @@ export function placeCreateToFormData(draft) {
     'service_schedule',
     JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
   )
+  fd.append('is_public', draft.is_public ? '1' : '0')
   return fd
 }
 

@@ -1,9 +1,11 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { createTask, fetchTasks, updateTask } from '../../services/contentApi'
-import { fetchChatFolders } from '../../services/chatApi'
+import { fetchFolders } from '../../services/chatApi'
 
 const tasks = ref([])
 const folders = ref([])
@@ -35,7 +37,7 @@ function unwrapList(payload) {
 async function load() {
   loading.value = true
   error.value = ''
-  const [tasksRes, foldersRes] = await Promise.all([fetchTasks(), fetchChatFolders()])
+  const [tasksRes, foldersRes] = await Promise.all([fetchTasks(), fetchFolders()])
   loading.value = false
   if (!tasksRes.ok) {
     error.value = `HTTP ${tasksRes.status}`
@@ -72,7 +74,9 @@ onMounted(load)
 <template>
   <section class="page page--tasks">
     <header class="page__header">
-      <Title tag="h1">{{ t('tasks.title') }}</Title>
+      <PageToolbarTitle route-key="tasks">
+        <Title tag="h1">{{ t('tasks.title') }}</Title>
+      </PageToolbarTitle>
       <p class="page__muted">{{ t('tasks.intro') }}</p>
     </header>
 
@@ -84,7 +88,7 @@ onMounted(load)
           {{ folder.name }}
         </option>
       </select>
-      <button class="btn btn--primary" @click="onCreate">{{ t('tasks.add') }}</button>
+      <Button variant="primary" @click="onCreate">{{ t('tasks.add') }}</Button>
     </div>
 
     <p v-if="loading" class="page__muted">{{ t('tasks.loading') }}</p>
@@ -96,7 +100,7 @@ onMounted(load)
         <li v-for="task in row.tasks" :key="task.id">
           <label>
             <input type="checkbox" :checked="Boolean(task.completed_at)" @change="toggle(task)" />
-            <span :class="{ done: task.completed_at }">{{ task.post?.title || t('tasks.untitled') }}</span>
+            <span :class="{ done: task.completed_at }">{{ task.title || t('tasks.untitled') }}</span>
           </label>
         </li>
       </ul>

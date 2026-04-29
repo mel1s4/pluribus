@@ -68,6 +68,7 @@ function draftFromPlace(p) {
     logoFile: null,
     removeLogo: false,
     service_schedule: normalizeServiceSchedule(p.service_schedule),
+    is_public: Boolean(p.is_public),
   }
 }
 
@@ -155,6 +156,7 @@ async function onSubmit() {
         area_geojson: d.area_geojson,
         logo_background_color: d.logo_background_color || null,
         service_schedule: normalizeServiceSchedule(d.service_schedule),
+        is_public: Boolean(d.is_public),
       }
   const { ok, status, data } = await updatePlace(d.id, payload)
   saveLoading.value = false

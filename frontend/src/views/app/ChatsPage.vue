@@ -2,15 +2,16 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import Icon from '../../atoms/Icon.vue'
 import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
 import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
 import { t } from '../../i18n/i18n'
 import {
   createChat,
-  createChatFolder,
+  createFolder,
   deleteChat,
-  fetchChatFolders,
+  fetchFolders,
   fetchChats,
   updateChat,
 } from '../../services/chatApi.js'
@@ -99,7 +100,7 @@ const sections = computed(() => {
 
 async function load() {
   loading.value = true
-  const [chatRes, folderRes] = await Promise.all([fetchChats(), fetchChatFolders()])
+  const [chatRes, folderRes] = await Promise.all([fetchChats(), fetchFolders()])
   if (chatRes.ok) chats.value = unwrapList(chatRes.data)
   if (folderRes.ok) folders.value = unwrapList(folderRes.data)
   loading.value = false
@@ -168,7 +169,7 @@ async function submitNewFolder() {
   if (folderForm.icon_bg_color && /^#[0-9A-Fa-f]{6}$/.test(folderForm.icon_bg_color)) {
     payload.icon_bg_color = folderForm.icon_bg_color
   }
-  const res = await createChatFolder(payload)
+  const res = await createFolder(payload)
   folderSaving.value = false
   if (!res.ok) return
   folderDialogRef.value?.close()
@@ -306,7 +307,9 @@ onMounted(load)
 <template>
   <section class="chats-page">
     <header class="chats-page__toolbar">
-      <Title tag="h1">{{ t('chats.title') }}</Title>
+      <PageToolbarTitle class="chats-page__titleRow" route-key="chats">
+        <Title tag="h1">{{ t('chats.title') }}</Title>
+      </PageToolbarTitle>
       <div class="chats-page__actions">
         <button type="button" class="btn btn--primary btn--sm" @click="openNewChatDialog">
           {{ t('chats.addConversation') }}
@@ -565,6 +568,7 @@ onMounted(load)
 <style scoped lang="scss">
 .chats-page { padding: 1rem; }
 .chats-page__toolbar { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
+.chats-page__titleRow { flex: 1; min-width: 0; }
 .chats-page__actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 .chats-page__section { border: 1px solid var(--border); border-radius: 0.5rem; margin-top: 0.75rem; }
 .chats-page__sectionHeader { padding: 0.5rem 0.75rem; font-weight: 700; border-bottom: 1px solid var(--border); }

@@ -25,6 +25,7 @@ class PlaceLogoApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->post('/api/places', [
                 'name' => 'Corner shop',
+                'slug' => 'corner-shop',
                 'description' => 'A nice corner',
                 'tags' => json_encode(['retail', 'corner']),
                 'logo' => $file,
@@ -54,6 +55,7 @@ class PlaceLogoApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->post('/api/places', [
                 'name' => 'Shop',
+                'slug' => 'shop-logo-test',
                 'logo' => $file,
             ])
             ->assertCreated();

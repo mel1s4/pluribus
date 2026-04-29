@@ -1,6 +1,8 @@
 <template>
   <section class="page page--settings">
-    <Title tag="h1">{{ t('settings.title') }}</Title>
+    <PageToolbarTitle route-key="settings">
+      <Title tag="h1">{{ t('settings.title') }}</Title>
+    </PageToolbarTitle>
 
     <SettingsGroup
       :title="t('settings.theme')"
@@ -25,6 +27,7 @@ import { t, language, setLanguage } from '../../i18n/i18n'
 import { SUPPORTED_LANGUAGES } from '../../i18n/locales'
 import { themeMode, setThemeMode } from '../../theme/theme'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import SettingsGroup from '../../molecules/SettingsGroup.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import { logoutRequest } from '../../composables/useSession'

@@ -22,7 +22,7 @@ class StorePostRequest extends FormRequest
             'shared_group_id' => ['nullable', 'integer', 'exists:groups,id'],
             'calendar_id' => ['nullable', 'integer', 'exists:calendars,id'],
             'place_id' => ['nullable', 'integer', 'exists:places,id'],
-            'type' => ['required', Rule::in(Post::TYPES)],
+            'type' => ['required', Rule::in([Post::TYPE_EVENT, Post::TYPE_ANNOUNCEMENT, Post::TYPE_INFO])],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'content_markdown' => ['nullable', 'string'],

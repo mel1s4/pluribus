@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { hasCapability } from '../composables/useCapabilities'
+import { hasCapability, isCommunityAdministrator } from '../composables/useCapabilities'
 import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
@@ -17,9 +17,11 @@ const SettingsView = () => import('../views/app/Settings.vue')
 const ChatsView = () => import('../views/app/ChatsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
 const ChatInfoPage = () => import('../views/app/ChatInfoPage.vue')
-const ChatFolderPage = () => import('../views/app/ChatFolderPage.vue')
+const FolderPage = () => import('../views/app/ChatFolderPage.vue')
 const MapView = () => import('../views/app/MapView.vue')
 const TasksPage = () => import('../views/app/TasksPage.vue')
+const FoldersPage = () => import('../views/app/FoldersPage.vue')
+const FolderDetailPage = () => import('../views/app/FolderDetailPage.vue')
 const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
 const MyGroupsPage = () => import('../views/app/MyGroups.vue')
@@ -89,6 +91,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'dashboard.title',
+      sidebarKey: 'dashboard',
     },
   },
   {
@@ -100,6 +103,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'settings.title',
+      sidebarKey: 'settings',
     },
   },
   {
@@ -111,12 +115,13 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'chats.title',
+      sidebarKey: 'chats',
     },
   },
   {
     path: '/chats/folder/:folderId',
     name: 'chatFolder',
-    component: ChatFolderPage,
+    component: FolderPage,
     meta: {
       layout: 'app',
       requiresAuth: true,
@@ -155,6 +160,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'map.title',
+      sidebarKey: 'map',
     },
   },
   {
@@ -166,6 +172,31 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'tasks.title',
+      sidebarKey: 'tasks',
+    },
+  },
+  {
+    path: '/folders',
+    name: 'folders',
+    component: FoldersPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'folders.title',
+      sidebarKey: 'folders',
+    },
+  },
+  {
+    path: '/folders/:folderId',
+    name: 'folderDetail',
+    component: FolderDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'folders.detail',
+      sidebarKey: 'folders',
     },
   },
   {
@@ -177,6 +208,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'calendar.title',
+      sidebarKey: 'calendar',
     },
   },
   {
@@ -188,6 +220,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'posts.title',
+      sidebarKey: 'posts',
     },
   },
   {
@@ -199,6 +232,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'groups.title',
+      sidebarKey: 'my-groups',
     },
   },
   {
@@ -210,6 +244,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'notifications.title',
+      sidebarKey: 'notifications',
     },
   },
   {
@@ -221,6 +256,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'profile.title',
+      sidebarKey: 'profile',
     },
   },
   {
@@ -251,7 +287,7 @@ const routes = [
     component: PlacePublicPage,
     meta: {
       layout: 'app',
-      requiresAuth: true,
+      requiresAuth: false,
       hideHeader: false,
       headerTitleKey: 'places.storefrontPageTitle',
     },
@@ -300,6 +336,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'users.title',
+      sidebarKey: 'users',
     },
   },
   {
@@ -311,6 +348,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'communitySettings.title',
+      sidebarKey: 'community-settings',
     },
   },
   {
@@ -344,6 +382,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'myPlaces.title',
+      sidebarKey: 'my-places',
     },
   },
 ]
@@ -378,6 +417,9 @@ router.beforeEach(async (to) => {
     && typeof to.meta.requiresCapability === 'string'
     && !hasCapability(to.meta.requiresCapability)
   ) {
+    return { name: 'dashboard' }
+  }
+  if (sessionStatus.value === 'authenticated' && to.name === 'users' && !isCommunityAdministrator()) {
     return { name: 'dashboard' }
   }
   return true

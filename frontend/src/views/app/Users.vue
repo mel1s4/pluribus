@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import UsersInvitationsToolbar from '../../components/App/UsersInvitationsToolbar.vue'
 import UsersMembersToolbar from '../../components/App/UsersMembersToolbar.vue'
 import UserCard from '../../components/App/UserCard.vue'
@@ -246,7 +247,9 @@ onUnmounted(() => {
 
 <template>
   <section class="page page--users">
-    <Title tag="h1">{{ t('users.title') }}</Title>
+    <PageToolbarTitle route-key="users">
+      <Title tag="h1">{{ t('users.title') }}</Title>
+    </PageToolbarTitle>
     <p class="page--users__intro">{{ t('users.intro') }}</p>
 
     <div

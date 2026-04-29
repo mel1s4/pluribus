@@ -3,6 +3,12 @@
   --text: #111827;
   --link: #2563eb;
   --border: rgba(17, 24, 39, 0.15);
+  --accent: #2563eb;
+  --danger: #b91c1c;
+  --muted: #6b7280;
+  --selection-bg: rgba(37, 99, 235, 0.08);
+  --surface-1: rgba(17, 24, 39, 0.03);
+  --surface-2: rgba(17, 24, 39, 0.06);
 
   --btn-bg: #e5e7eb;
   --btn-text: #111827;
@@ -14,6 +20,12 @@ html[data-theme='dark'] {
   --text: #e5e7eb;
   --link: #60a5fa;
   --border: rgba(255, 255, 255, 0.14);
+  --accent: #60a5fa;
+  --danger: #f87171;
+  --muted: #9ca3af;
+  --selection-bg: rgba(96, 165, 250, 0.12);
+  --surface-1: rgba(255, 255, 255, 0.04);
+  --surface-2: rgba(255, 255, 255, 0.08);
 
   --btn-bg: rgba(255, 255, 255, 0.08);
   --btn-text: #e5e7eb;

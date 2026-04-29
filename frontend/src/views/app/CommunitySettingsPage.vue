@@ -2,6 +2,7 @@
 import { computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import CommunityLeadershipTab from '../../components/App/CommunityLeadershipTab.vue'
 import CommunitySettingsFormTab from '../../components/App/CommunitySettingsFormTab.vue'
 import { t } from '../../i18n/i18n'
@@ -37,7 +38,9 @@ watch(
 
 <template>
   <section class="community-settings-page">
-    <Title tag="h1">{{ t('communitySettings.title') }}</Title>
+    <PageToolbarTitle route-key="community-settings">
+      <Title tag="h1">{{ t('communitySettings.title') }}</Title>
+    </PageToolbarTitle>
     <p class="community-settings-page__intro">{{ t('communitySettings.pageIntro') }}</p>
 
     <div class="community-settings-page__tabs" role="tablist" :aria-label="t('communitySettings.tabsAria')">

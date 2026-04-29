@@ -4,6 +4,7 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Input from '../../atoms/Input.vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import ProfileAvatarBlock from '../../molecules/ProfileAvatarBlock.vue'
 import ProfileExternalLinksEditor from '../../molecules/ProfileExternalLinksEditor.vue'
 import ProfileStringListEditor from '../../molecules/ProfileStringListEditor.vue'
@@ -206,7 +207,9 @@ async function onAvatarRemove() {
 
 <template>
   <section class="profile-page">
-    <Title tag="h1">{{ t('profile.title') }}</Title>
+    <PageToolbarTitle route-key="profile">
+      <Title tag="h1">{{ t('profile.title') }}</Title>
+    </PageToolbarTitle>
     <p class="profile-page__intro">{{ t('profile.intro') }}</p>
 
     <p v-if="loadError" class="profile-page__error" role="alert">

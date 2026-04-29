@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue'
+import Button from '../../atoms/Button.vue'
 import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
 import { formatOfferPrice } from '../../utils/formatPrice'
@@ -309,20 +310,22 @@ async function createRow() {
           <span class="place-reqs__qty">{{ r.quantity }} {{ r.unit }}</span>
           <span class="place-reqs__recur">{{ recurrenceSummary(r) }}</span>
           <span v-if="r.tags?.length" class="place-reqs__tags">{{ r.tags.join(', ') }}</span>
-          <button
+          <Button
             type="button"
-            class="place-reqs__btn"
+            variant="link"
+            size="sm"
             @click="startEdit(r)"
           >
             {{ t('myPlaces.edit') }}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            class="place-reqs__btn place-reqs__btn--danger"
+            variant="danger"
+            size="sm"
             @click="removeRow(r)"
           >
             {{ t('myPlaces.delete') }}
-          </button>
+          </Button>
         </div>
         <div v-if="r.offers_made?.length" class="place-reqs__made">
           <h4 class="place-reqs__madeTitle">{{ t('myPlaces.requirementOffersMade') }}</h4>
@@ -331,13 +334,14 @@ async function createRow() {
               <span class="place-reqs__madeName">{{ resp.title }}</span>
               <span class="place-reqs__madePrice">{{ formatPrice(resp.price) }}</span>
               <span class="place-reqs__madeVis">{{ resp.visibility === 'community' ? t('myPlaces.requirementVisibilityCommunity') : t('myPlaces.requirementVisibilityCreator') }}</span>
-              <button
+              <Button
                 type="button"
-                class="place-reqs__btn place-reqs__btn--danger"
+                variant="danger"
+                size="sm"
                 @click="removeResponse(r, resp)"
               >
                 {{ t('myPlaces.delete') }}
-              </button>
+              </Button>
             </li>
           </ul>
         </div>
@@ -448,12 +452,12 @@ async function createRow() {
         </div>
       </div>
       <div class="place-reqs__actions">
-        <button type="submit" class="place-reqs__btn place-reqs__btn--primary">
+        <Button type="submit" variant="primary" size="sm">
           {{ t('myPlaces.saveRequirement') }}
-        </button>
-        <button type="button" class="place-reqs__btn" @click="cancelEdit">
+        </Button>
+        <Button type="button" variant="ghost" size="sm" @click="cancelEdit">
           {{ t('myPlaces.cancel') }}
-        </button>
+        </Button>
       </div>
     </form>
 
@@ -545,12 +549,12 @@ async function createRow() {
             multiple
           >
           <div class="place-reqs__dialogActions">
-            <button type="button" class="place-reqs__btn" @click="createDialogRef?.close()">
+            <Button type="button" variant="ghost" size="sm" @click="createDialogRef?.close()">
               {{ t('myPlaces.cancel') }}
-            </button>
-            <button type="submit" class="place-reqs__btn place-reqs__btn--primary">
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
               {{ t('myPlaces.addRequirement') }}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -751,25 +755,6 @@ html[data-theme='dark'] .place-reqs__dialog::backdrop {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
-}
-
-.place-reqs__btn {
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.place-reqs__btn--primary {
-  border-color: var(--accent, #3b5bdb);
-  background: var(--accent, #3b5bdb);
-  color: #fff;
-}
-
-.place-reqs__btn--danger {
-  border-color: #c62828;
-  color: #c62828;
 }
 
 .place-reqs__gallery {

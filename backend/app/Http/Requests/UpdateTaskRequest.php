@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Task;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateTaskRequest extends FormRequest
 {
@@ -17,13 +19,12 @@ class UpdateTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'folder_id' => ['sometimes', 'nullable', 'integer', 'exists:chat_folders,id'],
+            'folder_id' => ['sometimes', 'nullable', 'integer', 'exists:folders,id'],
             'assignee_id' => ['sometimes', 'nullable', 'integer', 'exists:users,id'],
             'position' => ['sometimes', 'integer', 'min:0'],
             'highlighted' => ['sometimes', 'boolean'],
             'completed_at' => ['sometimes', 'nullable', 'date'],
 
-            // Post-backed fields
             'shared_group_id' => ['sometimes', 'nullable', 'integer', 'exists:groups,id'],
             'calendar_id' => ['sometimes', 'nullable', 'integer', 'exists:calendars,id'],
             'place_id' => ['sometimes', 'nullable', 'integer', 'exists:places,id'],
@@ -37,7 +38,7 @@ class UpdateTaskRequest extends FormRequest
             'all_day' => ['sometimes', 'boolean'],
             'recurrence_rule' => ['sometimes', 'nullable', 'string'],
             'recurrence_id' => ['sometimes', 'nullable', 'string', 'max:100'],
-            'visibility_scope' => ['sometimes', 'required', 'string', 'in:private,community,group'],
+            'visibility_scope' => ['sometimes', 'nullable', Rule::in(Task::VISIBILITY_SCOPES)],
         ];
     }
 }

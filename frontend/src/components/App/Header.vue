@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Icon from '../../atoms/Icon.vue'
+import FavoriteButton from './FavoriteButton.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import { t } from '../../i18n/i18n'
 import { fetchGlobalSearch } from '../../services/searchApi'
@@ -30,6 +31,11 @@ const titleText = computed(() => {
   const key = route.meta?.headerTitleKey
   if (typeof key !== 'string' || !key.length) return ''
   return t(key)
+})
+
+const sidebarKey = computed(() => {
+  const key = route.meta?.sidebarKey
+  return typeof key === 'string' && key.length > 0 ? key : ''
 })
 
 const quickItems = computed(() => [
@@ -149,6 +155,13 @@ onBeforeUnmount(() => {
 
       <h1 v-if="titleText" class="app-header__title">{{ titleText }}</h1>
       <div v-else class="app-header__titleSpacer" />
+
+      <FavoriteButton
+        v-if="sidebarKey"
+        class="app-header__favorite"
+        :route-key="sidebarKey"
+        size="sm"
+      />
 
       <div class="app-header__actions">
         <Button
@@ -314,6 +327,10 @@ onBeforeUnmount(() => {
 
 .app-header__titleSpacer {
   flex: 1;
+}
+
+.app-header__favorite {
+  flex-shrink: 0;
 }
 
 .app-header__actions {

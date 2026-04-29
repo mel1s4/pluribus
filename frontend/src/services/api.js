@@ -54,6 +54,9 @@ function xsrfHeaders() {
 }
 
 function shouldSkipGlobalUnauthorizedHandler(method, path) {
+  if (method === 'GET' && /^\/api\/places\/[^/]+\/public$/.test(path)) {
+    return true
+  }
   return (
     (method === 'GET' && path === '/api/user')
     || (method === 'POST' && path === '/api/login')

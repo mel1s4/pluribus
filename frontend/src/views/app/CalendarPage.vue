@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { createCalendar, fetchCalendarDiscovery, fetchCalendars } from '../../services/contentApi'
 
@@ -57,7 +58,9 @@ onMounted(load)
 <template>
   <section class="page page--calendar">
     <header class="page__header">
-      <Title tag="h1">{{ t('calendar.title') }}</Title>
+      <PageToolbarTitle route-key="calendar">
+        <Title tag="h1">{{ t('calendar.title') }}</Title>
+      </PageToolbarTitle>
       <p class="page__muted">{{ t('calendar.intro') }}</p>
     </header>
 

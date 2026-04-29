@@ -7,7 +7,8 @@ import PlaceOffersPublicList from '../../molecules/PlaceOffersPublicList.vue'
 import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublicList.vue'
 import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDisplay.vue'
 import { t } from '../../i18n/i18n'
-import { fetchPlaceBySlug } from '../../services/placesApi.js'
+import { sessionStatus } from '../../composables/useSession.js'
+import { fetchPublicPlaceBySlug } from '../../services/placesApi.js'
 import { placeApiErrorMessage } from '../../utils/placeForm.js'
 
 const route = useRoute()
@@ -15,7 +16,13 @@ const router = useRouter()
 
 const place = ref(null)
 const loadError = ref('')
+const loadHttpStatus = ref(0)
 const loading = ref(true)
+
+const isGuest = computed(() => sessionStatus.value === 'guest')
+const showPrivateGuestMessage = computed(
+  () => Boolean(loadError.value) && loadHttpStatus.value === 403 && isGuest.value,
+)
 
 const slug = computed(() => {
   const raw = route.params.slug
@@ -58,24 +65,29 @@ const heroStyle = computed(() => {
 async function load() {
   const s = slug.value
   if (!s) {
+    loading.value = false
     return
   }
   loadError.value = ''
+  loadHttpStatus.value = 0
   loading.value = true
   place.value = null
-  const { ok, status, data } = await fetchPlaceBySlug(s)
+  const { ok, status, data } = await fetchPublicPlaceBySlug(s)
   loading.value = false
+  loadHttpStatus.value = status
   if (!ok) {
-    loadError.value = placeApiErrorMessage(data, status, t('places.viewLoadError'))
-    if (status === 403 || status === 404) {
-      window.setTimeout(() => router.replace({ name: 'map' }), 1600)
+    if (status === 403 && isGuest.value) {
+      loadError.value = t('places.storefrontPrivateError')
+    } elseif (status === 404) {
+      loadError.value = t('places.storefrontNotFound')
+    } else {
+      loadError.value = placeApiErrorMessage(data, status, t('places.viewLoadError'))
     }
     return
   }
   const p = data?.place
   if (!p) {
     loadError.value = t('places.viewLoadError').replace('{status}', String(status))
-    window.setTimeout(() => router.replace({ name: 'map' }), 1600)
     return
   }
   place.value = p
@@ -192,6 +204,13 @@ load()
     </div>
     <div v-else class="place-public-page__errorWrap">
       <p class="place-public-page__error" role="alert">{{ loadError }}</p>
+      <RouterLink
+        v-if="showPrivateGuestMessage"
+        class="place-public-page__back place-public-page__back--link"
+        :to="{ name: 'login', query: { redirect: route.fullPath } }"
+      >
+        {{ t('places.storefrontLoginToView') }}
+      </RouterLink>
       <RouterLink class="place-public-page__back" :to="{ name: 'map' }">{{ t('map.title') }}</RouterLink>
     </div>
   </div>
@@ -389,5 +408,13 @@ load()
 
 .place-public-page__errorWrap {
   padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.place-public-page__back--link {
+  text-decoration: none;
 }
 </style>

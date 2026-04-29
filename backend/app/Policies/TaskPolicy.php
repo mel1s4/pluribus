@@ -17,17 +17,13 @@ class TaskPolicy
 
     public function update(User $user, Task $task): bool
     {
-        $task->loadMissing('post');
-
-        return (int) $task->post->author_id === (int) $user->id
+        return (int) $task->author_id === (int) $user->id
             || ((int) $task->assignee_id === (int) $user->id);
     }
 
     public function delete(User $user, Task $task): bool
     {
-        $task->loadMissing('post');
-
-        return (int) $task->post->author_id === (int) $user->id;
+        return (int) $task->author_id === (int) $user->id;
     }
 }
 

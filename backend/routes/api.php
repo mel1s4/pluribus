@@ -3,7 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ChatBackupController;
 use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\ChatFolderController;
+use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\ChatMessageController;
 use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\UserAdminController;
+use App\Http\Controllers\Api\UserFavoriteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -36,6 +37,8 @@ Route::get('/health', function () {
 });
 
 Route::get('/community/branding', [CommunitySettingsController::class, 'branding']);
+
+Route::get('/places/{place}/public', [PlaceController::class, 'showPublic']);
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
@@ -53,6 +56,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update']);
     Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
     Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar']);
+
+    Route::get('/user-favorites', [UserFavoriteController::class, 'index']);
+    Route::post('/user-favorites', [UserFavoriteController::class, 'store']);
+    Route::put('/user-favorites/reorder', [UserFavoriteController::class, 'reorder']);
+    Route::delete('/user-favorites/{routeKey}', [UserFavoriteController::class, 'destroy'])
+        ->where('routeKey', '[a-z0-9-]+');
 
     Route::get('/members/{user}', [MemberProfileController::class, 'show']);
 
@@ -106,10 +115,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
     Route::get('/chats/{chat}/messages', [ChatMessageController::class, 'index'])->scopeBindings();
     Route::post('/chats/{chat}/messages', [ChatMessageController::class, 'store'])->scopeBindings();
-    Route::get('/chat-folders', [ChatFolderController::class, 'index']);
-    Route::post('/chat-folders', [ChatFolderController::class, 'store']);
-    Route::patch('/chat-folders/{folder}', [ChatFolderController::class, 'update']);
-    Route::delete('/chat-folders/{folder}', [ChatFolderController::class, 'destroy']);
+    Route::get('/folders/search', [FolderController::class, 'search']);
+    Route::post('/folders/bulk-move', [FolderController::class, 'bulkMove']);
+    Route::patch('/folders/reorder', [FolderController::class, 'reorder']);
+    Route::get('/folders', [FolderController::class, 'index']);
+    Route::post('/folders', [FolderController::class, 'store']);
+    Route::get('/folders/{folder}/stats', [FolderController::class, 'stats'])->scopeBindings();
+    Route::patch('/folders/{folder}', [FolderController::class, 'update']);
+    Route::delete('/folders/{folder}', [FolderController::class, 'destroy']);
     Route::get('/chats/{chat}/backups', [ChatBackupController::class, 'index'])->scopeBindings();
     Route::post('/chats/{chat}/backups', [ChatBackupController::class, 'store'])->scopeBindings();
     Route::get('/chat-backups/{backup}/download', [ChatBackupController::class, 'download'])

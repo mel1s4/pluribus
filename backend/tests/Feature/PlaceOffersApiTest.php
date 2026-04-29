@@ -36,6 +36,7 @@ class PlaceOffersApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->postJson('/api/places', [
                 'name' => 'Tagged spot',
+                'slug' => 'tagged-spot',
                 'description' => 'Hello',
                 'tags' => ['foo', 'bar'],
             ])

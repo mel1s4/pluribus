@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Card from '../../atoms/Card.vue'
+import { isCommunityAdministrator } from '../../composables/useCapabilities'
 import { t } from '../../i18n/i18n'
 import { fetchMemberProfile } from '../../services/membersApi.js'
 
@@ -52,7 +53,8 @@ async function load() {
       (data && typeof data === 'object' && data.message && String(data.message)) ||
       t('memberProfile.loadError').replace('{status}', String(status))
     if (status === 403 || status === 404) {
-      window.setTimeout(() => router.replace({ name: 'users' }), 1600)
+      const dest = isCommunityAdministrator() ? 'users' : 'dashboard'
+      window.setTimeout(() => router.replace({ name: dest }), 1600)
     }
     return
   }
@@ -67,8 +69,12 @@ watch(userSlug, () => {
   load()
 })
 
-function goUsers() {
-  router.push({ name: 'users' })
+const backFromProfileLabel = computed(() =>
+  isCommunityAdministrator() ? t('memberProfile.backToMembers') : t('nav.dashboard'),
+)
+
+function goBackFromProfile() {
+  router.push({ name: isCommunityAdministrator() ? 'users' : 'dashboard' })
 }
 
 load()
@@ -77,8 +83,8 @@ load()
 <template>
   <section class="member-profile-page">
     <div class="member-profile-page__toolbar">
-      <button type="button" class="member-profile-page__back" @click="goUsers">
-        {{ t('memberProfile.backToMembers') }}
+      <button type="button" class="member-profile-page__back" @click="goBackFromProfile">
+        {{ backFromProfileLabel }}
       </button>
     </div>
 

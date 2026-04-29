@@ -43,6 +43,7 @@ class UpdatePlaceRequest extends FormRequest
             'logo' => ['nullable', 'file', 'image', 'max:5120'],
             'remove_logo' => ['sometimes', 'boolean'],
             'logo_background_color' => ['nullable', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'is_public' => ['sometimes', 'boolean'],
         ];
 
         $time = ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
@@ -58,6 +59,17 @@ class UpdatePlaceRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         $merge = [];
+        if ($this->has('is_public')) {
+            $raw = $this->input('is_public');
+            if (is_string($raw)) {
+                $lower = strtolower(trim($raw));
+                if (in_array($lower, ['1', 'true', 'yes', 'on'], true)) {
+                    $merge['is_public'] = true;
+                } elseif (in_array($lower, ['0', 'false', 'no', 'off', ''], true)) {
+                    $merge['is_public'] = false;
+                }
+            }
+        }
         if ($this->has('tags') && is_string($this->input('tags'))) {
             $raw = trim($this->input('tags'));
             if ($raw === '' || strcasecmp($raw, 'null') === 0) {

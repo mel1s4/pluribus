@@ -27,6 +27,7 @@ class PlaceServiceScheduleApiTest extends TestCase
 
         $res = $this->actingAs($user)->postJson('/api/places', [
             'name' => 'Scheduled shop',
+            'slug' => 'scheduled-shop',
             'tags' => [],
             'service_schedule' => $schedule,
         ]);
@@ -102,6 +103,7 @@ class PlaceServiceScheduleApiTest extends TestCase
 
         $res = $this->actingAs($user)->postJson('/api/places', [
             'name' => 'No hours',
+            'slug' => 'no-hours',
             'service_schedule' => $emptyDays,
         ]);
 

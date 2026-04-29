@@ -1,6 +1,8 @@
 <template>
   <section class="page page--dashboard">
-    <Title tag="h1">{{ t('dashboard.title') }}</Title>
+    <PageToolbarTitle route-key="dashboard">
+      <Title tag="h1">{{ t('dashboard.title') }}</Title>
+    </PageToolbarTitle>
     <p>{{ t('dashboard.description') }}</p>
 
     <div class="dashboard-grid">
@@ -25,6 +27,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import Title from '../../atoms/Title.vue'
+import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import DashboardFinishProfileWidget from '../../components/App/DashboardFinishProfileWidget.vue'
 import DashboardSetupPlaceWidget from '../../components/App/DashboardSetupPlaceWidget.vue'

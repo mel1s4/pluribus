@@ -1,5 +1,6 @@
 <script setup>
 import { nextTick, ref, watch } from 'vue'
+import Button from '../../atoms/Button.vue'
 import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
 import { formatOfferPrice } from '../../utils/formatPrice'
@@ -201,14 +202,15 @@ async function createOffer() {
   <section class="place-offers">
     <div class="place-offers__head">
       <Title tag="h3" class="place-offers__title">{{ t('myPlaces.offersHeading') }}</Title>
-      <button
+      <Button
         v-if="!editing"
         type="button"
-        class="btn btn--primary btn--sm"
+        variant="primary"
+        size="sm"
         @click="openCreateOfferDialog"
       >
         {{ t('myPlaces.addOffer') }}
-      </button>
+      </Button>
     </div>
     <p v-if="error" class="place-offers__error">{{ error }}</p>
 
@@ -221,20 +223,22 @@ async function createOffer() {
         <span class="place-offers__name">{{ o.title }}</span>
         <span class="place-offers__price">{{ formatPrice(o.price) }}</span>
         <span v-if="o.tags?.length" class="place-offers__tags">{{ o.tags.join(', ') }}</span>
-        <button
+        <Button
           type="button"
-          class="place-offers__btn"
+          variant="link"
+          size="sm"
           @click="startEdit(o)"
         >
           {{ t('myPlaces.edit') }}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          class="place-offers__btn place-offers__btn--danger"
+          variant="danger"
+          size="sm"
           @click="removeOffer(o)"
         >
           {{ t('myPlaces.delete') }}
-        </button>
+        </Button>
       </li>
     </ul>
 
@@ -325,12 +329,12 @@ async function createOffer() {
         </div>
       </div>
       <div class="place-offers__actions">
-        <button type="submit" class="place-offers__btn place-offers__btn--primary">
+        <Button type="submit" variant="primary" size="sm">
           {{ t('myPlaces.saveOffer') }}
-        </button>
-        <button type="button" class="place-offers__btn" @click="cancelEdit">
+        </Button>
+        <Button type="button" variant="ghost" size="sm" @click="cancelEdit">
           {{ t('myPlaces.cancel') }}
-        </button>
+        </Button>
       </div>
     </form>
 
@@ -405,12 +409,12 @@ async function createOffer() {
             multiple
           >
           <div class="place-offers__dialogActions">
-            <button type="button" class="place-offers__btn" @click="createDialogRef?.close()">
+            <Button type="button" variant="ghost" size="sm" @click="createDialogRef?.close()">
               {{ t('myPlaces.cancel') }}
-            </button>
-            <button type="submit" class="place-offers__btn place-offers__btn--primary">
+            </Button>
+            <Button type="submit" variant="primary" size="sm">
               {{ t('myPlaces.addOffer') }}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
@@ -556,25 +560,6 @@ html[data-theme='dark'] .place-offers__dialog::backdrop {
   display: flex;
   gap: 0.5rem;
   margin-top: 0.5rem;
-}
-
-.place-offers__btn {
-  cursor: pointer;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--bg);
-}
-
-.place-offers__btn--primary {
-  border-color: var(--accent, #3b5bdb);
-  background: var(--accent, #3b5bdb);
-  color: #fff;
-}
-
-.place-offers__btn--danger {
-  border-color: #c62828;
-  color: #c62828;
 }
 
 .place-offers__gallery {

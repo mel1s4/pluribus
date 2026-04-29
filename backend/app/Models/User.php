@@ -143,4 +143,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class, 'author_id');
     }
+
+    /**
+     * @return HasMany<UserFavorite, $this>
+     */
+    public function favorites(): HasMany
+    {
+        return $this->hasMany(UserFavorite::class)->orderBy('sort_order');
+    }
 }

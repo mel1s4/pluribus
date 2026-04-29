@@ -18,7 +18,6 @@ class PostController extends Controller
     {
         $query = Post::query()
             ->visibleToUser((int) $request->user()->id)
-            ->with('task')
             ->orderByDesc('start_at')
             ->orderByDesc('id');
 
@@ -42,14 +41,14 @@ class PostController extends Controller
             ...$request->validated(),
         ]);
 
-        return response()->json(['post' => new PostResource($post->load('task'))], 201);
+        return response()->json(['post' => new PostResource($post)], 201);
     }
 
     public function show(Request $request, Post $post): JsonResponse
     {
         $this->authorize('view', $post);
 
-        return response()->json(['post' => new PostResource($post->load('task'))]);
+        return response()->json(['post' => new PostResource($post)]);
     }
 
     public function update(UpdatePostRequest $request, Post $post): JsonResponse
@@ -58,7 +57,7 @@ class PostController extends Controller
         $post->fill($request->validated());
         $post->save();
 
-        return response()->json(['post' => new PostResource($post->load('task'))]);
+        return response()->json(['post' => new PostResource($post)]);
     }
 
     public function destroy(Request $request, Post $post): JsonResponse

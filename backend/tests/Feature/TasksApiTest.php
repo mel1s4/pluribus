@@ -21,12 +21,17 @@ class TasksApiTest extends TestCase
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->postJson('/api/tasks', [
                 'title' => 'Prepare meeting notes',
-                'visibility_scope' => 'private',
             ])
             ->assertCreated();
 
         $taskId = (int) $create->json('task.id');
-        $this->assertDatabaseHas('tasks', ['id' => $taskId, 'completed_at' => null]);
+        $this->assertDatabaseHas('tasks', [
+            'id' => $taskId,
+            'title' => 'Prepare meeting notes',
+            'author_id' => $user->id,
+            'completed_at' => null,
+            'visibility_scope' => 'private',
+        ]);
 
         $this->actingAs($user)
             ->withoutMiddleware(ValidateCsrfToken::class)
@@ -36,7 +41,6 @@ class TasksApiTest extends TestCase
             ->assertOk();
 
         $this->assertDatabaseHas('tasks', ['id' => $taskId]);
-        $this->assertDatabaseHas('posts', ['id' => (int) $create->json('task.post_id'), 'type' => 'task']);
     }
 }
 

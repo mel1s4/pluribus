@@ -25,7 +25,7 @@ const props = defineProps({
   variant: {
     type: String,
     default: 'primary',
-    validator: (v) => ['primary', 'secondary', 'ghost', 'danger'].includes(v),
+    validator: (v) => ['primary', 'secondary', 'ghost', 'danger', 'link'].includes(v),
   },
   size: {
     type: String,
@@ -156,6 +156,29 @@ const isDisabled = computed(() => props.disabled || props.loading)
 
   &:not(:disabled):hover {
     background-color: #b91c1c;
+  }
+}
+
+.btn--link {
+  background-color: transparent;
+  color: #2563eb;
+  border-color: transparent;
+  padding-left: 0;
+  padding-right: 0;
+  text-decoration: none;
+
+  .btn__spinner {
+    border-color: rgba(37, 99, 235, 0.2);
+    border-top-color: currentColor;
+  }
+
+  &:not(:disabled):hover {
+    text-decoration: underline;
+    background-color: transparent;
+  }
+
+  &:not(:disabled):active {
+    transform: none;
   }
 }
 
