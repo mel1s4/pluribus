@@ -87,6 +87,9 @@ const emit = defineEmits(['open', 'menu', 'dragstart', 'dragend', 'dragover', 'd
         <button type="button" role="menuitem" class="folder-card__menuItem" @click="emit('menu', { action: 'editIcon', folder })">
           {{ t('folders.editIcon') }}
         </button>
+        <button type="button" role="menuitem" class="folder-card__menuItem" @click="emit('menu', { action: 'share', folder })">
+          {{ t('folders.share') }}
+        </button>
         <button type="button" role="menuitem" class="folder-card__menuItem folder-card__menuItem--danger" @click="emit('menu', { action: 'delete', folder })">
           {{ t('folders.delete') }}
         </button>

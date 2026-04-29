@@ -83,5 +83,23 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perMinute(8)->by($request->ip().'|'.$token);
         });
+
+        RateLimiter::for('visitor-login-request', function (Request $request) {
+            $email = (string) $request->input('email', '');
+
+            return Limit::perMinute(6)->by(strtolower($email).'|'.$request->ip());
+        });
+
+        RateLimiter::for('visitor-login-consume', function (Request $request) {
+            $token = (string) $request->route('token', '');
+
+            return Limit::perMinute(12)->by($request->ip().'|'.$token);
+        });
+
+        RateLimiter::for('table-access-resolve', function (Request $request) {
+            $token = (string) $request->route('token', '');
+
+            return Limit::perMinute(120)->by($request->ip().'|'.$token);
+        });
     }
 }

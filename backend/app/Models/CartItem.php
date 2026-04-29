@@ -11,6 +11,7 @@ class CartItem extends Model
     protected $fillable = [
         'user_id',
         'place_offer_id',
+        'table_id',
         'quantity',
     ];
 
@@ -38,5 +39,13 @@ class CartItem extends Model
     public function offer(): BelongsTo
     {
         return $this->belongsTo(PlaceOffer::class, 'place_offer_id');
+    }
+
+    /**
+     * @return BelongsTo<Table, $this>
+     */
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(Table::class);
     }
 }

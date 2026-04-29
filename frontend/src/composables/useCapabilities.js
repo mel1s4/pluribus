@@ -30,3 +30,8 @@ export function hasCapability(capabilityId) {
   }
   return caps.includes(capabilityId)
 }
+
+export function isVisitorUser() {
+  const user = sessionUser.value
+  return Boolean(user && user.user_type === 'visitor' && !user.is_root)
+}

@@ -36,6 +36,10 @@ class CartItemResource extends JsonResource
                 fn () => new PlaceOfferResource($this->offer)
             ),
             'place' => $place,
+            'table' => $this->when(
+                $this->relationLoaded('table') && $this->table !== null,
+                fn () => new TableResource($this->table)
+            ),
         ];
     }
 }

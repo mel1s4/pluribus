@@ -27,8 +27,11 @@ use App\Http\Controllers\Api\PlaceRequirementResponseController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\TaskController;
+use App\Http\Controllers\Api\TableAccessLinkController;
 use App\Http\Controllers\Api\UserAdminController;
 use App\Http\Controllers\Api\UserFavoriteController;
+use App\Http\Controllers\Api\VisitorAuthController;
+use App\Http\Controllers\Api\PlaceTableController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', function () {
@@ -45,6 +48,12 @@ Route::get('/places/{place}/public', [PlaceController::class, 'showPublic']);
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
+Route::post('/visitor-auth/request-link', [VisitorAuthController::class, 'requestLoginLink'])
+    ->middleware('throttle:visitor-login-request');
+Route::post('/visitor-auth/consume/{token}', [VisitorAuthController::class, 'consumeLoginLink'])
+    ->middleware('throttle:visitor-login-consume');
+Route::get('/table-access/{token}', [TableAccessLinkController::class, 'resolve'])
+    ->middleware('throttle:table-access-resolve');
 
 Route::get('/join-invitations/{token}', [JoinInvitationController::class, 'show'])
     ->middleware('throttle:join-invitation-show');
@@ -119,6 +128,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/chats/{chat}', [ChatController::class, 'show']);
     Route::patch('/chats/{chat}', [ChatController::class, 'update']);
     Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
+    Route::post('/chats/{chat}/read', [ChatController::class, 'markRead'])->scopeBindings();
     Route::get('/chats/{chat}/messages', [ChatMessageController::class, 'index'])->scopeBindings();
     Route::post('/chats/{chat}/messages', [ChatMessageController::class, 'store'])->scopeBindings();
     Route::get('/folders/search', [FolderController::class, 'search']);
@@ -163,6 +173,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/places/{place}/administrators', [PlaceAdministratorController::class, 'store'])->scopeBindings();
     Route::patch('/places/{place}/administrators/{user}', [PlaceAdministratorController::class, 'update'])->scopeBindings();
     Route::delete('/places/{place}/administrators/{user}', [PlaceAdministratorController::class, 'destroy'])->scopeBindings();
+    Route::get('/places/{place}/tables', [PlaceTableController::class, 'index'])->scopeBindings();
+    Route::post('/places/{place}/tables', [PlaceTableController::class, 'store'])->scopeBindings();
+    Route::patch('/places/{place}/tables/{table}', [PlaceTableController::class, 'update'])->scopeBindings();
+    Route::delete('/places/{place}/tables/{table}', [PlaceTableController::class, 'destroy'])->scopeBindings();
+    Route::post('/places/{place}/tables/{table}/access-links', [TableAccessLinkController::class, 'store'])->scopeBindings();
+    Route::post('/places/{place}/tables/{table}/access-links/rotate', [TableAccessLinkController::class, 'rotate'])->scopeBindings();
+    Route::delete('/places/{place}/tables/{table}/access-links', [TableAccessLinkController::class, 'revoke'])->scopeBindings();
+    Route::post('/table-access/{token}/consume', [TableAccessLinkController::class, 'consume']);
 
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart/items', [CartController::class, 'upsertItem']);
@@ -176,4 +194,5 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/places/{place}/orders', [OrderController::class, 'placeIndex']);
     Route::get('/places/{place}/orders/{order}', [OrderController::class, 'placeShow']);
     Route::patch('/places/{place}/orders/{order}', [OrderController::class, 'updatePlaceOrder']);
+    Route::patch('/places/{place}/orders/{order}/items/{item}/table', [OrderController::class, 'reassignTable']);
 });

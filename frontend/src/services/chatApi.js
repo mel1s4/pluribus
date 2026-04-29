@@ -50,6 +50,13 @@ export async function sendChatMessage(chatId, body) {
   return apiJson('POST', `/api/chats/${chatId}/messages`, { body })
 }
 
+export async function markChatRead(chatId) {
+  await ensureCsrfCookie()
+  const result = await apiJson('POST', `/api/chats/${chatId}/read`)
+  if (result.ok) invalidateChatCaches()
+  return result
+}
+
 export function fetchFolders() {
   return cachedGet('/api/folders')
 }
@@ -99,6 +106,14 @@ export async function reorderFolders(payload) {
   const result = await apiJson('PATCH', '/api/folders/reorder', payload)
   if (result.ok) invalidateChatCaches()
   return result
+}
+
+export async function shareFolderWithGroup(folderId, groupId) {
+  return updateFolder(folderId, { shared_group_id: groupId })
+}
+
+export async function unshareFolderWithGroup(folderId) {
+  return updateFolder(folderId, { shared_group_id: null })
 }
 
 export function fetchChatBackups(chatId) {

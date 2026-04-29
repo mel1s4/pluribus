@@ -1,10 +1,11 @@
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import { useSession } from '../../composables/useSession.js'
 import { useChatRealtime } from '../../composables/useChatRealtime.js'
 import { fetchChat, fetchChatMessages, sendChatMessage } from '../../services/chatApi.js'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 
 const MESSAGE_MAX = 10000
 const CHAR_COUNTER_THRESHOLD = 8000
@@ -13,6 +14,7 @@ const NEAR_BOTTOM_PX = 100
 const route = useRoute()
 const router = useRouter()
 const { user } = useSession()
+const { markChatAsRead, setActiveChat } = useChatUnread()
 const chatId = computed(() => route.params.chatId)
 const chat = ref(null)
 const messages = ref([])
@@ -118,6 +120,8 @@ async function load() {
     messages.value = msgRes.data.data.map((m) => ({ ...m, _status: 'sent' }))
   }
   loading.value = false
+  setActiveChat(chatId.value)
+  await markChatAsRead(chatId.value)
   nextTick(() => maybeScrollBottom(true))
 }
 
@@ -210,6 +214,12 @@ function goToInfo() {
 }
 
 onMounted(load)
+watch(chatId, () => {
+  void load()
+})
+onBeforeUnmount(() => {
+  setActiveChat(null)
+})
 </script>
 
 <template>

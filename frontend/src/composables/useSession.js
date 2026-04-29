@@ -60,6 +60,24 @@ export async function loginRequest(payload) {
   })
 }
 
+/**
+ * @param {{ email: string }} payload
+ */
+export async function requestVisitorLoginLink(payload) {
+  await ensureCsrfCookie()
+  return apiJson('POST', '/api/visitor-auth/request-link', {
+    email: payload.email,
+  })
+}
+
+/**
+ * @param {string} token
+ */
+export async function consumeVisitorLoginLink(token) {
+  await ensureCsrfCookie()
+  return apiJson('POST', `/api/visitor-auth/consume/${token}`)
+}
+
 export async function logoutRequest() {
   await ensureCsrfCookie()
   const out = await apiJson('POST', '/api/logout')
@@ -116,6 +134,8 @@ export function useSession() {
     status: sessionStatus,
     resolveSession,
     loginRequest,
+    requestVisitorLoginLink,
+    consumeVisitorLoginLink,
     logoutRequest,
     setSessionFromLoginUser,
   }

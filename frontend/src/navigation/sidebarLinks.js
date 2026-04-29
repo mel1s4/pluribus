@@ -1,4 +1,4 @@
-import { hasCapability, isCommunityAdministrator } from '../composables/useCapabilities'
+import { hasCapability, isCommunityAdministrator, isVisitorUser } from '../composables/useCapabilities'
 
 /**
  * Single source for authenticated app sidebar destinations (keys match backend UserFavoriteController).
@@ -22,6 +22,7 @@ export const SIDEBAR_LINK_DEFS = [
   { key: 'posts', to: '/posts', labelKey: 'posts.title', icon: 'newspaper', capability: null },
   { key: 'my-groups', to: '/my-groups', labelKey: 'groups.title', icon: 'people-group', capability: null },
   { key: 'orders', to: '/orders', labelKey: 'nav.orders', icon: 'file-lines', capability: null },
+  { key: 'my-cart', to: '/cart', labelKey: 'nav.myCart', icon: 'cart-shopping', capability: null },
   { key: 'my-places', to: '/my-places', labelKey: 'nav.myPlaces', icon: 'store', capability: null },
   { key: 'map', to: '/map', labelKey: 'quickNav.map', icon: 'map-location-dot', capability: null },
   { key: 'notifications', to: '/notifications', labelKey: 'quickNav.notifications', icon: 'bell', capability: null },
@@ -49,6 +50,12 @@ export function sidebarDefByKey(key) {
  * @param {typeof SIDEBAR_LINK_DEFS[number]} def
  */
 export function isSidebarLinkDefAccessible(def) {
+  if (
+    isVisitorUser()
+    && !['map', 'orders', 'my-cart', 'profile', 'settings'].includes(def.key)
+  ) {
+    return false
+  }
   if (def.requiresCommunityAdmin && !isCommunityAdministrator()) {
     return false
   }

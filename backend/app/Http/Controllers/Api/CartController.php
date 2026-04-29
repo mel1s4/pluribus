@@ -7,6 +7,7 @@ use App\Http\Requests\UpsertCartItemRequest;
 use App\Http\Resources\CartItemResource;
 use App\Models\CartItem;
 use App\Models\PlaceOffer;
+use App\Models\Table;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,7 +19,7 @@ class CartController extends Controller
         assert($user !== null);
         $items = CartItem::query()
             ->where('user_id', $user->id)
-            ->with(['offer.place'])
+            ->with(['offer.place', 'table'])
             ->orderByDesc('updated_at')
             ->get();
 
@@ -40,6 +41,22 @@ class CartController extends Controller
         assert($user !== null);
         $offer = PlaceOffer::query()->with('place')->findOrFail((int) $request->validated('place_offer_id'));
         $this->assertOfferVisibleToBuyer($request, $offer);
+        $tableId = $request->validated('table_id');
+        if ($tableId === null) {
+            $ctx = $request->session()->get('active_table_context');
+            if (is_array($ctx) && (int) ($ctx['place_id'] ?? 0) === (int) $offer->place_id) {
+                $tableId = (int) ($ctx['table_id'] ?? 0);
+                if ($tableId <= 0) {
+                    $tableId = null;
+                }
+            }
+        }
+        if ($tableId !== null) {
+            $table = Table::query()->findOrFail((int) $tableId);
+            if ((int) $table->place_id !== (int) $offer->place_id) {
+                abort(422, 'Selected table does not belong to this place.');
+            }
+        }
 
         $qty = (int) $request->validated('quantity');
         if ($qty <= 0) {
@@ -58,6 +75,7 @@ class CartController extends Controller
             ],
             [
                 'quantity' => $qty,
+                'table_id' => $tableId,
             ]
         );
 

@@ -32,6 +32,7 @@ class ChatMessageController extends Controller
             'user_id' => $request->user()->id,
             'body' => $request->validated()['body'],
         ]);
+        $chat->touch();
         $message->load('user:id,name,avatar_path');
         event(new MessageSent($message));
 

@@ -16,8 +16,10 @@ import {
   updateChat,
 } from '../../services/chatApi.js'
 import { searchUsers } from '../../services/usersApi.js'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 
 const router = useRouter()
+const { hydrateFromChats, getChatUnread } = useChatUnread()
 const chats = ref([])
 const folders = ref([])
 const loading = ref(true)
@@ -101,7 +103,10 @@ const sections = computed(() => {
 async function load() {
   loading.value = true
   const [chatRes, folderRes] = await Promise.all([fetchChats(), fetchFolders()])
-  if (chatRes.ok) chats.value = unwrapList(chatRes.data)
+  if (chatRes.ok) {
+    chats.value = unwrapList(chatRes.data)
+    hydrateFromChats(chats.value)
+  }
   if (folderRes.ok) folders.value = unwrapList(folderRes.data)
   loading.value = false
 }
@@ -514,6 +519,9 @@ onMounted(load)
               {{ chat.icon_emoji || '💬' }}
             </span>
             <span>{{ chat.title || t('chats.defaultConversation') }}</span>
+            <span v-if="getChatUnread(chat.id) > 0" class="chats-page__unreadBadge">
+              {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
+            </span>
           </button>
           <details
             class="chats-page__kebab"
@@ -645,6 +653,20 @@ html[data-theme='dark'] .chats-page__kebabMenu {
   color: #dc2626;
 }
 .chats-page__icon { width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
+.chats-page__unreadBadge {
+  margin-left: auto;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
 .chats-page__folderButton {
   border: none;
   background: transparent;

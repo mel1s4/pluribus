@@ -37,10 +37,10 @@ class User extends Authenticatable
     ];
 
     /** Stored on users who are not root; root accounts use {@see $is_root}. */
-    public const USER_TYPES = ['root', 'admin', 'member', 'developer'];
+    public const USER_TYPES = ['root', 'admin', 'member', 'developer', 'visitor'];
 
     /** Values root may assign via {@see users.assign_types} (excludes root). */
-    public const ASSIGNABLE_USER_TYPES = ['admin', 'member', 'developer'];
+    public const ASSIGNABLE_USER_TYPES = ['admin', 'member', 'developer', 'visitor'];
 
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;

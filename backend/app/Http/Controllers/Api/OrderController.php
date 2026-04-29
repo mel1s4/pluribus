@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
+use App\Http\Requests\UpdateOrderItemTableRequest;
 use App\Http\Requests\UpdatePlaceOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\CartItem;
@@ -11,6 +12,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Place;
 use App\Models\PlaceOffer;
+use App\Models\Table;
 use App\Support\PlaceMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,7 +27,7 @@ class OrderController extends Controller
         assert($user !== null);
         $orders = Order::query()
             ->where('user_id', $user->id)
-            ->with(['items.place'])
+            ->with(['items.place', 'items.table'])
             ->orderByDesc('created_at')
             ->paginate(20);
 
@@ -40,7 +42,7 @@ class OrderController extends Controller
         $order = DB::transaction(function () use ($user, $request) {
             $cartRows = CartItem::query()
                 ->where('user_id', $user->id)
-                ->with(['offer.place'])
+                ->with(['offer.place', 'table'])
                 ->lockForUpdate()
                 ->get();
 
@@ -54,6 +56,11 @@ class OrderController extends Controller
                 if ($row->offer === null) {
                     throw ValidationException::withMessages([
                         'cart' => [__('An item in your cart is no longer available.')],
+                    ]);
+                }
+                if ($row->table !== null && (int) $row->table->place_id !== (int) $row->offer->place_id) {
+                    throw ValidationException::withMessages([
+                        'cart' => [__('A selected table does not match the offer place.')],
                     ]);
                 }
                 $this->authorizeOfferForCheckout($request, $row->offer);
@@ -85,6 +92,7 @@ class OrderController extends Controller
                     'order_id' => $order->id,
                     'place_offer_id' => $offer->id,
                     'place_id' => $offer->place_id,
+                    'table_id' => $row->table_id,
                     'quantity' => $qty,
                     'unit_price' => $price,
                     'subtotal' => $subtotal,
@@ -94,7 +102,7 @@ class OrderController extends Controller
 
             CartItem::query()->where('user_id', $user->id)->delete();
 
-            return $order->fresh(['items.place']);
+            return $order->fresh(['items.place', 'items.table']);
         });
 
         assert($order instanceof Order);
@@ -111,7 +119,7 @@ class OrderController extends Controller
         if ((int) $order->user_id !== (int) $user->id) {
             abort(403);
         }
-        $order->load(['items.place']);
+        $order->load(['items.place', 'items.table']);
 
         return response()->json([
             'order' => new OrderResource($order),
@@ -123,7 +131,7 @@ class OrderController extends Controller
         $this->authorize('update', $place);
         $orders = Order::query()
             ->whereHas('items', fn ($q) => $q->where('place_id', $place->id))
-            ->with(['items' => fn ($q) => $q->where('place_id', $place->id)->with('place')])
+            ->with(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])])
             ->orderByDesc('created_at')
             ->paginate(20);
 
@@ -146,7 +154,7 @@ class OrderController extends Controller
         if (! $order->items()->where('place_id', $place->id)->exists()) {
             abort(404);
         }
-        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with('place')]);
+        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $item) {
             $sub = $this->addMoney($sub, (string) $item->subtotal);
@@ -165,10 +173,40 @@ class OrderController extends Controller
             abort(404);
         }
         $order->update(['status' => $request->validated('status')]);
-        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with('place')]);
+        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $item) {
             $sub = $this->addMoney($sub, (string) $item->subtotal);
+        }
+        $order->setAttribute('place_subtotal', $sub);
+
+        return response()->json([
+            'order' => new OrderResource($order),
+        ]);
+    }
+
+    public function reassignTable(
+        UpdateOrderItemTableRequest $request,
+        Place $place,
+        Order $order,
+        OrderItem $item
+    ): JsonResponse {
+        $this->authorize('update', $place);
+        if ((int) $item->order_id !== (int) $order->id || (int) $item->place_id !== (int) $place->id) {
+            abort(404);
+        }
+        $tableId = $request->validated('table_id');
+        if ($tableId !== null) {
+            $table = Table::query()->findOrFail((int) $tableId);
+            if ((int) $table->place_id !== (int) $place->id) {
+                abort(422, 'Selected table does not belong to this place.');
+            }
+        }
+        $item->update(['table_id' => $tableId]);
+        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
+        $sub = '0.00';
+        foreach ($order->items as $line) {
+            $sub = $this->addMoney($sub, (string) $line->subtotal);
         }
         $order->setAttribute('place_subtotal', $sub);
 

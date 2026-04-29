@@ -137,5 +137,15 @@
       "calendars.view",
       "calendars.manage"
     ]
+  },
+  "visitor": {
+    "entity_type": null,
+    "role": "visitor",
+    "description": "Consumer-focused account with only public browsing and ordering capabilities.",
+    "capabilities": [
+      "stores.view",
+      "offers.view",
+      "map.view"
+    ]
   }
 }

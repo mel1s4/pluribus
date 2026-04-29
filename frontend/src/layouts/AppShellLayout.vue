@@ -41,7 +41,7 @@
 
     <template v-if="sessionStatus === 'authenticated'">
       <CartDrawer />
-      <CartFab />
+      <CartFab v-if="showCartFab" />
     </template>
   </div>
 </template>
@@ -63,6 +63,11 @@ import { sessionStatus } from '../composables/useSession'
 const route = useRoute()
 const { isDesktop } = useDesktopViewport()
 const { sidebarOpen, closeSidebar, headerActions } = useAppShell()
+
+/** Routes that surface add-to-cart (see PlacePublicPage / PlaceViewPage). */
+const CART_FAB_ROUTE_NAMES = new Set(['placePublic', 'placeView'])
+
+const showCartFab = computed(() => CART_FAB_ROUTE_NAMES.has(String(route.name || '')))
 
 const showHeader = computed(() => !route.meta?.hideHeader)
 const { chromeVisible } = useMobileChromeScroll(showHeader)

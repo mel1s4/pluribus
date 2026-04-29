@@ -12,6 +12,7 @@ class OrderItem extends Model
         'order_id',
         'place_offer_id',
         'place_id',
+        'table_id',
         'quantity',
         'unit_price',
         'subtotal',
@@ -53,5 +54,13 @@ class OrderItem extends Model
     public function place(): BelongsTo
     {
         return $this->belongsTo(Place::class);
+    }
+
+    /**
+     * @return BelongsTo<Table, $this>
+     */
+    public function table(): BelongsTo
+    {
+        return $this->belongsTo(Table::class);
     }
 }

@@ -5,7 +5,7 @@ import { t } from '../i18n/i18n'
 import Card from '../atoms/Card.vue'
 import Title from '../atoms/Title.vue'
 import LoginForm from '../molecules/LoginForm.vue'
-import { loginRequest, setSessionFromLoginUser } from '../composables/useSession'
+import { loginRequest, requestVisitorLoginLink, setSessionFromLoginUser } from '../composables/useSession'
 
 const route = useRoute()
 const router = useRouter()
@@ -13,6 +13,7 @@ const router = useRouter()
 const submitting = ref(false)
 const emailError = ref('')
 const formError = ref('')
+const visitorLinkSent = ref('')
 
 function pickEmailError(data) {
   if (!data || typeof data !== 'object') {
@@ -37,6 +38,7 @@ async function onSubmit(payload) {
 
   emailError.value = ''
   formError.value = ''
+  visitorLinkSent.value = ''
   submitting.value = true
 
   try {
@@ -63,6 +65,21 @@ async function onSubmit(payload) {
     submitting.value = false
   }
 }
+
+async function onRequestVisitorLink(payload) {
+  const email = typeof payload?.email === 'string' ? payload.email.trim() : ''
+  if (!email) {
+    emailError.value = t('login.emailPlaceholder')
+    return
+  }
+  visitorLinkSent.value = ''
+  const { ok } = await requestVisitorLoginLink({ email })
+  if (ok) {
+    visitorLinkSent.value = 'Visitor login link sent to your email.'
+  } else {
+    formError.value = t('login.errorGeneric')
+  }
+}
 </script>
 
 <template>
@@ -73,7 +90,9 @@ async function onSubmit(payload) {
       :submitting="submitting"
       :email-error="emailError"
       @submit="onSubmit"
+      @visitor-link="onRequestVisitorLink"
     />
+    <p v-if="visitorLinkSent" class="login-card__visitorLinkSent">{{ visitorLinkSent }}</p>
   </Card>
 </template>
 
@@ -82,5 +101,11 @@ async function onSubmit(payload) {
   color: var(--color-danger, #b91c1c);
   font-size: 0.875rem;
   margin: 0 0 0.75rem;
+}
+
+.login-card__visitorLinkSent {
+  color: #0f766e;
+  font-size: 0.875rem;
+  margin: 0.75rem 0 0;
 }
 </style>

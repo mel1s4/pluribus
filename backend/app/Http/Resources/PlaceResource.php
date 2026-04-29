@@ -68,6 +68,10 @@ class PlaceResource extends JsonResource
             $data['requirements'] = PlaceRequirementResource::collection($this->requirements);
         }
 
+        if ($this->relationLoaded('tables')) {
+            $data['tables'] = TableResource::collection($this->tables);
+        }
+
         return $data;
     }
 }

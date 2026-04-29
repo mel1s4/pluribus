@@ -7,10 +7,12 @@ use App\Http\Requests\StoreChatRequest;
 use App\Http\Requests\UpdateChatRequest;
 use App\Http\Resources\ChatResource;
 use App\Models\Chat;
+use App\Models\ChatMessage;
 use App\Models\Community;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 
 class ChatController extends Controller
 {
@@ -19,8 +21,27 @@ class ChatController extends Controller
         $user = $request->user();
         $chats = Chat::query()
             ->visibleToUser((int) $user->id)
+            ->addSelect([
+                'last_message_at' => ChatMessage::query()
+                    ->selectRaw('MAX(chat_messages.created_at)')
+                    ->whereColumn('chat_messages.chat_id', 'chats.id'),
+            ])
+            ->addSelect([
+                'unread_count' => ChatMessage::query()
+                    ->selectRaw('COUNT(*)')
+                    ->join('chat_members as current_member', function ($join) use ($user): void {
+                        $join->on('current_member.chat_id', '=', 'chat_messages.chat_id')
+                            ->where('current_member.user_id', '=', (int) $user->id);
+                    })
+                    ->whereColumn('chat_messages.chat_id', 'chats.id')
+                    ->where('chat_messages.user_id', '!=', (int) $user->id)
+                    ->where(function ($query): void {
+                        $query->whereNull('current_member.last_read_at')
+                            ->orWhereColumn('chat_messages.created_at', '>', 'current_member.last_read_at');
+                    }),
+            ])
             ->with(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id'])
-            ->latest('updated_at')
+            ->orderByDesc(DB::raw('COALESCE(last_message_at, chats.updated_at)'))
             ->get();
 
         return ChatResource::collection($chats);
@@ -89,6 +110,20 @@ class ChatController extends Controller
 
         return response()->json([
             'ok' => true,
+        ]);
+    }
+
+    public function markRead(Request $request, Chat $chat): JsonResponse
+    {
+        $this->authorize('view', $chat);
+        $chat->members()->updateExistingPivot((int) $request->user()->id, [
+            'last_read_at' => now(),
+        ]);
+
+        return response()->json([
+            'ok' => true,
+            'chat_id' => $chat->id,
+            'last_read_at' => now()->toIso8601String(),
         ]);
     }
 }

@@ -18,6 +18,7 @@ class UpsertCartItemRequest extends FormRequest
     {
         return [
             'place_offer_id' => ['required', 'integer', 'exists:place_offers,id'],
+            'table_id' => ['nullable', 'integer', 'exists:tables,id'],
             'quantity' => ['required', 'integer', 'min:0', 'max:999'],
         ];
     }

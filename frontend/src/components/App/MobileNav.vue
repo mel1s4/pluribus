@@ -52,10 +52,11 @@ onUnmounted(() => {
   }
 }
 
+/* Above Leaflet panes/controls (Leaflet uses up to ~1000; see leaflet.css). */
 .mobile-nav__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 40;
+  z-index: 1100;
   background: rgba(15, 23, 42, 0.45);
   opacity: 0;
   pointer-events: none;
@@ -72,7 +73,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 45;
+  z-index: 1110;
   width: min(88vw, 320px);
   max-width: 100%;
   transform: translateX(-100%);

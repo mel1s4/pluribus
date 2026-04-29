@@ -24,6 +24,7 @@ class OrderItemResource extends JsonResource
             'id' => $this->id,
             'place_offer_id' => $this->place_offer_id,
             'place_id' => $this->place_id,
+            'table_id' => $this->table_id,
             'quantity' => $this->quantity,
             'unit_price' => (string) $this->unit_price,
             'subtotal' => (string) $this->subtotal,
@@ -38,6 +39,10 @@ class OrderItemResource extends JsonResource
                     'name' => $this->place->name,
                     'slug' => $this->place->slug,
                 ]
+            ),
+            'table' => $this->when(
+                $this->relationLoaded('table') && $this->table !== null,
+                fn () => new TableResource($this->table)
             ),
         ];
     }

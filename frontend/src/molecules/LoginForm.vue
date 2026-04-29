@@ -16,7 +16,7 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['submit'])
+const emit = defineEmits(['submit', 'visitor-link'])
 
 const email = ref('')
 const password = ref('')
@@ -27,6 +27,12 @@ function handleSubmit() {
     email: email.value,
     password: password.value,
     remember: remember.value,
+  })
+}
+
+function handleVisitorLink() {
+  emit('visitor-link', {
+    email: email.value,
   })
 }
 </script>
@@ -65,6 +71,15 @@ function handleSubmit() {
       :loading="submitting"
     >
       {{ t('login.signIn') }}
+    </Button>
+    <Button
+      type="button"
+      variant="secondary"
+      size="md"
+      :disabled="submitting"
+      @click="handleVisitorLink"
+    >
+      Send visitor login link
     </Button>
   </form>
 </template>

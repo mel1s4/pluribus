@@ -11,7 +11,7 @@ function resolveAuthEndpoint() {
   return `${base.replace(/\/$/, '')}/broadcasting/auth`
 }
 
-function getEcho() {
+export function getChatEcho() {
   if (!echo) {
     echo = new Echo({
       broadcaster: 'pusher',
@@ -41,8 +41,8 @@ export function useChatRealtime(chatIdRef, onMessage) {
 
   function join(chatId) {
     if (!chatId) return
-    const e = getEcho()
-    channelName = `private-chat.${chatId}`
+    const e = getChatEcho()
+    channelName = `chat.${chatId}`
     e.private(`chat.${chatId}`)
       .listen('.message.sent', (event) => {
         if (event && event.message) {
@@ -56,7 +56,7 @@ export function useChatRealtime(chatIdRef, onMessage) {
 
   function leave() {
     if (!channelName) return
-    getEcho().leave(channelName)
+    getChatEcho().leave(channelName)
     channelName = null
     connected.value = false
   }

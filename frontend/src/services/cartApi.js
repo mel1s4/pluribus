@@ -12,12 +12,14 @@ export async function fetchCart() {
 /**
  * @param {number|string} placeOfferId
  * @param {number} quantity
+ * @param {number|null} [tableId]
  */
-export async function upsertCartItem(placeOfferId, quantity) {
+export async function upsertCartItem(placeOfferId, quantity, tableId = null) {
   await ensureCsrfCookie()
   return apiJson('POST', `${PREFIX}/items`, {
     place_offer_id: Number(placeOfferId),
     quantity: Number(quantity),
+    table_id: tableId == null ? null : Number(tableId),
   })
 }
 

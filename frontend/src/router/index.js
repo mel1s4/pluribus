@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { hasCapability, isCommunityAdministrator } from '../composables/useCapabilities'
+import { hasCapability, isCommunityAdministrator, isVisitorUser } from '../composables/useCapabilities'
 import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
@@ -12,6 +12,8 @@ const LoginView = () => import('../views/public/Login.vue')
 const ContactView = () => import('../views/public/Contact.vue')
 const LegalView = () => import('../views/public/Legal.vue')
 const JoinInvitationView = () => import('../views/public/JoinInvitation.vue')
+const VisitorAuthConsumeView = () => import('../views/public/VisitorAuthConsume.vue')
+const TableAccessView = () => import('../views/public/TableAccessPage.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
 const ChatsView = () => import('../views/app/ChatsPage.vue')
@@ -38,6 +40,7 @@ const PlaceViewPage = () => import('../views/app/PlaceViewPage.vue')
 const PlacePublicPage = () => import('../views/app/PlacePublicPage.vue')
 const PlaceCreatePage = () => import('../views/app/PlaceCreatePage.vue')
 const PlaceEditPage = () => import('../views/app/PlaceEditPage.vue')
+const PlaceOfferCreatePage = () => import('../views/app/PlaceOfferCreatePage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
 const CartPage = () => import('../views/app/CartPage.vue')
 const OrdersPage = () => import('../views/app/OrdersPage.vue')
@@ -84,6 +87,22 @@ const routes = [
     meta: {
       layout: 'public',
       headerTitleKey: 'joinInvitation.title',
+    },
+  },
+  {
+    path: '/visitor-auth/:token',
+    name: 'visitorAuthConsume',
+    component: VisitorAuthConsumeView,
+    meta: {
+      layout: 'public',
+    },
+  },
+  {
+    path: '/table-access/:token',
+    name: 'tableAccess',
+    component: TableAccessView,
+    meta: {
+      layout: 'public',
     },
   },
   {
@@ -379,6 +398,17 @@ const routes = [
     },
   },
   {
+    path: '/my-places/:placeId/offers/new',
+    name: 'placeOfferCreate',
+    component: PlaceOfferCreatePage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'myPlaces.addOfferPageTitle',
+    },
+  },
+  {
     path: '/my-places/:placeId/:tab?',
     name: 'placeEdit',
     component: PlaceEditPage,
@@ -410,6 +440,7 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'cart.title',
+      sidebarKey: 'my-cart',
     },
   },
   {
@@ -470,6 +501,13 @@ router.beforeEach(async (to) => {
     return { name: 'dashboard' }
   }
   if (sessionStatus.value === 'authenticated' && to.name === 'users' && !isCommunityAdministrator()) {
+    return { name: 'dashboard' }
+  }
+  if (
+    sessionStatus.value === 'authenticated'
+    && isVisitorUser()
+    && !['dashboard', 'map', 'placePublic', 'cart', 'orders', 'orderDetail', 'profile', 'settings', 'visitorAuthConsume'].includes(String(to.name || ''))
+  ) {
     return { name: 'dashboard' }
   }
   return true

@@ -9,11 +9,13 @@ import { useCart } from '../../composables/useCart'
 import { sessionStatus } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { fetchGlobalSearch } from '../../services/searchApi'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 
 const route = useRoute()
 const router = useRouter()
 const { sidebarOpen, toggleSidebar, headerActions } = useAppShell()
 const { lineCount, toggleDrawer } = useCart()
+const { totalUnread, initializeChatUnread } = useChatUnread()
 
 const searchQuery = ref('')
 const searchOpen = ref(false)
@@ -42,9 +44,9 @@ const sidebarKey = computed(() => {
 })
 
 const quickItems = computed(() => [
-  { to: '/chats', icon: 'comments', label: t('quickNav.chats') },
+  { to: '/chats', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
   { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
-  { to: '/notifications', icon: 'bell', label: t('quickNav.notifications') },
+  { to: '/notifications', icon: 'bell', label: t('quickNav.notifications'), unread: totalUnread.value },
   { to: '/profile', icon: 'user', label: t('quickNav.profile') },
 ])
 
@@ -133,6 +135,7 @@ watch(() => route.fullPath, () => {
 
 onMounted(() => {
   window.addEventListener('mousedown', onOutsideClick)
+  void initializeChatUnread()
 })
 
 onBeforeUnmount(() => {
@@ -291,6 +294,9 @@ onBeforeUnmount(() => {
           :aria-label="item.label"
         >
           <Icon class="app-header__iconGlyph" :name="item.icon" aria-hidden="true" />
+          <span v-if="item.unread > 0" class="app-header__badge">
+            {{ item.unread > 99 ? '99+' : item.unread }}
+          </span>
         </RouterLink>
       </nav>
     </div>
@@ -546,6 +552,7 @@ onBeforeUnmount(() => {
 }
 
 .app-header__quickLink {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -608,4 +615,23 @@ onBeforeUnmount(() => {
   top: 0.05rem;
   right: 0.05rem;
 }
+
+.app-header__badge {
+  position: absolute;
+  top: 0.15rem;
+  right: 0.15rem;
+  min-width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  padding: 0 0.2rem;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 </style>

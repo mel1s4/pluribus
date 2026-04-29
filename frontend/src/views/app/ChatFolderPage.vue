@@ -6,9 +6,11 @@ import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
 import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
 import { t } from '../../i18n/i18n'
 import { deleteChat, fetchFolders, fetchChats, updateChat } from '../../services/chatApi.js'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 
 const route = useRoute()
 const router = useRouter()
+const { hydrateFromChats, getChatUnread } = useChatUnread()
 const folderId = computed(() => Number(route.params.folderId))
 const folders = ref([])
 const chats = ref([])
@@ -26,7 +28,10 @@ function unwrapList(payload) {
 async function load() {
   const [foldersRes, chatsRes] = await Promise.all([fetchFolders(), fetchChats()])
   if (foldersRes.ok) folders.value = unwrapList(foldersRes.data)
-  if (chatsRes.ok) chats.value = unwrapList(chatsRes.data)
+  if (chatsRes.ok) {
+    chats.value = unwrapList(chatsRes.data)
+    hydrateFromChats(chats.value)
+  }
 }
 
 /** @type {Record<string, HTMLDetailsElement | null>} */
@@ -200,6 +205,9 @@ onMounted(load)
             {{ chat.icon_emoji || '💬' }}
           </span>
           <span class="chat-folder-page__title">{{ chat.title || t('chats.defaultConversation') }}</span>
+          <span v-if="getChatUnread(chat.id) > 0" class="chat-folder-page__unreadBadge">
+            {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
+          </span>
         </button>
         <details
           class="chat-folder-page__kebab"
@@ -275,6 +283,20 @@ onMounted(load)
   font: inherit;
 }
 .chat-folder-page__title { min-width: 0; }
+.chat-folder-page__unreadBadge {
+  margin-left: auto;
+  min-width: 1.2rem;
+  height: 1.2rem;
+  padding: 0 0.3rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
 .chat-folder-page__icon {
   width: 1.8rem;
   height: 1.8rem;

@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import FolderCard from '../../molecules/FolderCard.vue'
 import FolderIconPicker from '../../molecules/FolderIconPicker.vue'
+import FolderShareDialog from '../../molecules/FolderShareDialog.vue'
 import ViewModeSwitcher from '../../molecules/ViewModeSwitcher.vue'
 import FolderTree from '../../organisms/FolderTree.vue'
 import FolderSearchPanel from '../../organisms/FolderSearchPanel.vue'
@@ -14,6 +15,7 @@ import { t } from '../../i18n/i18n'
 import { bulkMoveFolderItems, createChat, fetchChats } from '../../services/chatApi.js'
 import { createTask, fetchTasks } from '../../services/contentApi.js'
 import { searchUsers } from '../../services/usersApi.js'
+import { shareFolderWithGroup, unshareFolderWithGroup } from '../../services/chatApi.js'
 
 const router = useRouter()
 const {
@@ -131,6 +133,10 @@ const taskForm = reactive({
   folder_id: null,
 })
 
+const shareDialogRef = ref(null)
+const shareDialogOpen = ref(false)
+const shareFolder = ref(null)
+
 function openFolder(f) {
   router.push({ name: 'folderDetail', params: { folderId: f.id } })
 }
@@ -207,6 +213,9 @@ async function onFolderMenu({ action, folder }) {
       ? folder.icon_bg_color
       : '#6366f1'
     iconDialogRef.value?.showModal()
+  } else if (action === 'share') {
+    shareFolder.value = folder
+    shareDialogOpen.value = true
   } else if (action === 'delete') {
     if (!window.confirm(t('folders.deleteFolderConfirm'))) return
     await deleteFolder(folder.id)
@@ -306,6 +315,35 @@ function onChatDialogBackdrop(e) {
 
 function onTaskDialogBackdrop(e) {
   if (e.target === taskDialogRef.value) taskDialogRef.value?.close()
+}
+
+function closeShareDialog() {
+  shareDialogOpen.value = false
+  shareFolder.value = null
+}
+
+async function handleFolderShare(payload) {
+  try {
+    const res = await shareFolderWithGroup(payload.folderId, payload.shared_group_id)
+    if (res.ok) {
+      await loadAll()
+      closeShareDialog()
+    }
+  } catch (error) {
+    console.error('Failed to share folder:', error)
+  }
+}
+
+async function handleFolderUnshare(payload) {
+  try {
+    const res = await unshareFolderWithGroup(payload.folderId)
+    if (res.ok) {
+      await loadAll()
+      closeShareDialog()
+    }
+  } catch (error) {
+    console.error('Failed to unshare folder:', error)
+  }
 }
 
 async function submitCreateChat() {
@@ -613,6 +651,14 @@ onMounted(async () => {
         </div>
       </form>
     </dialog>
+
+    <FolderShareDialog
+      :folder="shareFolder"
+      :open="shareDialogOpen"
+      @close="closeShareDialog"
+      @share="handleFolderShare"
+      @unshare="handleFolderUnshare"
+    />
   </section>
 </template>
 

@@ -96,6 +96,14 @@ class Place extends Model
     }
 
     /**
+     * @return HasMany<Table, $this>
+     */
+    public function tables(): HasMany
+    {
+        return $this->hasMany(Table::class);
+    }
+
+    /**
      * @return HasMany<PlaceRequirement, $this>
      */
     public function requirements(): HasMany

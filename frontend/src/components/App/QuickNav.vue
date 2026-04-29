@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import Icon from '../../atoms/Icon.vue'
 import { useFavorites } from '../../composables/useFavorites'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 import { t } from '../../i18n/i18n'
 
 defineProps({
@@ -13,6 +14,7 @@ defineProps({
 })
 
 const { quickNavFavoriteItems } = useFavorites()
+const { totalUnread, initializeChatUnread } = useChatUnread()
 
 const defaultItems = computed(() => [
   { to: '/chats', icon: 'comments', label: t('quickNav.chats') },
@@ -29,9 +31,17 @@ const items = computed(() => {
       to: item.to,
       icon: item.icon,
       label: item.label,
+      unread: item.to === '/chats' || item.to === '/notifications' ? totalUnread.value : 0,
     }))
   }
-  return defaultItems.value
+  return defaultItems.value.map((item) => ({
+    ...item,
+    unread: item.to === '/chats' || item.to === '/notifications' ? totalUnread.value : 0,
+  }))
+})
+
+onMounted(() => {
+  void initializeChatUnread()
 })
 </script>
 
@@ -47,6 +57,9 @@ const items = computed(() => {
       :title="item.label"
     >
       <Icon class="quick-nav__icon" :name="item.icon" aria-hidden="true" />
+      <span v-if="item.unread > 0" class="quick-nav__badge">
+        {{ item.unread > 99 ? '99+' : item.unread }}
+      </span>
     </RouterLink>
   </nav>
 </template>
@@ -64,6 +77,7 @@ const items = computed(() => {
 }
 
 .quick-nav__link {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -84,6 +98,24 @@ const items = computed(() => {
     opacity: 1;
     color: var(--link);
   }
+}
+
+.quick-nav__badge {
+  position: absolute;
+  top: 0.25rem;
+  right: 0.45rem;
+  min-width: 1rem;
+  height: 1rem;
+  border-radius: 999px;
+  padding: 0 0.2rem;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .quick-nav__icon {

@@ -104,7 +104,7 @@ watch(
  *   openDrawer: () => void,
  *   closeDrawer: () => void,
  *   toggleDrawer: () => void,
- *   upsertItem: (placeOfferId: number|string, quantity: number) => Promise<void>,
+ *   upsertItem: (placeOfferId: number|string, quantity: number, tableId?: number|null) => Promise<void>,
  *   removeFromCart: (placeOfferId: number|string) => Promise<void>,
  *   clearCartRemote: () => Promise<void>,
  *   checkout: (notes?: string) => Promise<unknown>,
@@ -132,8 +132,8 @@ export function useCart() {
    * @param {number|string} placeOfferId
    * @param {number} quantity
    */
-  async function upsertItem(placeOfferId, quantity) {
-    const { ok, data, status } = await cartApi.upsertCartItem(placeOfferId, quantity)
+  async function upsertItem(placeOfferId, quantity, tableId = null) {
+    const { ok, data, status } = await cartApi.upsertCartItem(placeOfferId, quantity, tableId)
     if (!ok) {
       const msg =
         data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'

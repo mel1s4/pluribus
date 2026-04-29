@@ -71,4 +71,12 @@ class UserFactory extends Factory
         ]);
     }
 
+    public function visitor(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'user_type' => 'visitor',
+            'is_root' => false,
+        ]);
+    }
+
 }
