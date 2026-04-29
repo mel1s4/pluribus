@@ -21,6 +21,7 @@ export const SIDEBAR_LINK_DEFS = [
   { key: 'calendar', to: '/calendar', labelKey: 'calendar.title', icon: 'calendar-days', capability: null },
   { key: 'posts', to: '/posts', labelKey: 'posts.title', icon: 'newspaper', capability: null },
   { key: 'my-groups', to: '/my-groups', labelKey: 'groups.title', icon: 'people-group', capability: null },
+  { key: 'orders', to: '/orders', labelKey: 'nav.orders', icon: 'file-lines', capability: null },
   { key: 'my-places', to: '/my-places', labelKey: 'nav.myPlaces', icon: 'store', capability: null },
   { key: 'map', to: '/map', labelKey: 'quickNav.map', icon: 'map-location-dot', capability: null },
   { key: 'notifications', to: '/notifications', labelKey: 'quickNav.notifications', icon: 'bell', capability: null },

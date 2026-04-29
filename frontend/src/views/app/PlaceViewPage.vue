@@ -155,7 +155,7 @@ load()
 
       <Card class="place-view-page__card">
         <h2 class="place-view-page__cardTitle">{{ t('places.viewOffersSection') }}</h2>
-        <PlaceOffersPublicList :offers="place.offers || []" />
+        <PlaceOffersPublicList :offers="place.offers || []" :place-id="place.id" />
       </Card>
 
       <Card class="place-view-page__card">

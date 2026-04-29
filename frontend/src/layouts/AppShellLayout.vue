@@ -38,6 +38,11 @@
     </div>
 
     <MobileNav v-if="!isDesktop" :open="sidebarOpen" @close="closeSidebar" />
+
+    <template v-if="sessionStatus === 'authenticated'">
+      <CartDrawer />
+      <CartFab />
+    </template>
   </div>
 </template>
 
@@ -45,12 +50,15 @@
 import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from '../components/App/Header.vue'
+import CartDrawer from '../components/App/CartDrawer.vue'
+import CartFab from '../components/App/CartFab.vue'
 import MobileNav from '../components/App/MobileNav.vue'
 import QuickNav from '../components/App/QuickNav.vue'
 import Sidebar from '../components/App/Sidebar.vue'
 import { useAppShell } from '../composables/useAppShell'
 import { useDesktopViewport } from '../composables/useDesktopViewport'
 import { useMobileChromeScroll } from '../composables/useMobileChromeScroll'
+import { sessionStatus } from '../composables/useSession'
 
 const route = useRoute()
 const { isDesktop } = useDesktopViewport()

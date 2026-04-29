@@ -97,7 +97,15 @@ export default defineConfig({
     chunkSizeWarningLimit: 600,
   },
   optimizeDeps: {
-    include: ['leaflet', 'leaflet-draw'],
+    include: [
+      'leaflet',
+      'leaflet-draw',
+      '@fullcalendar/list',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/interaction',
+      '@fullcalendar/vue3',
+    ],
   },
   publicDir: 'public',
 })

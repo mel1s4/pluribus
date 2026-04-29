@@ -5,12 +5,15 @@ import Button from '../../atoms/Button.vue'
 import Icon from '../../atoms/Icon.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { useAppShell } from '../../composables/useAppShell'
+import { useCart } from '../../composables/useCart'
+import { sessionStatus } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { fetchGlobalSearch } from '../../services/searchApi'
 
 const route = useRoute()
 const router = useRouter()
 const { sidebarOpen, toggleSidebar, headerActions } = useAppShell()
+const { lineCount, toggleDrawer } = useCart()
 
 const searchQuery = ref('')
 const searchOpen = ref(false)
@@ -156,6 +159,17 @@ onBeforeUnmount(() => {
       <h1 v-if="titleText" class="app-header__title">{{ titleText }}</h1>
       <div v-else class="app-header__titleSpacer" />
 
+      <button
+        v-if="sessionStatus === 'authenticated'"
+        type="button"
+        class="app-header__iconBtn app-header__cartBtn"
+        :aria-label="t('header.openCart')"
+        @click="toggleDrawer"
+      >
+        <Icon class="app-header__iconGlyph" name="cart-shopping" aria-hidden="true" />
+        <span v-if="lineCount > 0" class="app-header__cartBadge">{{ lineCount > 99 ? '99+' : lineCount }}</span>
+      </button>
+
       <FavoriteButton
         v-if="sidebarKey"
         class="app-header__favorite"
@@ -256,6 +270,17 @@ onBeforeUnmount(() => {
       </div>
 
       <nav class="app-header__quick" aria-label="Quick actions">
+        <button
+          v-if="sessionStatus === 'authenticated'"
+          type="button"
+          class="app-header__quickLink app-header__quickLink--btn"
+          :title="t('header.openCart')"
+          :aria-label="t('header.openCart')"
+          @click="toggleDrawer"
+        >
+          <Icon class="app-header__iconGlyph" name="cart-shopping" aria-hidden="true" />
+          <span v-if="lineCount > 0" class="app-header__cartBadge app-header__cartBadge--quick">{{ lineCount > 99 ? '99+' : lineCount }}</span>
+        </button>
         <RouterLink
           v-for="item in quickItems"
           :key="item.to"
@@ -546,5 +571,41 @@ onBeforeUnmount(() => {
       background: rgba(96, 165, 250, 0.12);
     }
   }
+}
+
+.app-header__quickLink--btn {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  position: relative;
+}
+
+.app-header__cartBtn {
+  position: relative;
+}
+
+.app-header__cartBadge {
+  position: absolute;
+  top: 0.1rem;
+  right: 0.1rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.app-header__cartBadge--quick {
+  top: 0.05rem;
+  right: 0.05rem;
 }
 </style>

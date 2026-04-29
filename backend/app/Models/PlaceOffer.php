@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
-use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class PlaceOffer extends Model
 {
@@ -53,6 +54,14 @@ class PlaceOffer extends Model
     public function audiences(): BelongsToMany
     {
         return $this->belongsToMany(PlaceAudience::class, 'place_offer_audience');
+    }
+
+    /**
+     * @return HasMany<CartItem, $this>
+     */
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class, 'place_offer_id');
     }
 
     public function scopeVisibleToUser(Builder $query, int $userId): Builder

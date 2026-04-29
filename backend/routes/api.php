@@ -1,21 +1,23 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\CalendarEventController;
+use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatBackupController;
 use App\Http\Controllers\Api\ChatController;
-use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\ChatMessageController;
 use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunitySettingsController;
-use App\Http\Controllers\Api\CalendarController;
-use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\DiscoveryController;
+use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\GroupMemberController;
 use App\Http\Controllers\Api\JoinInvitationController;
 use App\Http\Controllers\Api\MemberProfileController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PlaceAdministratorController;
 use App\Http\Controllers\Api\PlaceAudienceController;
 use App\Http\Controllers\Api\PlaceController;
@@ -161,4 +163,17 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/places/{place}/administrators', [PlaceAdministratorController::class, 'store'])->scopeBindings();
     Route::patch('/places/{place}/administrators/{user}', [PlaceAdministratorController::class, 'update'])->scopeBindings();
     Route::delete('/places/{place}/administrators/{user}', [PlaceAdministratorController::class, 'destroy'])->scopeBindings();
+
+    Route::get('/cart', [CartController::class, 'index']);
+    Route::post('/cart/items', [CartController::class, 'upsertItem']);
+    Route::delete('/cart/items/{placeOffer}', [CartController::class, 'removeItem']);
+    Route::delete('/cart', [CartController::class, 'clear']);
+
+    Route::post('/orders', [OrderController::class, 'store']);
+    Route::get('/orders', [OrderController::class, 'index']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+
+    Route::get('/places/{place}/orders', [OrderController::class, 'placeIndex']);
+    Route::get('/places/{place}/orders/{order}', [OrderController::class, 'placeShow']);
+    Route::patch('/places/{place}/orders/{order}', [OrderController::class, 'updatePlaceOrder']);
 });

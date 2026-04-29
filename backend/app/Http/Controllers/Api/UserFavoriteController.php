@@ -23,6 +23,7 @@ class UserFavoriteController extends Controller
         'posts',
         'my-groups',
         'my-places',
+        'orders',
         'map',
         'notifications',
         'profile',

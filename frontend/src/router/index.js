@@ -39,6 +39,9 @@ const PlacePublicPage = () => import('../views/app/PlacePublicPage.vue')
 const PlaceCreatePage = () => import('../views/app/PlaceCreatePage.vue')
 const PlaceEditPage = () => import('../views/app/PlaceEditPage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
+const CartPage = () => import('../views/app/CartPage.vue')
+const OrdersPage = () => import('../views/app/OrdersPage.vue')
+const OrderDetailPage = () => import('../views/app/OrderDetailPage.vue')
 
 const routes = [
   {
@@ -396,6 +399,40 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'myPlaces.title',
       sidebarKey: 'my-places',
+    },
+  },
+  {
+    path: '/cart',
+    name: 'cart',
+    component: CartPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'cart.title',
+    },
+  },
+  {
+    path: '/orders',
+    name: 'orders',
+    component: OrdersPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'orders.title',
+      sidebarKey: 'orders',
+    },
+  },
+  {
+    path: '/orders/:orderId',
+    name: 'orderDetail',
+    component: OrderDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'orders.detailTitle',
     },
   },
 ]

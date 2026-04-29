@@ -184,7 +184,7 @@ load()
           {{ t('places.storefrontOffersHeading') }}
         </h2>
         <div class="place-public-page__offersGrid">
-          <PlaceOffersPublicList :offers="place.offers || []" />
+          <PlaceOffersPublicList :offers="place.offers || []" :place-id="place.id" />
         </div>
       </section>
 

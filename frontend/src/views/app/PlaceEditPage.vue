@@ -5,6 +5,7 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Title from '../../atoms/Title.vue'
 import PlaceAdministratorsSection from '../../components/App/PlaceAdministratorsSection.vue'
+import PlaceOrdersSection from '../../components/App/PlaceOrdersSection.vue'
 import PlaceAudiencesSection from '../../components/App/PlaceAudiencesSection.vue'
 import PlaceOffersSection from '../../components/App/PlaceOffersSection.vue'
 import PlaceRequirementsSection from '../../components/App/PlaceRequirementsSection.vue'
@@ -30,6 +31,7 @@ const tab = computed(() => {
   if (
     raw === 'edit'
     || raw === 'offers'
+    || raw === 'orders'
     || raw === 'requirements'
     || raw === 'audiences'
     || raw === 'administrators'
@@ -121,6 +123,7 @@ watch(
       pTab != null
       && pTab !== 'edit'
       && pTab !== 'offers'
+      && pTab !== 'orders'
       && pTab !== 'requirements'
       && pTab !== 'audiences'
       && pTab !== 'administrators'
@@ -237,6 +240,16 @@ load()
         <button
           type="button"
           class="place-edit-page__tab"
+          :class="{ 'is-active': tab === 'orders' }"
+          role="tab"
+          :aria-selected="tab === 'orders'"
+          @click="onTabClick('orders')"
+        >
+          {{ t('myPlaces.tabOrders') }}
+        </button>
+        <button
+          type="button"
+          class="place-edit-page__tab"
           :class="{ 'is-active': tab === 'requirements' }"
           role="tab"
           :aria-selected="tab === 'requirements'"
@@ -284,6 +297,10 @@ load()
           v-else-if="tab === 'offers'"
           :place-id="place.id"
           @changed="load"
+        />
+        <PlaceOrdersSection
+          v-else-if="tab === 'orders'"
+          :place-id="place.id"
         />
         <PlaceRequirementsSection
           v-else-if="tab === 'requirements'"

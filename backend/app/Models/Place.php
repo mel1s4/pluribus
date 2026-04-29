@@ -112,6 +112,14 @@ class Place extends Model
     }
 
     /**
+     * @return HasMany<OrderItem, $this>
+     */
+    public function orderItems(): HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    /**
      * Delegated administrators (does not include the place owner).
      *
      * @return BelongsToMany<User, $this>

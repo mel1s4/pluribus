@@ -151,4 +151,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserFavorite::class)->orderBy('sort_order');
     }
+
+    /**
+     * @return HasMany<CartItem, $this>
+     */
+    public function cartItems(): HasMany
+    {
+        return $this->hasMany(CartItem::class);
+    }
+
+    /**
+     * @return HasMany<Order, $this>
+     */
+    public function orders(): HasMany
+    {
+        return $this->hasMany(Order::class)->orderByDesc('created_at');
+    }
 }
