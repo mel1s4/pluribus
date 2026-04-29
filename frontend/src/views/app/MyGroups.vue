@@ -1,11 +1,14 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { createGroup, fetchGroupMembers, fetchGroups, removeGroupMember } from '../../services/contentApi'
 import { fetchUsersPage } from '../../services/usersApi'
 import { sessionUser } from '../../composables/useSession'
+
+const router = useRouter()
 
 const groups = ref([])
 const membersByGroup = ref({})
@@ -91,12 +94,15 @@ onMounted(load)
 
     <ul class="groups-list">
       <li v-for="group in groups" :key="group.id" class="groups-list__item">
-        <div>
+        <button
+          class="groups-list__name"
+          @click="router.push({ name: 'groupDetail', params: { groupId: group.id } })"
+        >
           <strong>{{ group.name }}</strong>
           <p class="page__muted">
             {{ t('groups.membersCount').replace('{count}', String(memberCount(group.id))) }}
           </p>
-        </div>
+        </button>
         <button class="btn btn--ghost" @click="leave(group)">
           {{ t('groups.leave') }}
         </button>
@@ -111,6 +117,8 @@ onMounted(load)
 .groups-create input { flex: 1 1 auto; padding: 0.5rem; border: 1px solid var(--border); border-radius: 0.5rem; }
 .groups-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
 .groups-list__item { display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); border-radius: 0.6rem; padding: 0.7rem; }
+.groups-list__name { flex: 1; text-align: left; background: none; border: none; padding: 0; cursor: pointer; color: inherit; border-radius: 0.4rem; }
+.groups-list__name:hover strong { text-decoration: underline; }
 .page__muted { margin: 0; opacity: 0.8; }
 .page__error { color: #b00020; margin: 0; }
 </style>

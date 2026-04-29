@@ -78,7 +78,7 @@ async function load() {
   if (!ok) {
     if (status === 403 && isGuest.value) {
       loadError.value = t('places.storefrontPrivateError')
-    } elseif (status === 404) {
+    } else if (status === 404) {
       loadError.value = t('places.storefrontNotFound')
     } else {
       loadError.value = placeApiErrorMessage(data, status, t('places.viewLoadError'))

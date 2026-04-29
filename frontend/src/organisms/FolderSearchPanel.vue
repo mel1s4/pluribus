@@ -38,7 +38,7 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
 
 <template>
   <section class="folder-search-panel" aria-label="Search">
-    <div class="folder-search-panel__row">
+    <div class="folder-search-panel__searchRow">
       <Icon name="magnifying-glass" class="folder-search-panel__icon" aria-hidden="true" />
       <input
         :value="query"
@@ -50,19 +50,39 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
       >
       <span v-if="loading" class="folder-search-panel__loading">{{ t('folders.searchLoading') }}</span>
     </div>
-    <div class="folder-search-panel__filters">
-      <label class="folder-search-panel__filter">
-        <span class="sr-only">{{ t('folders.filterType') }}</span>
-        <select
-          :value="filterType"
-          @change="emit('update:filterType', $event.target.value)"
-        >
-          <option value="all">{{ t('folders.filterAll') }}</option>
-          <option value="folder">{{ t('folders.filterFolders') }}</option>
-          <option value="chat">{{ t('folders.filterChats') }}</option>
-          <option value="task">{{ t('folders.filterTasks') }}</option>
-        </select>
-      </label>
+    <div class="folder-search-panel__tabs" role="tablist" :aria-label="t('folders.filterType')">
+      <button
+        type="button"
+        role="tab"
+        class="folder-search-panel__tab"
+        :class="{ 'is-active': filterType === 'all' }"
+        :aria-selected="filterType === 'all'"
+        @click="emit('update:filterType', 'all')"
+      >{{ t('folders.filterAll') }}</button>
+      <button
+        type="button"
+        role="tab"
+        class="folder-search-panel__tab"
+        :class="{ 'is-active': filterType === 'folder' }"
+        :aria-selected="filterType === 'folder'"
+        @click="emit('update:filterType', 'folder')"
+      >{{ t('folders.filterFolders') }}</button>
+      <button
+        type="button"
+        role="tab"
+        class="folder-search-panel__tab"
+        :class="{ 'is-active': filterType === 'chat' }"
+        :aria-selected="filterType === 'chat'"
+        @click="emit('update:filterType', 'chat')"
+      >{{ t('folders.filterChats') }}</button>
+      <button
+        type="button"
+        role="tab"
+        class="folder-search-panel__tab"
+        :class="{ 'is-active': filterType === 'task' }"
+        :aria-selected="filterType === 'task'"
+        @click="emit('update:filterType', 'task')"
+      >{{ t('folders.filterTasks') }}</button>
     </div>
     <div v-if="recentQueries.length && !query.trim()" class="folder-search-panel__recent">
       <span class="folder-search-panel__recentLabel">{{ t('folders.recentSearches') }}</span>
@@ -116,44 +136,89 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
 
 <style scoped lang="scss">
 .folder-search-panel {
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  padding: 0.85rem;
-  background: var(--bg);
-  margin-bottom: 1rem;
+  flex: 1;
+  min-width: 0;
 }
 
-.folder-search-panel__row {
+.folder-search-panel__searchRow {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 0.55rem;
+  background: var(--bg, #fff);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+
+  &:focus-within {
+    border-color: var(--accent, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+  }
 }
 
 .folder-search-panel__icon {
   width: 1.1rem;
   height: 1.1rem;
   flex-shrink: 0;
-  opacity: 0.75;
+  opacity: 0.55;
 }
 
 .folder-search-panel__input {
   flex: 1;
   min-width: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.35rem 0;
+  color: inherit;
+
+  &:focus {
+    outline: none;
+  }
+
+  &::placeholder {
+    color: var(--text-muted, #9ca3af);
+  }
 }
 
 .folder-search-panel__loading {
-  font-size: 0.8rem;
-  opacity: 0.75;
+  font-size: 0.75rem;
+  color: var(--text-muted, #6b7280);
   flex-shrink: 0;
 }
 
-.folder-search-panel__filters {
+.folder-search-panel__tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
   margin-top: 0.65rem;
+  padding: 0.25rem;
+  background: var(--surface-2, #f3f4f6);
+  border-radius: 0.55rem;
 }
 
-.folder-search-panel__filter select {
-  width: 100%;
-  max-width: 14rem;
+.folder-search-panel__tab {
+  padding: 0.3rem 0.75rem;
+  border: none;
+  background: transparent;
+  border-radius: 0.4rem;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  color: var(--text-muted, #6b7280);
+  transition: background 120ms ease, color 120ms ease;
+
+  &.is-active {
+    background: var(--bg, #fff);
+    color: var(--text, #111827);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  &:not(.is-active):hover {
+    color: var(--text, #111827);
+  }
 }
 
 .folder-search-panel__recent {
@@ -223,17 +288,5 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
   margin: 0;
   font-size: 0.9rem;
   opacity: 0.8;
-}
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 </style>

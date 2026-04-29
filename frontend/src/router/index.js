@@ -25,6 +25,7 @@ const FolderDetailPage = () => import('../views/app/FolderDetailPage.vue')
 const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
 const MyGroupsPage = () => import('../views/app/MyGroups.vue')
+const GroupDetailPage = () => import('../views/app/GroupDetailPage.vue')
 const NotificationsView = () => import('../views/app/Notifications.vue')
 const ProfileView = () => import('../views/app/Profile.vue')
 const ApiTestView = () => import('../views/app/ApiTest.vue')
@@ -227,6 +228,18 @@ const routes = [
     path: '/my-groups',
     name: 'myGroups',
     component: MyGroupsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'groups.title',
+      sidebarKey: 'my-groups',
+    },
+  },
+  {
+    path: '/my-groups/:groupId',
+    name: 'groupDetail',
+    component: GroupDetailPage,
     meta: {
       layout: 'app',
       requiresAuth: true,

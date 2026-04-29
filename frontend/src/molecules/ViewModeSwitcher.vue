@@ -20,33 +20,33 @@ const emit = defineEmits(['update:modelValue'])
       class="view-mode-switcher__btn"
       :class="{ 'is-active': modelValue === 'list' }"
       :aria-pressed="modelValue === 'list'"
+      :aria-label="t('folders.viewMode.list')"
       :title="t('folders.viewMode.list')"
       @click="emit('update:modelValue', 'list')"
     >
-      <Icon name="list" />
-      <span class="view-mode-switcher__text">{{ t('folders.viewMode.list') }}</span>
+      <Icon name="list" aria-hidden="true" />
     </button>
     <button
       type="button"
       class="view-mode-switcher__btn"
       :class="{ 'is-active': modelValue === 'grid' }"
       :aria-pressed="modelValue === 'grid'"
+      :aria-label="t('folders.viewMode.grid')"
       :title="t('folders.viewMode.grid')"
       @click="emit('update:modelValue', 'grid')"
     >
-      <Icon name="note-sticky" />
-      <span class="view-mode-switcher__text">{{ t('folders.viewMode.grid') }}</span>
+      <Icon name="note-sticky" aria-hidden="true" />
     </button>
     <button
       type="button"
       class="view-mode-switcher__btn"
       :class="{ 'is-active': modelValue === 'tree' }"
       :aria-pressed="modelValue === 'tree'"
+      :aria-label="t('folders.viewMode.tree')"
       :title="t('folders.viewMode.tree')"
       @click="emit('update:modelValue', 'tree')"
     >
-      <Icon name="folder-open" />
-      <span class="view-mode-switcher__text">{{ t('folders.viewMode.tree') }}</span>
+      <Icon name="folder-open" aria-hidden="true" />
     </button>
   </div>
 </template>
@@ -54,43 +54,37 @@ const emit = defineEmits(['update:modelValue'])
 <style scoped lang="scss">
 .view-mode-switcher {
   display: inline-flex;
-  border: 1px solid var(--border);
+  flex-shrink: 0;
+  border: 1px solid var(--border, #e5e7eb);
   border-radius: 0.5rem;
   overflow: hidden;
-  background: var(--bg);
+  background: var(--bg, #fff);
 }
 
 .view-mode-switcher__btn {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.4rem 0.65rem;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
   border: none;
   background: transparent;
-  color: inherit;
+  color: var(--text-muted, #6b7280);
   cursor: pointer;
-  font-size: 0.85rem;
+  transition: background 100ms ease, color 100ms ease;
 
   &.is-active {
     background: var(--surface-2, rgba(0, 0, 0, 0.06));
-    font-weight: 600;
+    color: var(--text, #111827);
   }
 
   &:not(:last-child) {
-    border-right: 1px solid var(--border);
+    border-right: 1px solid var(--border, #e5e7eb);
   }
-}
 
-.view-mode-switcher__text {
-  @media (max-width: 640px) {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    clip-path: inset(50%);
-    white-space: nowrap;
+  &:hover:not(.is-active) {
+    background: var(--surface-2, rgba(0, 0, 0, 0.03));
   }
 }
 </style>

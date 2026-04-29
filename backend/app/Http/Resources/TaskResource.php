@@ -5,6 +5,7 @@ namespace App\Http\Resources;
 use App\Models\Task;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin Task */
 class TaskResource extends JsonResource
@@ -24,6 +25,19 @@ class TaskResource extends JsonResource
             'folder_id' => $this->folder_id,
             'folder' => $this->whenLoaded('folder', fn () => $this->folder ? new FolderResource($this->folder) : null),
             'assignee_id' => $this->assignee_id,
+            'assignee' => $this->whenLoaded('assignee', function () {
+                if (! $this->assignee) {
+                    return null;
+                }
+
+                return [
+                    'id' => $this->assignee->id,
+                    'name' => $this->assignee->name,
+                    'avatar_url' => $this->assignee->avatar_path
+                        ? Storage::disk('public')->url($this->assignee->avatar_path)
+                        : null,
+                ];
+            }),
             'title' => $this->title,
             'description' => $this->description,
             'content_markdown' => $this->content_markdown,
@@ -44,4 +58,3 @@ class TaskResource extends JsonResource
         ];
     }
 }
-

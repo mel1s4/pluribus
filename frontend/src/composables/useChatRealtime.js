@@ -16,11 +16,14 @@ function getEcho() {
     echo = new Echo({
       broadcaster: 'pusher',
       key: import.meta.env.VITE_PUSHER_APP_KEY || 'pluribus-key',
+      // pusher-js 8+ requires cluster even when wsHost points at Reverb / self-hosted.
+      cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
       wsHost: import.meta.env.VITE_WS_HOST || '127.0.0.1',
       wsPort: Number(import.meta.env.VITE_WS_PORT || 6001),
       wssPort: Number(import.meta.env.VITE_WS_PORT || 6001),
       forceTLS: import.meta.env.VITE_WS_SCHEME === 'wss',
       enabledTransports: ['ws', 'wss'],
+      disableStats: true,
       authEndpoint: resolveAuthEndpoint(),
       auth: {
         headers: {

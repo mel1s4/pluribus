@@ -100,11 +100,18 @@ const emit = defineEmits(['open', 'menu', 'dragstart', 'dragend', 'dragover', 'd
   display: flex;
   align-items: flex-start;
   gap: 0.35rem;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-  background: var(--bg);
-  padding: 0.5rem 0.5rem 0.5rem 0.35rem;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 0.75rem;
+  background: var(--bg, #fff);
+  padding: 0.55rem 0.55rem 0.55rem 0.4rem;
   position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 140ms ease, border-color 140ms ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    border-color: var(--border, #d1d5db);
+  }
 
   &.is-drop-over {
     outline: 2px dashed var(--accent, #2563eb);

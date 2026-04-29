@@ -7,6 +7,8 @@ use App\Http\Resources\PostResource;
 use App\Models\Calendar;
 use App\Models\Place;
 use App\Models\Post;
+use App\Models\Task;
+use App\Services\CalendarEventsPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -18,9 +20,28 @@ class DiscoveryController extends Controller
         $start = $request->query('start');
         $end = $request->query('end');
 
+        $calendarIds = array_values(array_unique(array_filter(
+            array_map('intval', (array) $request->query('calendar_ids', [])),
+            fn (int $id) => $id > 0
+        )));
+
         $posts = Post::query()
             ->visibleToUser($userId)
             ->whereIn('type', [Post::TYPE_EVENT, Post::TYPE_ANNOUNCEMENT, Post::TYPE_INFO])
+            ->when(count($calendarIds) > 0, fn ($q) => $q->whereIn('calendar_id', $calendarIds))
+            ->when($start, fn ($q) => $q->where(function ($q2) use ($start): void {
+                $q2->whereNull('end_at')->orWhere('end_at', '>=', $start);
+            }))
+            ->when($end, fn ($q) => $q->where(function ($q2) use ($end): void {
+                $q2->whereNull('start_at')->orWhere('start_at', '<=', $end);
+            }))
+            ->orderBy('start_at')
+            ->get();
+
+        $tasks = Task::query()
+            ->visibleToUser($userId)
+            ->whereNotNull('calendar_id')
+            ->when(count($calendarIds) > 0, fn ($q) => $q->whereIn('calendar_id', $calendarIds))
             ->when($start, fn ($q) => $q->where(function ($q2) use ($start): void {
                 $q2->whereNull('end_at')->orWhere('end_at', '>=', $start);
             }))
@@ -36,7 +57,7 @@ class DiscoveryController extends Controller
             ->get(['id', 'name', 'color', 'visibility_scope', 'shared_group_id']);
 
         return response()->json([
-            'events' => PostResource::collection($posts),
+            'events' => CalendarEventsPresenter::mergedEvents($request, $posts, $tasks),
             'calendars' => $calendars,
         ]);
     }
@@ -84,4 +105,3 @@ class DiscoveryController extends Controller
         ]);
     }
 }
-

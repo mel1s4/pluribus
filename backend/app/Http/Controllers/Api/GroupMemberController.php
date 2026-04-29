@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Resources\UserSummaryResource;
+use App\Http\Resources\GroupMemberResource;
 use App\Models\Group;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
@@ -21,7 +21,7 @@ class GroupMemberController extends Controller
             ->orderBy('name')
             ->get();
 
-        return UserSummaryResource::collection($members);
+        return GroupMemberResource::collection($members);
     }
 
     public function store(Request $request, Group $group): JsonResponse

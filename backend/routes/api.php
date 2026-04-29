@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\CalendarController;
+use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\DiscoveryController;
 use App\Http\Controllers\Api\GlobalSearchController;
 use App\Http\Controllers\Api\GroupController;
@@ -95,9 +96,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/groups/{group}/members/{user}', [GroupMemberController::class, 'destroy'])->scopeBindings();
     Route::get('/calendars', [CalendarController::class, 'index']);
     Route::post('/calendars', [CalendarController::class, 'store']);
+    Route::get('/calendars/{calendar}/events', [CalendarController::class, 'events'])->scopeBindings();
     Route::get('/calendars/{calendar}', [CalendarController::class, 'show']);
     Route::patch('/calendars/{calendar}', [CalendarController::class, 'update']);
     Route::delete('/calendars/{calendar}', [CalendarController::class, 'destroy']);
+    Route::patch('/events/{type}/{id}/reschedule', [CalendarEventController::class, 'reschedule'])
+        ->where(['type' => 'post|task', 'id' => '[0-9]+']);
     Route::get('/posts', [PostController::class, 'index']);
     Route::post('/posts', [PostController::class, 'store']);
     Route::get('/posts/{post}', [PostController::class, 'show']);

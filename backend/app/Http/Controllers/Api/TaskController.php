@@ -25,6 +25,9 @@ class TaskController extends Controller
         if ($request->filled('folder_id')) {
             $query->where('folder_id', (int) $request->query('folder_id'));
         }
+        if ($request->filled('calendar_id')) {
+            $query->where('calendar_id', (int) $request->query('calendar_id'));
+        }
         if ($request->boolean('only_open')) {
             $query->whereNull('completed_at');
         }

@@ -10,13 +10,19 @@
     "analyze": "vite build && du -sh dist && du -sh dist/assets/* | sort -hr | head -20"
   },
   "dependencies": {
-    "vue-draggable-next": "^2.2.1",
+    "@fullcalendar/core": "^6.1.20",
+    "@fullcalendar/daygrid": "^6.1.20",
+    "@fullcalendar/interaction": "^6.1.20",
+    "@fullcalendar/list": "^6.1.20",
+    "@fullcalendar/timegrid": "^6.1.20",
+    "@fullcalendar/vue3": "^6.1.20",
     "laravel-echo": "^2.2.4",
     "leaflet": "^1.9.4",
     "leaflet-draw": "^1.0.4",
     "pusher-js": "^8.4.0",
     "qrcode": "^1.5.4",
     "vue": "^3.5.30",
+    "vue-draggable-next": "^2.2.1",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {

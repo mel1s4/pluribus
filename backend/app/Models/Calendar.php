@@ -73,6 +73,14 @@ class Calendar extends Model
         return $this->hasMany(Post::class);
     }
 
+    /**
+     * @return HasMany<Task, $this>
+     */
+    public function tasks(): HasMany
+    {
+        return $this->hasMany(Task::class);
+    }
+
     public function scopeVisibleToUser(Builder $query, int $userId): Builder
     {
         return $query->where(function (Builder $q) use ($userId): void {
