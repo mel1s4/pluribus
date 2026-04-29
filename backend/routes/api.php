@@ -21,7 +21,9 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PlaceAdministratorController;
 use App\Http\Controllers\Api\PlaceAudienceController;
 use App\Http\Controllers\Api\PlaceController;
+use App\Http\Controllers\Api\PlaceOfferCsvController;
 use App\Http\Controllers\Api\PlaceOfferController;
+use App\Http\Controllers\Api\PlaceRequirementCsvController;
 use App\Http\Controllers\Api\PlaceRequirementController;
 use App\Http\Controllers\Api\PlaceRequirementResponseController;
 use App\Http\Controllers\Api\PostController;
@@ -154,11 +156,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/places/{place}/offers', [PlaceOfferController::class, 'store'])->scopeBindings();
     Route::patch('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'update'])->scopeBindings();
     Route::delete('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'destroy'])->scopeBindings();
+    Route::get('/places/{place}/offers/export.csv', [PlaceOfferCsvController::class, 'export'])->scopeBindings();
+    Route::post('/places/{place}/offers/import.csv', [PlaceOfferCsvController::class, 'import'])->scopeBindings();
 
     Route::get('/places/{place}/requirements', [PlaceRequirementController::class, 'index'])->scopeBindings();
     Route::post('/places/{place}/requirements', [PlaceRequirementController::class, 'store'])->scopeBindings();
     Route::patch('/places/{place}/requirements/{requirement}', [PlaceRequirementController::class, 'update'])->scopeBindings();
     Route::delete('/places/{place}/requirements/{requirement}', [PlaceRequirementController::class, 'destroy'])->scopeBindings();
+    Route::get('/places/{place}/requirements/export.csv', [PlaceRequirementCsvController::class, 'export'])->scopeBindings();
+    Route::post('/places/{place}/requirements/import.csv', [PlaceRequirementCsvController::class, 'import'])->scopeBindings();
 
     Route::post('/places/{place}/requirements/{requirement}/responses', [PlaceRequirementResponseController::class, 'store'])->scopeBindings();
     Route::delete('/places/{place}/requirements/{requirement}/responses/{response}', [PlaceRequirementResponseController::class, 'destroy'])->scopeBindings();

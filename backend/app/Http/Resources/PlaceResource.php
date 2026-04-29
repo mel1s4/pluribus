@@ -56,6 +56,7 @@ class PlaceResource extends JsonResource
             'service_schedule' => PlaceServiceScheduleNormalizer::normalize(
                 is_array($this->service_schedule) ? $this->service_schedule : []
             ),
+            'brand_links' => is_array($this->brand_links) ? $this->brand_links : [],
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

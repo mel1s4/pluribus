@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build --outDir dist-deploy && node scripts/generate-version.js dist-deploy",
     "preview": "vite preview",
-    "analyze": "vite build && du -sh dist && du -sh dist/assets/* | sort -hr | head -20"
+    "analyze": "vite build && du -sh dist && du -sh dist/assets/* | sort -hr | head -20",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@fullcalendar/core": "^6.1.20",

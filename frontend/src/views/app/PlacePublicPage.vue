@@ -6,6 +6,7 @@ import PlaceLocationPicker from '../../organisms/PlaceLocationPicker.vue'
 import PlaceOffersPublicList from '../../molecules/PlaceOffersPublicList.vue'
 import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublicList.vue'
 import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDisplay.vue'
+import PlaceBrandLinksList from '../../molecules/PlaceBrandLinksList.vue'
 import { t } from '../../i18n/i18n'
 import { sessionStatus } from '../../composables/useSession.js'
 import { fetchPublicPlaceBySlug } from '../../services/placesApi.js'
@@ -199,6 +200,18 @@ load()
             :requirements="place.requirements || []"
             @updated="load"
           />
+        </Card>
+      </section>
+
+      <section
+        v-if="Array.isArray(place.brand_links) && place.brand_links.length"
+        class="place-public-page__section"
+      >
+        <h2 class="place-public-page__sectionTitle place-public-page__sectionTitle--em">
+          {{ t('places.viewLinksSection') }}
+        </h2>
+        <Card class="place-public-page__reqCard">
+          <PlaceBrandLinksList :links="place.brand_links" />
         </Card>
       </section>
     </div>

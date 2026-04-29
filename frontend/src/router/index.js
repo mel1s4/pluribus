@@ -26,6 +26,7 @@ const FoldersPage = () => import('../views/app/FoldersPage.vue')
 const FolderDetailPage = () => import('../views/app/FolderDetailPage.vue')
 const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
+const PostComposerPage = () => import('../views/app/PostComposerPage.vue')
 const MyGroupsPage = () => import('../views/app/MyGroups.vue')
 const GroupDetailPage = () => import('../views/app/GroupDetailPage.vue')
 const NotificationsView = () => import('../views/app/Notifications.vue')
@@ -232,6 +233,30 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'calendar.title',
       sidebarKey: 'calendar',
+    },
+  },
+  {
+    path: '/posts/new',
+    name: 'posts-new',
+    component: PostComposerPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'posts.composerCreateTitle',
+      sidebarKey: 'posts',
+    },
+  },
+  {
+    path: '/posts/:id/edit',
+    name: 'posts-edit',
+    component: PostComposerPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'posts.composerEditTitle',
+      sidebarKey: 'posts',
     },
   },
   {

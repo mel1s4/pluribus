@@ -10,11 +10,13 @@ import PlaceAudiencesSection from '../../components/App/PlaceAudiencesSection.vu
 import PlaceOffersSection from '../../components/App/PlaceOffersSection.vue'
 import PlaceTablesSection from '../../components/App/PlaceTablesSection.vue'
 import PlaceRequirementsSection from '../../components/App/PlaceRequirementsSection.vue'
+import PlaceBrandLinksSection from '../../components/App/PlaceBrandLinksSection.vue'
 import PlaceBasicsForm from '../../organisms/PlaceBasicsForm.vue'
 import { t } from '../../i18n/i18n'
 import { deletePlace, fetchPlace, updatePlace } from '../../services/placesApi.js'
 import { placeApiErrorMessage, placeToFormData } from '../../utils/placeForm.js'
 import { normalizeServiceSchedule } from '../../utils/placeSchedule.js'
+import { normalizeBrandLinks } from '../../utils/placeBrandLinks.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -37,6 +39,7 @@ const tab = computed(() => {
     || raw === 'requirements'
     || raw === 'audiences'
     || raw === 'administrators'
+    || raw === 'brand'
   ) {
     return raw
   }
@@ -73,6 +76,7 @@ function draftFromPlace(p) {
     removeLogo: false,
     service_schedule: normalizeServiceSchedule(p.service_schedule),
     is_public: Boolean(p.is_public),
+    brand_links: Array.isArray(p.brand_links) ? [...p.brand_links] : [],
   }
 }
 
@@ -130,6 +134,7 @@ watch(
       && pTab !== 'requirements'
       && pTab !== 'audiences'
       && pTab !== 'administrators'
+      && pTab !== 'brand'
     ) {
       router.replace({ name: 'placeEdit', params: { placeId: id } })
     }
@@ -163,6 +168,7 @@ async function onSubmit() {
         logo_background_color: d.logo_background_color || null,
         service_schedule: normalizeServiceSchedule(d.service_schedule),
         is_public: Boolean(d.is_public),
+        brand_links: normalizeBrandLinks(d.brand_links),
       }
   const { ok, status, data } = await updatePlace(d.id, payload)
   saveLoading.value = false
@@ -281,6 +287,16 @@ load()
           {{ t('myPlaces.tabAudiences') }}
         </button>
         <button
+          type="button"
+          class="place-edit-page__tab"
+          :class="{ 'is-active': tab === 'brand' }"
+          role="tab"
+          :aria-selected="tab === 'brand'"
+          @click="onTabClick('brand')"
+        >
+          {{ t('myPlaces.tabBrand') }}
+        </button>
+        <button
           v-if="canManageAdmins"
           type="button"
           class="place-edit-page__tab"
@@ -328,6 +344,15 @@ load()
           v-else-if="tab === 'audiences'"
           :place-id="place.id"
         />
+        <Card v-else-if="tab === 'brand'" class="place-edit-page__card">
+          <PlaceBrandLinksSection
+            :model-value="draft"
+            :save-error="saveError"
+            :save-loading="saveLoading"
+            @update:model-value="setDraft"
+            @save="onSubmit"
+          />
+        </Card>
         <PlaceAdministratorsSection
           v-else-if="tab === 'administrators'"
           :place-id="place.id"

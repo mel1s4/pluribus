@@ -7,7 +7,14 @@ import { t } from '../../i18n/i18n'
 import { formatOfferPrice } from '../../utils/formatPrice'
 import Title from '../../atoms/Title.vue'
 import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
-import { deleteOffer, fetchAudiences, fetchOffers, updateOffer } from '../../services/placesApi.js'
+import {
+  deleteOffer,
+  downloadOffersCsvUrl,
+  fetchAudiences,
+  fetchOffers,
+  updateOffer,
+  uploadOffersCsv,
+} from '../../services/placesApi.js'
 
 const props = defineProps({
   placeId: {
@@ -28,6 +35,7 @@ const removeGallery = ref([])
 const photoInput = ref(null)
 const galleryInput = ref(null)
 const editTagsRef = ref(null)
+const csvInput = ref(null)
 
 const { communityCurrencyCode } = useCommunity()
 
@@ -121,6 +129,31 @@ async function removeOffer(o) {
 function goToCreateOfferPage() {
   router.push({ name: 'placeOfferCreate', params: { placeId: String(props.placeId) } })
 }
+
+function downloadCsv() {
+  window.open(downloadOffersCsvUrl(props.placeId), '_blank', 'noopener')
+}
+
+function openCsvPicker() {
+  csvInput.value?.click()
+}
+
+async function handleCsvSelected(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) return
+  const { ok, status, data } = await uploadOffersCsv(props.placeId, file)
+  event.target.value = ''
+  if (!ok) {
+    error.value = t('myPlaces.offersUploadError').replace('{status}', String(status))
+    return
+  }
+  const created = Number(data?.created ?? 0)
+  const updated = Number(data?.updated ?? 0)
+  const failed = Number(data?.failed ?? 0)
+  window.alert(`Offer CSV import complete.\nCreated: ${created}\nUpdated: ${updated}\nFailed: ${failed}`)
+  await load()
+  emit('changed')
+}
 </script>
 
 <template>
@@ -136,6 +169,13 @@ function goToCreateOfferPage() {
       >
         {{ t('myPlaces.addOffer') }}
       </Button>
+      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="downloadCsv">
+        Download CSV
+      </Button>
+      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="openCsvPicker">
+        Upload CSV
+      </Button>
+      <input ref="csvInput" type="file" accept=".csv,text/csv" class="place-offers__csvInput" @change="handleCsvSelected" />
     </div>
     <p v-if="error" class="place-offers__error">{{ error }}</p>
 
@@ -390,5 +430,9 @@ function goToCreateOfferPage() {
   align-items: center;
   gap: 0.25rem;
   font-size: 0.85rem;
+}
+
+.place-offers__csvInput {
+  display: none;
 }
 </style>

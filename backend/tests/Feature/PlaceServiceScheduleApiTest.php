@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Place;
 use App\Models\User;
+use App\Support\PlaceBrandLinks;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -30,6 +31,9 @@ class PlaceServiceScheduleApiTest extends TestCase
             'slug' => 'scheduled-shop',
             'tags' => [],
             'service_schedule' => $schedule,
+            'brand_links' => [
+                ['title' => 'Instagram', 'url' => 'https://instagram.com/scheduled-shop', 'icon' => 'instagram'],
+            ],
         ]);
 
         $res->assertCreated();
@@ -46,6 +50,8 @@ class PlaceServiceScheduleApiTest extends TestCase
         $stored = Place::query()->findOrFail($placeId);
         $this->assertIsArray($stored->service_schedule);
         $this->assertCount(2, $stored->service_schedule['mon']);
+        $this->assertIsArray($stored->brand_links);
+        $this->assertSame('instagram', $stored->brand_links[0]['icon']);
     }
 
     public function test_owner_can_patch_service_schedule_only(): void
@@ -76,6 +82,9 @@ class PlaceServiceScheduleApiTest extends TestCase
                 'sat' => [],
                 'sun' => [],
             ],
+            'brand_links' => [
+                ['title' => 'Website', 'url' => 'https://venue.test', 'icon' => 'website'],
+            ],
         ]);
 
         $patch->assertOk();
@@ -85,6 +94,8 @@ class PlaceServiceScheduleApiTest extends TestCase
         $place->refresh();
         $this->assertIsArray($place->service_schedule);
         $this->assertSame('10:00', $place->service_schedule['mon'][0]['open']);
+        $this->assertIsArray($place->brand_links);
+        $this->assertSame('https://venue.test', $place->brand_links[0]['url']);
     }
 
     public function test_all_empty_slots_store_null_in_database(): void
@@ -111,5 +122,25 @@ class PlaceServiceScheduleApiTest extends TestCase
         $id = (int) $res->json('place.id');
         $row = Place::query()->findOrFail($id);
         $this->assertNull($row->service_schedule);
+    }
+
+    public function test_invalid_brand_links_are_rejected(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+
+        $res = $this->actingAs($user)->postJson('/api/places', [
+            'name' => 'Bad links place',
+            'slug' => 'bad-links-place',
+            'brand_links' => [
+                ['title' => 'Broken', 'url' => 'not-a-url', 'icon' => 'not-valid-icon'],
+            ],
+        ]);
+
+        $res->assertStatus(422);
+        $res->assertJsonValidationErrors([
+            'brand_links.0.url',
+            'brand_links.0.icon',
+        ]);
+        $this->assertFalse(in_array('not-valid-icon', PlaceBrandLinks::ICON_KEYS, true));
     }
 }

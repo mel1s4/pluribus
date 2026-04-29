@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePlaceRequest;
 use App\Http\Resources\PlaceResource;
 use App\Models\Place;
 use App\Models\User;
+use App\Support\PlaceBrandLinks;
 use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -69,6 +70,7 @@ class PlaceController extends Controller
             'radius_meters' => null,
             'area_geojson' => null,
             'service_schedule' => $this->scheduleOrNull($schedule),
+            'brand_links' => $this->brandLinksOrNull($validated['brand_links'] ?? []),
         ]);
 
         if ($request->hasFile('logo')) {
@@ -185,6 +187,9 @@ class PlaceController extends Controller
         if (array_key_exists('service_schedule', $validated)) {
             $validated['service_schedule'] = $this->scheduleOrNull($validated['service_schedule']);
         }
+        if (array_key_exists('brand_links', $validated)) {
+            $validated['brand_links'] = $this->brandLinksOrNull($validated['brand_links']);
+        }
 
         $place->update($validated);
 
@@ -243,5 +248,16 @@ class PlaceController extends Controller
         }
 
         return null;
+    }
+
+    /**
+     * @param  mixed  $raw
+     * @return list<array{title: string, url: string, icon: string}>|null
+     */
+    private function brandLinksOrNull($raw): ?array
+    {
+        $normalized = PlaceBrandLinks::normalize($raw);
+
+        return $normalized === [] ? null : $normalized;
     }
 }

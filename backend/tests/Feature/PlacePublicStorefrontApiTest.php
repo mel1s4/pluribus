@@ -29,6 +29,9 @@ class PlacePublicStorefrontApiTest extends TestCase
             'area_geojson' => null,
             'logo_path' => null,
             'service_schedule' => null,
+            'brand_links' => [
+                ['title' => 'Website', 'url' => 'https://open-cafe.test', 'icon' => 'website'],
+            ],
         ]);
 
         $res = $this->getJson('/api/places/open-cafe/public');
@@ -37,6 +40,8 @@ class PlacePublicStorefrontApiTest extends TestCase
         $res->assertJsonPath('place.slug', 'open-cafe');
         $res->assertJsonPath('place.is_public', true);
         $res->assertJsonPath('place.name', 'Open café');
+        $res->assertJsonPath('place.brand_links.0.title', 'Website');
+        $res->assertJsonPath('place.brand_links.0.icon', 'website');
     }
 
     public function test_guest_cannot_fetch_private_place_by_slug(): void

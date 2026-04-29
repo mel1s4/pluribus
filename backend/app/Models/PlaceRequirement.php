@@ -32,6 +32,7 @@ class PlaceRequirement extends Model
      */
     protected $fillable = [
         'place_id',
+        'sku',
         'title',
         'description',
         'quantity',

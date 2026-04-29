@@ -19,6 +19,7 @@ class PlaceOffer extends Model
      */
     protected $fillable = [
         'place_id',
+        'sku',
         'title',
         'description',
         'price',

@@ -61,6 +61,7 @@ class Place extends Model
         'logo_path',
         'logo_background_color',
         'service_schedule',
+        'brand_links',
     ];
 
     /**
@@ -76,6 +77,7 @@ class Place extends Model
             'area_geojson' => 'array',
             'tags' => 'array',
             'service_schedule' => 'array',
+            'brand_links' => 'array',
         ];
     }
 

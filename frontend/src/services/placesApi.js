@@ -1,4 +1,4 @@
-import { apiForm, apiJson, ensureCsrfCookie } from './api.js'
+import { apiBaseUrl, apiForm, apiJson, ensureCsrfCookie } from './api.js'
 import { cachedGet, invalidateCache } from './cachedApi.js'
 
 function invalidatePlacesCaches() {
@@ -207,6 +207,32 @@ export async function deleteRequirementResponse(placeId, requirementId, response
     'DELETE',
     `/api/places/${placeId}/requirements/${requirementId}/responses/${responseId}`,
   )
+  if (result.ok) invalidatePlacesCaches()
+  return result
+}
+
+export function downloadOffersCsvUrl(placeId) {
+  return `${apiBaseUrl()}/api/places/${placeId}/offers/export.csv`
+}
+
+export function downloadRequirementsCsvUrl(placeId) {
+  return `${apiBaseUrl()}/api/places/${placeId}/requirements/export.csv`
+}
+
+export async function uploadOffersCsv(placeId, file) {
+  await ensureCsrfCookie()
+  const formData = new FormData()
+  formData.append('file', file)
+  const result = await apiForm('POST', `/api/places/${placeId}/offers/import.csv`, formData)
+  if (result.ok) invalidatePlacesCaches()
+  return result
+}
+
+export async function uploadRequirementsCsv(placeId, file) {
+  await ensureCsrfCookie()
+  const formData = new FormData()
+  formData.append('file', file)
+  const result = await apiForm('POST', `/api/places/${placeId}/requirements/import.csv`, formData)
   if (result.ok) invalidatePlacesCaches()
   return result
 }

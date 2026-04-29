@@ -12,8 +12,10 @@ import {
   createRequirement as apiCreateRequirement,
   deleteRequirement,
   deleteRequirementResponse,
+  downloadRequirementsCsvUrl,
   fetchAudiences,
   fetchRequirements,
+  uploadRequirementsCsv,
   updateRequirement,
 } from '../../services/placesApi.js'
 
@@ -50,6 +52,7 @@ const createGallery = ref(null)
 const editTagsRef = ref(null)
 const createTagsRef = ref(null)
 const createDialogRef = ref(null)
+const csvInput = ref(null)
 
 const { communityCurrencyCode } = useCommunity()
 
@@ -282,6 +285,31 @@ async function createRow() {
   await load()
   emit('changed')
 }
+
+function downloadCsv() {
+  window.open(downloadRequirementsCsvUrl(props.placeId), '_blank', 'noopener')
+}
+
+function openCsvPicker() {
+  csvInput.value?.click()
+}
+
+async function handleCsvSelected(event) {
+  const file = event?.target?.files?.[0]
+  if (!file) return
+  const { ok, status, data } = await uploadRequirementsCsv(props.placeId, file)
+  event.target.value = ''
+  if (!ok) {
+    error.value = t('myPlaces.requirementsUploadError').replace('{status}', String(status))
+    return
+  }
+  const created = Number(data?.created ?? 0)
+  const updated = Number(data?.updated ?? 0)
+  const failed = Number(data?.failed ?? 0)
+  window.alert(`Requirement CSV import complete.\nCreated: ${created}\nUpdated: ${updated}\nFailed: ${failed}`)
+  await load()
+  emit('changed')
+}
 </script>
 
 <template>
@@ -296,6 +324,13 @@ async function createRow() {
       >
         {{ t('myPlaces.addRequirement') }}
       </button>
+      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="downloadCsv">
+        Download CSV
+      </Button>
+      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="openCsvPicker">
+        Upload CSV
+      </Button>
+      <input ref="csvInput" type="file" accept=".csv,text/csv" class="place-reqs__csvInput" @change="handleCsvSelected">
     </div>
     <p v-if="error" class="place-reqs__error">{{ error }}</p>
 
@@ -787,5 +822,9 @@ html[data-theme='dark'] .place-reqs__dialog::backdrop {
   align-items: center;
   gap: 0.25rem;
   font-size: 0.85rem;
+}
+
+.place-reqs__csvInput {
+  display: none;
 }
 </style>

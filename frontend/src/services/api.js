@@ -27,7 +27,7 @@ function alignLocalDevApiHost(base) {
 }
 
 export function apiBaseUrl() {
-  const raw = import.meta.env.VITE_API_BASE_URL
+  const raw = import.meta?.env?.VITE_API_BASE_URL
   const configured =
     typeof raw === 'string' && raw.length > 0 ? raw : defaultBase
   return alignLocalDevApiHost(configured)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PlaceBrandLinks;
 use App\Support\PlaceServiceScheduleNormalizer;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -33,6 +34,10 @@ class StorePlaceRequest extends FormRequest
             'tags.*' => ['string', 'max:64'],
             'logo' => ['nullable', 'file', 'image', 'max:5120'],
             'is_public' => ['sometimes', 'boolean'],
+            'brand_links' => ['nullable', 'array', 'max:'.PlaceBrandLinks::MAX_LINKS],
+            'brand_links.*.title' => ['required_with:brand_links.*.url,brand_links.*.icon', 'string', 'max:80'],
+            'brand_links.*.url' => ['required_with:brand_links.*.title,brand_links.*.icon', 'url', 'max:2048'],
+            'brand_links.*.icon' => ['required_with:brand_links.*.title,brand_links.*.url', 'string', Rule::in(PlaceBrandLinks::ICON_KEYS)],
         ];
 
         $time = ['required', 'regex:/^([01]\d|2[0-3]):[0-5]\d$/'];
@@ -79,6 +84,18 @@ class StorePlaceRequest extends FormRequest
                 }
             } else {
                 $this->merge(['service_schedule' => PlaceServiceScheduleNormalizer::normalize($raw)]);
+            }
+        }
+        if ($this->has('brand_links')) {
+            $raw = $this->input('brand_links');
+            if (is_string($raw)) {
+                $trim = trim($raw);
+                if ($trim === '' || strcasecmp($trim, 'null') === 0) {
+                    $this->merge(['brand_links' => []]);
+                } else {
+                    $decoded = json_decode($trim, true);
+                    $this->merge(['brand_links' => is_array($decoded) ? $decoded : []]);
+                }
             }
         }
     }

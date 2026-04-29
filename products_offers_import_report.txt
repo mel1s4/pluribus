@@ -1,0 +1,5 @@
+Output file: /home/mel1s4/Development/pluribus/products_offers_import.csv
+Rows written: 62
+Rows skipped: 2
+- line 35: missing price for "Croissant de Mantequilla"
+- line 36: missing price for "Pan de Masa Madre"

@@ -98,6 +98,14 @@ export function fetchPosts(params = {}) {
   return cachedGet(`/api/posts${qs ? `?${qs}` : ''}`)
 }
 
+/**
+ * Single post for composer/edit (skip cache so edits always see fresh data).
+ * @param {number|string} postId
+ */
+export function fetchPost(postId) {
+  return cachedGet(`/api/posts/${postId}`, { skipCache: true })
+}
+
 export async function createPost(payload) {
   await ensureCsrfCookie()
   const result = await apiJson('POST', '/api/posts', payload)

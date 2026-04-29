@@ -24,6 +24,7 @@ class PlaceOfferResource extends JsonResource
         return [
             'id' => $this->id,
             'place_id' => $this->place_id,
+            'sku' => $this->sku,
             'title' => $this->title,
             'description' => $this->description,
             'price' => (string) $this->price,

@@ -3,6 +3,7 @@
  */
 
 import { emptyServiceSchedule, normalizeServiceSchedule } from './placeSchedule.js'
+import { normalizeBrandLinks } from './placeBrandLinks.js'
 
 export function emptyPlaceDraft() {
   return {
@@ -23,6 +24,7 @@ export function emptyPlaceDraft() {
     logoFile: null,
     removeLogo: false,
     is_public: false,
+    brand_links: [],
   }
 }
 
@@ -71,6 +73,7 @@ export function placeToFormData(draft) {
     JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
   )
   fd.append('is_public', draft.is_public ? '1' : '0')
+  fd.append('brand_links', JSON.stringify(normalizeBrandLinks(draft.brand_links)))
   return fd
 }
 
@@ -96,6 +99,7 @@ export function placeCreateToFormData(draft) {
     JSON.stringify(normalizeServiceSchedule(draft.service_schedule)),
   )
   fd.append('is_public', draft.is_public ? '1' : '0')
+  fd.append('brand_links', JSON.stringify(normalizeBrandLinks(draft.brand_links)))
   return fd
 }
 

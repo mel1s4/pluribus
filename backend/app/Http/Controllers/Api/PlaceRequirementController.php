@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePlaceRequirementRequest;
 use App\Http\Resources\PlaceRequirementResource;
 use App\Models\Place;
 use App\Models\PlaceRequirement;
+use App\Support\PlaceSku;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -73,6 +74,7 @@ class PlaceRequirementController extends Controller
         }
 
         $row = $place->requirements()->create([
+            'sku' => PlaceSku::generate($validated['sku'] ?? $validated['title']),
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'quantity' => $validated['quantity'],
@@ -156,6 +158,7 @@ class PlaceRequirementController extends Controller
         }
 
         $requirement->fill([
+            'sku' => array_key_exists('sku', $validated) ? PlaceSku::normalize($validated['sku']) : $requirement->sku,
             'title' => $validated['title'] ?? $requirement->title,
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $requirement->description,
             'quantity' => $validated['quantity'] ?? $requirement->quantity,

@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePlaceOfferRequest;
 use App\Http\Resources\PlaceOfferResource;
 use App\Models\Place;
 use App\Models\PlaceOffer;
+use App\Support\PlaceSku;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -55,6 +56,7 @@ class PlaceOfferController extends Controller
         $tags = is_array($tags) ? array_values(array_filter(array_map('strval', $tags), fn (string $t) => $t !== '')) : [];
 
         $offer = $place->offers()->create([
+            'sku' => PlaceSku::generate($validated['sku'] ?? $validated['title']),
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
             'price' => $validated['price'],
@@ -120,6 +122,7 @@ class PlaceOfferController extends Controller
         }
 
         $offer->fill([
+            'sku' => array_key_exists('sku', $validated) ? PlaceSku::normalize($validated['sku']) : $offer->sku,
             'title' => $validated['title'] ?? $offer->title,
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $offer->description,
             'price' => $validated['price'] ?? $offer->price,

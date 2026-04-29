@@ -23,8 +23,19 @@ class UpdatePlaceRequirementRequest extends FormRequest
         /** @var Place|null $place */
         $place = $this->route('place');
         $placeId = (int) ($place?->id ?? 0);
+        /** @var PlaceRequirement|null $requirement */
+        $requirement = $this->route('requirement');
 
         return [
+            'sku' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:64',
+                Rule::unique('place_requirements', 'sku')
+                    ->where('place_id', $placeId)
+                    ->ignore((int) ($requirement?->id ?? 0)),
+            ],
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'quantity' => ['sometimes', 'required', 'numeric', 'min:0', 'max:9999999999.9999'],

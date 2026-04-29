@@ -49,6 +49,7 @@ class PlaceRequirementResource extends JsonResource
         $data = [
             'id' => $this->id,
             'place_id' => $this->place_id,
+            'sku' => $this->sku,
             'title' => $this->title,
             'description' => $this->description,
             'quantity' => (string) $this->quantity,

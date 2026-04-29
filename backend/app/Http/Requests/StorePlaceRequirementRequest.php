@@ -25,6 +25,7 @@ class StorePlaceRequirementRequest extends FormRequest
         $placeId = (int) ($place?->id ?? 0);
 
         return [
+            'sku' => ['nullable', 'string', 'max:64', Rule::unique('place_requirements', 'sku')->where('place_id', $placeId)],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
             'quantity' => ['required', 'numeric', 'min:0', 'max:9999999999.9999'],

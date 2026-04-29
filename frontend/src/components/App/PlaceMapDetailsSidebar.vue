@@ -5,6 +5,7 @@ import Card from '../../atoms/Card.vue'
 import PlaceOffersPublicList from '../../molecules/PlaceOffersPublicList.vue'
 import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublicList.vue'
 import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDisplay.vue'
+import PlaceBrandLinksList from '../../molecules/PlaceBrandLinksList.vue'
 import { t } from '../../i18n/i18n'
 
 const props = defineProps({
@@ -91,6 +92,10 @@ function onTabClick(tab) {
         <Card class="place-map-sidebar__card">
           <h3 class="place-map-sidebar__card-title">{{ t('places.viewScheduleSection') }}</h3>
           <PlaceServiceScheduleDisplay :schedule="place.service_schedule" />
+        </Card>
+        <Card v-if="Array.isArray(place.brand_links) && place.brand_links.length" class="place-map-sidebar__card">
+          <h3 class="place-map-sidebar__card-title">{{ t('places.viewLinksSection') }}</h3>
+          <PlaceBrandLinksList :links="place.brand_links" compact />
         </Card>
       </div>
 
