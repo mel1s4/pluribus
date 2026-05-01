@@ -7,6 +7,7 @@ use App\Http\Requests\StoreTableAccessLinkRequest;
 use App\Models\Place;
 use App\Models\Table;
 use App\Models\TableAccessLink;
+use App\Models\TableSeating;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -102,6 +103,19 @@ class TableAccessLinkController extends Controller
             ];
         });
         $request->session()->put('active_table_context', $payload);
+        $user = $request->user();
+        if ($user !== null && $payload['place_id'] > 0 && $payload['table_id'] > 0) {
+            TableSeating::query()->updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'place_id' => $payload['place_id'],
+                ],
+                [
+                    'table_id' => $payload['table_id'],
+                    'last_seen_at' => now(),
+                ]
+            );
+        }
 
         return response()->json(['context' => $payload]);
     }

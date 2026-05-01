@@ -7,7 +7,7 @@
 # Credentials read from .secrets (key=value: ftp_user=, ftp_password=; or legacy FTP: section).
 #
 # Deploy Usage:
-#   ./deploy.sh [all]       Build frontend, upload frontend + backend
+#   ./deploy.sh [all]       Build frontend (npm install if vite missing), upload frontend + backend
 #   ./deploy.sh backend     Upload backend only
 #   ./deploy.sh env         Upload .env.production as backend/.env
 #   ./deploy.sh file <local> [remote]  Upload a single file
@@ -151,7 +151,15 @@ run_with_timeout() {
 # --- Check lftp is available ---
 check_lftp() {
   if ! command -v lftp &>/dev/null; then
-    print_error "lftp is required. Install: macOS: brew install lftp  |  Debian/Ubuntu: sudo apt install lftp"
+    print_error "lftp is required. Install: Arch/CachyOS: sudo pacman -S lftp  |  Debian/Ubuntu: sudo apt install lftp  |  Fedora: sudo dnf install lftp  |  macOS: brew install lftp"
+    exit 1
+  fi
+}
+
+# --- npm for frontend build (non-interactive shells may lack nvm/fnm PATH) ---
+check_npm() {
+  if ! command -v npm &>/dev/null; then
+    print_error "npm is required to build the frontend. Install: Arch/CachyOS: sudo pacman -S nodejs npm  |  Debian/Ubuntu: sudo apt install nodejs npm  |  macOS: brew install node"
     exit 1
   fi
 }
@@ -354,24 +362,37 @@ EOF
 }
 
 # --- Build frontend ---
+# package.json "build" already sets --outDir dist-deploy; do not pass extra args (they reach generate-version.js).
 build_frontend() {
+  check_npm
   echo "Building frontend..."
-  # Use a dedicated output dir to avoid permission issues from root-owned dist artifacts.
   (
     cd "$PROJECT_ROOT/frontend"
-    local install_deps="${INSTALL_NPM_DEPS:-0}"
-    # Backward compatibility: explicit skip always wins.
-    if [[ "${SKIP_NPM_INSTALL:-0}" == "1" ]]; then
-      install_deps=0
+    local nm="node_modules"
+    local vite_bin="$nm/.bin/vite"
+    # Root-owned node_modules (e.g. past sudo npm install) breaks installs and leaves vite missing.
+    if [[ -d "$nm" ]] && [[ ! -w "$nm" ]]; then
+      print_error "frontend/node_modules is not writable (often root-owned after sudo npm install)."
+      print_error "Fix: sudo rm -rf \"$PROJECT_ROOT/frontend/$nm\" && cd \"$PROJECT_ROOT/frontend\" && npm install"
+      exit 1
     fi
-    if [[ "$install_deps" == "1" ]]; then
-      print_info "Installing frontend dependencies (with retry/offline-friendly flags)..."
+    if [[ "${SKIP_NPM_INSTALL:-0}" == "1" ]]; then
+      if [[ ! -x "$vite_bin" ]]; then
+        print_error "SKIP_NPM_INSTALL=1 but Vite is missing at $PROJECT_ROOT/frontend/$vite_bin"
+        exit 1
+      fi
+    elif [[ "${INSTALL_NPM_DEPS:-0}" == "1" ]] || [[ ! -x "$vite_bin" ]]; then
+      if [[ ! -x "$vite_bin" ]]; then
+        print_info "Installing frontend dependencies (vite not found in node_modules/.bin)..."
+      else
+        print_info "Installing frontend dependencies (--install-deps)..."
+      fi
       npm install --no-audit --prefer-offline --fetch-retries=5 --fetch-retry-maxtimeout=120000 \
         || npm install --no-audit --fetch-retries=5 --fetch-retry-maxtimeout=120000
     else
-      print_info "Skipping npm install by default (use --install-deps to force install)."
+      print_info "Skipping npm install (vite already present; use --install-deps to refresh)."
     fi
-    npm run build -- --outDir dist-deploy
+    npm run build
   )
   if [[ ! -d "$PROJECT_ROOT/frontend/dist-deploy" ]]; then
     echo "Error: Frontend build did not produce frontend/dist-deploy"
@@ -578,7 +599,7 @@ main() {
       echo "  backend  Upload backend only"
       echo "  env      Upload .env.production to server as backend/.env"
       echo "  file <local_file> [remote_path]  Upload a single file"
-      echo "  --install-deps  Run npm install before frontend build (off by default)"
+      echo "  --install-deps  Run npm install before build even when deps already look installed"
       echo ""
       echo "FTP (list / read / upload any path):"
       echo "  list <remote_path>       List remote directory"

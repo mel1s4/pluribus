@@ -199,6 +199,13 @@
         "category": "write",
         "isDangerous": true,
         "description": "Grant or revoke user types and capability bundles."
+      },
+      {
+        "id": "users.personify",
+        "name": "personify",
+        "category": "write",
+        "isDangerous": true,
+        "description": "Start a support session that sees the product as another user (audited, time-limited)."
       }
     ]
   },

@@ -15,6 +15,8 @@
       <AppHeader />
     </div>
 
+    <PersonificationBanner />
+
     <div class="app-shell__content">
       <aside
         v-if="isDesktop"
@@ -54,6 +56,7 @@ import CartDrawer from '../components/App/CartDrawer.vue'
 import CartFab from '../components/App/CartFab.vue'
 import MobileNav from '../components/App/MobileNav.vue'
 import QuickNav from '../components/App/QuickNav.vue'
+import PersonificationBanner from '../components/App/PersonificationBanner.vue'
 import Sidebar from '../components/App/Sidebar.vue'
 import { useAppShell } from '../composables/useAppShell'
 import { useDesktopViewport } from '../composables/useDesktopViewport'

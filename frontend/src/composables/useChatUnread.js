@@ -1,18 +1,20 @@
 import { computed, ref } from 'vue'
 import { useSession } from './useSession.js'
 import { fetchChats, markChatRead } from '../services/chatApi.js'
-import { getChatEcho } from './useChatRealtime.js'
+import { registerChatSseListener } from './useChatSse.js'
 import { useMessageNotifications } from './useMessageNotifications.js'
 
 const unreadByChatId = ref({})
 const activeChatId = ref(null)
 const chatTitlesById = ref({})
 const subscribedChatIds = new Set()
+/** @type {Map<string, () => void>} */
+const chatSseUnsubById = new Map()
 let initialized = false
 
 const totalUnread = computed(() => Object.values(unreadByChatId.value).reduce((sum, count) => sum + Number(count || 0), 0))
 const { user } = useSession()
-const { requestPermission, notify, playIncomingSound } = useMessageNotifications()
+const { syncNotificationPermission, notify } = useMessageNotifications()
 
 function normalizeCount(value) {
   const n = Number(value)
@@ -51,7 +53,7 @@ function hydrateFromChats(chats) {
   }
   unreadByChatId.value = nextUnread
   chatTitlesById.value = nextTitles
-  ensureRealtimeSubscriptions(chats.map((chat) => String(chat.id)))
+  ensureRealtimeSubscriptions(subscriptionTargets())
 }
 
 function handleIncomingEvent(chatId, event) {
@@ -64,7 +66,6 @@ function handleIncomingEvent(chatId, event) {
     incrementChatUnread(chatId, 1)
   }
 
-  playIncomingSound()
   if (!isActiveChat) {
     notify({
       title: chatTitlesById.value[String(chatId)] || 'New message',
@@ -76,20 +77,28 @@ function handleIncomingEvent(chatId, event) {
 
 function ensureRealtimeSubscriptions(chatIds) {
   const next = new Set(chatIds.map((id) => String(id)))
-  const echo = getChatEcho()
 
   for (const id of subscribedChatIds) {
     if (!next.has(id)) {
-      echo.leave(`chat.${id}`)
+      chatSseUnsubById.get(id)?.()
+      chatSseUnsubById.delete(id)
       subscribedChatIds.delete(id)
     }
   }
 
   for (const id of next) {
     if (subscribedChatIds.has(id)) continue
-    echo.private(`chat.${id}`).listen('.message.sent', (event) => handleIncomingEvent(id, event))
+    const unreg = registerChatSseListener(id, (payload) => {
+      handleIncomingEvent(id, payload)
+    })
+    chatSseUnsubById.set(id, unreg)
     subscribedChatIds.add(id)
   }
+}
+
+function subscriptionTargets() {
+  const activeId = activeChatId.value != null ? String(activeChatId.value) : null
+  return Object.keys(chatTitlesById.value).filter((id) => id !== activeId)
 }
 
 async function refreshUnreadFromApi() {
@@ -110,12 +119,13 @@ function setActiveChat(chatId) {
   if (chatId != null) {
     clearChatUnread(chatId)
   }
+  ensureRealtimeSubscriptions(subscriptionTargets())
 }
 
 async function initializeChatUnread() {
   if (initialized) return
   initialized = true
-  await requestPermission()
+  syncNotificationPermission()
   await refreshUnreadFromApi()
 }
 

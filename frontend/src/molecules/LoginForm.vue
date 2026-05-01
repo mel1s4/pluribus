@@ -62,6 +62,9 @@ function handleVisitorLink() {
 
     <div class="login-form__row">
       <Checkbox v-model="remember" :label="t('login.rememberMe')" />
+      <router-link class="login-form__forgot" to="/forgot-password">
+        {{ t('login.forgotPasswordLink') }}
+      </router-link>
     </div>
 
     <Button
@@ -101,5 +104,9 @@ function handleVisitorLink() {
   color: var(--color-danger, #b91c1c);
   font-size: 0.8125rem;
   margin: -0.5rem 0 0;
+}
+
+.login-form__forgot {
+  font-size: 0.8125rem;
 }
 </style>

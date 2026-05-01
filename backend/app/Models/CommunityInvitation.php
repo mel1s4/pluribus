@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Invitation tokens are stored as SHA-256 hashes of the secret shown in join URLs.
@@ -43,6 +44,14 @@ class CommunityInvitation extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * @return HasMany<CommunityInvitationEmailVerification, $this>
+     */
+    public function emailVerifications(): HasMany
+    {
+        return $this->hasMany(CommunityInvitationEmailVerification::class, 'community_invitation_id');
     }
 
     public static function hashPlainToken(string $plain): string

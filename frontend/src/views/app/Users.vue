@@ -45,7 +45,8 @@ const canCreate = computed(() => hasCapability('users.create'))
 const canDelete = computed(() => hasCapability('users.delete'))
 const canEdit = computed(() => hasCapability('users.update'))
 const canManageInvitations = computed(() => hasCapability('invitations.manage'))
-const showRowActions = computed(() => canDelete.value || canEdit.value)
+const canPersonify = computed(() => hasCapability('users.personify'))
+const showRowActions = computed(() => canDelete.value || canEdit.value || canPersonify.value)
 const showTabs = computed(() => canManageInvitations.value)
 
 function setTab(id) {
@@ -79,7 +80,7 @@ watch(
   activeTab,
   (tabId) => {
     if (tabId === 'invitations') {
-      fetchInvitations()
+      loadInvitations()
     }
   },
   { immediate: true },
@@ -156,6 +157,25 @@ function memberProfileToFor(target) {
     return null
   }
   return { name: 'memberProfile', params: { userSlug: String(slug) } }
+}
+
+function isUserCommunityAdmin(u) {
+  return Boolean(u?.is_root || u?.user_type === 'admin')
+}
+
+function rowPersonifyDisabled(target) {
+  const me = sessionUser.value
+  if (!me) return true
+  if (target.is_root) return true
+  if (me.id === target.id) return true
+  if (!me.is_root && me.user_type === 'developer' && isUserCommunityAdmin(target)) {
+    return true
+  }
+  return false
+}
+
+function personifyToFor(target) {
+  return { name: 'supportPersonification', query: { userId: String(target.id) } }
 }
 
 async function onDeleteUser(target) {
@@ -305,10 +325,14 @@ onUnmounted(() => {
           :user="u"
           :member-profile-to="memberProfileToFor(u)"
           :show-actions="showRowActions"
+          :show-personify="canPersonify"
+          :personify-to="personifyToFor(u)"
+          :personify-disabled="rowPersonifyDisabled(u)"
+          :personify-label="t('users.personifyCard')"
           :show-edit="canEdit"
           :edit-to="editToFor(u)"
           :edit-disabled="rowEditDisabled(u)"
-          :edit-label="t('users.edit')"
+          :edit-label="t('users.editPageTitle')"
           :show-delete="canDelete"
           :delete-disabled="rowDeleteDisabled(u)"
           :delete-loading="deletingId === u.id"
@@ -347,7 +371,7 @@ onUnmounted(() => {
     </template>
 
     <template v-else-if="activeTab === 'invitations'">
-      <UsersInvitationsToolbar v-if="canManageInvitations" />
+      <UsersInvitationsToolbar v-if="canManageInvitations" @invitations-changed="loadInvitations" />
       <h2 class="users-list__title">{{ t('users.invitationsHeading') }}</h2>
       <p class="page--users__panelIntro">{{ t('users.invitationsIntro') }}</p>
       <p v-if="invitationsError" class="users-list__error" role="alert">

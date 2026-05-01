@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import { hasCapability, isCommunityAdministrator, isVisitorUser } from '../composables/useCapabilities'
+import { hasCapability, isVisitorUser } from '../composables/useCapabilities'
 import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
@@ -13,6 +13,8 @@ const ContactView = () => import('../views/public/Contact.vue')
 const LegalView = () => import('../views/public/Legal.vue')
 const JoinInvitationView = () => import('../views/public/JoinInvitation.vue')
 const VisitorAuthConsumeView = () => import('../views/public/VisitorAuthConsume.vue')
+const ForgotPasswordView = () => import('../views/public/ForgotPassword.vue')
+const ResetPasswordView = () => import('../views/public/ResetPassword.vue')
 const TableAccessView = () => import('../views/public/TableAccessPage.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
@@ -33,6 +35,7 @@ const NotificationsView = () => import('../views/app/Notifications.vue')
 const ProfileView = () => import('../views/app/Profile.vue')
 const ApiTestView = () => import('../views/app/ApiTest.vue')
 const UsersView = () => import('../views/app/Users.vue')
+const SupportPersonificationPage = () => import('../views/app/SupportPersonificationPage.vue')
 const UserCreatePage = () => import('../views/app/UserCreatePage.vue')
 const UserEditPage = () => import('../views/app/UserEditPage.vue')
 const MemberProfilePage = () => import('../views/app/MemberProfilePage.vue')
@@ -41,6 +44,9 @@ const PlaceViewPage = () => import('../views/app/PlaceViewPage.vue')
 const PlacePublicPage = () => import('../views/app/PlacePublicPage.vue')
 const PlaceCreatePage = () => import('../views/app/PlaceCreatePage.vue')
 const PlaceEditPage = () => import('../views/app/PlaceEditPage.vue')
+const PlaceTableDetailPage = () => import('../views/app/PlaceTableDetailPage.vue')
+const PlaceLiveOrdersPage = () => import('../views/app/PlaceLiveOrdersPage.vue')
+const PlaceOrderDetailPage = () => import('../views/app/PlaceOrderDetailPage.vue')
 const PlaceOfferCreatePage = () => import('../views/app/PlaceOfferCreatePage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
 const CartPage = () => import('../views/app/CartPage.vue')
@@ -81,6 +87,16 @@ const routes = [
     },
   },
   {
+    path: '/join/:token/verify/:verifyToken',
+    alias: ['/invitacion/:token/verify/:verifyToken'],
+    name: 'joinInvitationVerify',
+    component: JoinInvitationView,
+    meta: {
+      layout: 'public',
+      headerTitleKey: 'joinInvitation.title',
+    },
+  },
+  {
     path: '/join/:token',
     alias: ['/invitacion/:token'],
     name: 'joinInvitation',
@@ -94,6 +110,22 @@ const routes = [
     path: '/visitor-auth/:token',
     name: 'visitorAuthConsume',
     component: VisitorAuthConsumeView,
+    meta: {
+      layout: 'public',
+    },
+  },
+  {
+    path: '/forgot-password',
+    name: 'forgotPassword',
+    component: ForgotPasswordView,
+    meta: {
+      layout: 'public',
+    },
+  },
+  {
+    path: '/reset-password/:token',
+    name: 'resetPassword',
+    component: ResetPasswordView,
     meta: {
       layout: 'public',
     },
@@ -128,6 +160,19 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'settings.title',
       sidebarKey: 'settings',
+    },
+  },
+  {
+    path: '/support/personification',
+    name: 'supportPersonification',
+    component: SupportPersonificationPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'users.personify',
+      hideHeader: false,
+      headerTitleKey: 'personification.pageTitle',
+      sidebarKey: 'support-personification',
     },
   },
   {
@@ -394,6 +439,7 @@ const routes = [
     meta: {
       layout: 'app',
       requiresAuth: true,
+      requiresCapability: 'users.view',
       hideHeader: false,
       headerTitleKey: 'users.title',
       sidebarKey: 'users',
@@ -431,6 +477,39 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'myPlaces.addOfferPageTitle',
+    },
+  },
+  {
+    path: '/my-places/:placeId/live-orders',
+    name: 'placeLiveOrders',
+    component: PlaceLiveOrdersPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: true,
+      headerTitleKey: 'orders.liveViewTitle',
+    },
+  },
+  {
+    path: '/my-places/:placeId/orders/:orderId',
+    name: 'placeOrderDetail',
+    component: PlaceOrderDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'orders.detailTitle',
+    },
+  },
+  {
+    path: '/my-places/:placeId/tables/:tableId',
+    name: 'placeTableDetail',
+    component: PlaceTableDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'myPlaces.tableDetailTitle',
     },
   },
   {
@@ -499,12 +578,57 @@ const router = createRouter({
 })
 
 router.beforeEach(async (to) => {
+  // #region agent log
+  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
+    body: JSON.stringify({
+      sessionId: '808933',
+      runId: 'login-hang-v1',
+      hypothesisId: 'H5',
+      location: 'router/index.js:beforeEach:entry',
+      message: 'router beforeEach entry',
+      data: {
+        toName: String(to.name || ''),
+        toPath: to.fullPath,
+        requiresAuth: Boolean(to.meta.requiresAuth),
+        sessionStatus: sessionStatus.value,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
+  const requiresAuth = Boolean(to.meta.requiresAuth)
+  const unknownSession = sessionStatus.value === 'unknown'
   const needsResolution =
-    sessionStatus.value === 'unknown'
-    || (to.meta.requiresAuth && sessionStatus.value !== 'authenticated')
+    (requiresAuth && sessionStatus.value !== 'authenticated')
+    || (unknownSession && requiresAuth)
 
   if (needsResolution) {
     await resolveSession()
+    // #region agent log
+    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
+      body: JSON.stringify({
+        sessionId: '808933',
+        runId: 'login-hang-v1',
+        hypothesisId: 'H2',
+        location: 'router/index.js:beforeEach:postResolve',
+        message: 'router after resolveSession',
+        data: {
+          toName: String(to.name || ''),
+          toPath: to.fullPath,
+          sessionStatus: sessionStatus.value,
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
+  }
+  if (unknownSession && !requiresAuth) {
+    // Resolve in background so public first paint/navigation is never blocked.
+    resolveSession().catch(() => {})
   }
   if (to.meta.requiresAuth && sessionStatus.value !== 'authenticated') {
     const query = { redirect: to.fullPath }
@@ -523,9 +647,6 @@ router.beforeEach(async (to) => {
     && typeof to.meta.requiresCapability === 'string'
     && !hasCapability(to.meta.requiresCapability)
   ) {
-    return { name: 'dashboard' }
-  }
-  if (sessionStatus.value === 'authenticated' && to.name === 'users' && !isCommunityAdministrator()) {
     return { name: 'dashboard' }
   }
   if (

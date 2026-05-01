@@ -29,6 +29,7 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'username' => $this->username,
+            'voting_id' => $this->voting_id,
             'phone_numbers' => is_array($this->phone_numbers) ? $this->phone_numbers : [],
             'contact_emails' => is_array($this->contact_emails) ? $this->contact_emails : [],
             'aliases' => is_array($this->aliases) ? $this->aliases : [],

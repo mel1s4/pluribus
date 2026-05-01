@@ -4,6 +4,10 @@ export async function fetchPlaceTables(placeId) {
   return apiJson('GET', `/api/places/${placeId}/tables`)
 }
 
+export async function fetchPlaceTableDetail(placeId, tableId) {
+  return apiJson('GET', `/api/places/${placeId}/tables/${tableId}`)
+}
+
 export async function createPlaceTable(placeId, name) {
   await ensureCsrfCookie()
   return apiJson('POST', `/api/places/${placeId}/tables`, { name })

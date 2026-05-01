@@ -78,6 +78,30 @@ const cartTotal = computed(() =>
   cartData.value && cartData.value.total != null ? String(cartData.value.total) : '0.00',
 )
 
+const activeTable = computed(() => {
+  const d = cartData.value
+  if (!d || typeof d !== 'object' || !('active_table' in d)) {
+    return null
+  }
+  const at = /** @type {{ place_id?: unknown, table_id?: unknown, table_name?: unknown, place_slug?: unknown }} */ (
+    d.active_table
+  )
+  if (!at || typeof at !== 'object') {
+    return null
+  }
+  const placeId = Number(at.place_id)
+  const tableId = Number(at.table_id)
+  if (!Number.isFinite(placeId) || placeId <= 0 || !Number.isFinite(tableId) || tableId <= 0) {
+    return null
+  }
+  return {
+    place_id: placeId,
+    table_id: tableId,
+    table_name: typeof at.table_name === 'string' ? at.table_name : '',
+    place_slug: typeof at.place_slug === 'string' ? at.place_slug : '',
+  }
+})
+
 watch(
   sessionStatus,
   (s) => {
@@ -108,6 +132,8 @@ watch(
  *   removeFromCart: (placeOfferId: number|string) => Promise<void>,
  *   clearCartRemote: () => Promise<void>,
  *   checkout: (notes?: string) => Promise<unknown>,
+ *   activeTable: import('vue').ComputedRef<null | { place_id: number, table_id: number, table_name: string, place_slug: string }>,
+ *   leaveTableSession: () => Promise<void>,
  * }}
  */
 export function useCart() {
@@ -197,12 +223,25 @@ export function useCart() {
     return payload?.order ?? null
   }
 
+  async function leaveTableSession() {
+    const { ok, data, status } = await cartApi.clearTableSession()
+    if (!ok) {
+      const msg =
+        data && typeof data === 'object' && 'message' in data && typeof data.message === 'string'
+          ? data.message
+          : `HTTP ${status}`
+      throw new Error(msg)
+    }
+    await refreshCart()
+  }
+
   return {
     cartData,
     cartLoading,
     cartError,
     cartGroups,
     cartTotal,
+    activeTable,
     lineCount,
     drawerOpen,
     refreshCart,
@@ -213,5 +252,6 @@ export function useCart() {
     removeFromCart,
     clearCartRemote,
     checkout,
+    leaveTableSession,
   }
 }

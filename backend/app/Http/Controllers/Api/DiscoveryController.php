@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\PlaceResource;
 use App\Http\Resources\PostResource;
 use App\Models\Calendar;
 use App\Models\Place;
@@ -74,6 +75,7 @@ class DiscoveryController extends Controller
             $places = Place::query()
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
+                ->with('administrators')
                 ->when(count($tags) > 0, function ($q) use ($tags): void {
                     foreach ($tags as $tag) {
                         $q->whereJsonContains('tags', $tag);
@@ -100,7 +102,7 @@ class DiscoveryController extends Controller
         }
 
         return response()->json([
-            'places' => $places,
+            'places' => PlaceResource::collection($places),
             'posts' => PostResource::collection($posts),
         ]);
     }

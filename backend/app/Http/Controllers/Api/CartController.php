@@ -32,7 +32,35 @@ class CartController extends Controller
             'groups' => $groups,
             'line_count' => (int) $items->sum('quantity'),
             'total' => $total,
+            'active_table' => $this->resolveActiveTableForRequest($request),
         ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function resolveActiveTableForRequest(Request $request): ?array
+    {
+        $ctx = $request->session()->get('active_table_context');
+        if (! is_array($ctx)) {
+            return null;
+        }
+        $placeId = (int) ($ctx['place_id'] ?? 0);
+        $tableId = (int) ($ctx['table_id'] ?? 0);
+        if ($placeId <= 0 || $tableId <= 0) {
+            return null;
+        }
+        $table = Table::query()->whereKey($tableId)->where('place_id', $placeId)->first();
+        if ($table === null) {
+            return null;
+        }
+
+        return [
+            'place_id' => $placeId,
+            'place_slug' => (string) ($ctx['place_slug'] ?? ''),
+            'table_id' => $tableId,
+            'table_name' => (string) $table->name,
+        ];
     }
 
     public function upsertItem(UpsertCartItemRequest $request): JsonResponse

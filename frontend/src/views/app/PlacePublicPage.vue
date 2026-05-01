@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Card from '../../atoms/Card.vue'
 import PlaceLocationPicker from '../../organisms/PlaceLocationPicker.vue'
@@ -8,7 +8,9 @@ import PlaceRequirementsPublicList from '../../molecules/PlaceRequirementsPublic
 import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDisplay.vue'
 import PlaceBrandLinksList from '../../molecules/PlaceBrandLinksList.vue'
 import { t } from '../../i18n/i18n'
+import { refreshCart, useCart } from '../../composables/useCart.js'
 import { sessionStatus } from '../../composables/useSession.js'
+import { pingTableSession } from '../../services/cartApi.js'
 import { fetchPublicPlaceBySlug } from '../../services/placesApi.js'
 import { placeApiErrorMessage } from '../../utils/placeForm.js'
 
@@ -54,6 +56,81 @@ const locationModel = computed(() => {
 })
 
 const canManage = computed(() => Boolean(place.value?.viewer_place_role))
+
+const { activeTable, leaveTableSession } = useCart()
+const leavingTable = ref(false)
+
+const seatedAtThisPlace = computed(() => {
+  if (sessionStatus.value !== 'authenticated' || !place.value?.id) {
+    return false
+  }
+  const at = activeTable.value
+  if (!at) {
+    return false
+  }
+  return Number(at.place_id) === Number(place.value.id)
+})
+
+/** @type {ReturnType<typeof setInterval> | null} */
+let pingTimer = null
+
+function clearPingTimer() {
+  if (pingTimer != null) {
+    clearInterval(pingTimer)
+    pingTimer = null
+  }
+}
+
+async function syncTablePing() {
+  if (!seatedAtThisPlace.value) {
+    return
+  }
+  await pingTableSession()
+}
+
+watch(seatedAtThisPlace, (seated) => {
+  clearPingTimer()
+  if (seated) {
+    void syncTablePing()
+    pingTimer = setInterval(() => void syncTablePing(), 45000)
+  }
+})
+
+watch(sessionStatus, (s) => {
+  if (s === 'authenticated') {
+    void refreshCart()
+  }
+})
+
+watch(
+  () => place.value?.id,
+  () => {
+    if (sessionStatus.value === 'authenticated') {
+      void refreshCart()
+    }
+  },
+)
+
+onMounted(() => {
+  if (sessionStatus.value === 'authenticated') {
+    void refreshCart()
+  }
+})
+
+onUnmounted(() => {
+  clearPingTimer()
+})
+
+async function onLeaveTable() {
+  leavingTable.value = true
+  try {
+    await leaveTableSession()
+  } catch (e) {
+    window.alert(e instanceof Error ? e.message : String(e))
+  } finally {
+    leavingTable.value = false
+  }
+}
 
 const heroStyle = computed(() => {
   const c = place.value?.logo_background_color
@@ -132,6 +209,24 @@ load()
           @click="goEdit"
         >
           {{ t('places.viewManage') }}
+        </button>
+      </div>
+
+      <div
+        v-if="seatedAtThisPlace && activeTable"
+        class="place-public-page__tableBanner"
+        role="status"
+      >
+        <span class="place-public-page__tableBannerText">
+          {{ t('places.tableSeatedBanner').replace('{table}', activeTable.table_name) }}
+        </span>
+        <button
+          type="button"
+          class="place-public-page__tableBannerLeave"
+          :disabled="leavingTable"
+          @click="onLeaveTable"
+        >
+          {{ t('places.tableLeave') }}
         </button>
       </div>
 
@@ -243,6 +338,39 @@ load()
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1rem;
+}
+
+.place-public-page__tableBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin: 0 1rem 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.5rem;
+  background: color-mix(in srgb, var(--primary, #2563eb) 12%, var(--bg));
+  border: 1px solid color-mix(in srgb, var(--primary, #2563eb) 35%, var(--border));
+}
+
+.place-public-page__tableBannerText {
+  font-size: 0.95rem;
+  line-height: 1.35;
+}
+
+.place-public-page__tableBannerLeave {
+  cursor: pointer;
+  font: inherit;
+  padding: 0.35rem 0.75rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  flex-shrink: 0;
+}
+
+.place-public-page__tableBannerLeave:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .place-public-page__back {

@@ -1,9 +1,9 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import { useSession } from '../../composables/useSession.js'
-import { useChatRealtime } from '../../composables/useChatRealtime.js'
+import { useChatSseForThread } from '../../composables/useChatSse.js'
 import { fetchChat, fetchChatMessages, sendChatMessage } from '../../services/chatApi.js'
 import { useChatUnread } from '../../composables/useChatUnread.js'
 
@@ -19,8 +19,11 @@ const chatId = computed(() => route.params.chatId)
 const chat = ref(null)
 const messages = ref([])
 const text = ref('')
-const loading = ref(true)
+const chatLoading = ref(true)
+const messagesLoading = ref(true)
 const listEl = ref(null)
+let loadToken = 0
+let scrollRafId = 0
 
 const timeFormatter = new Intl.DateTimeFormat(undefined, {
   hour: 'numeric',
@@ -49,7 +52,7 @@ function replaceOptimistic(tempId, realMessage, status) {
   } else {
     messages.value[idx] = { ...messages.value[idx], _status: status }
   }
-  nextTick(() => maybeScrollBottom(true))
+  scheduleScrollBottom(true)
 }
 
 function onIncomingMessage(message) {
@@ -64,17 +67,17 @@ function onIncomingMessage(message) {
     )
     if (idx !== -1) {
       messages.value[idx] = { ...message, _status: 'sent' }
-      nextTick(() => maybeScrollBottom(true))
+      scheduleScrollBottom(true)
       return
     }
   }
 
   const isOwn = Number(message.user_id) === Number(uid)
   messages.value.push({ ...message, _status: 'sent' })
-  nextTick(() => maybeScrollBottom(isOwn))
+  scheduleScrollBottom(isOwn)
 }
 
-const { connected } = useChatRealtime(chatId, onIncomingMessage)
+const { connected } = useChatSseForThread(chatId, onIncomingMessage)
 
 const messagesWithMeta = computed(() =>
   messages.value.map((msg, i) => {
@@ -108,36 +111,59 @@ const textareaRows = computed(() => {
 })
 
 async function load() {
-  loading.value = true
-  const [chatRes, msgRes] = await Promise.all([
-    fetchChat(chatId.value),
-    fetchChatMessages(chatId.value),
-  ])
-  if (chatRes.ok && chatRes.data?.chat) {
-    chat.value = chatRes.data.chat
-  }
-  if (msgRes.ok && Array.isArray(msgRes.data?.data)) {
-    messages.value = msgRes.data.data.map((m) => ({ ...m, _status: 'sent' }))
-  }
-  loading.value = false
-  setActiveChat(chatId.value)
-  await markChatAsRead(chatId.value)
-  nextTick(() => maybeScrollBottom(true))
+  const token = ++loadToken
+  const currentChatId = chatId.value
+  chatLoading.value = true
+  messagesLoading.value = true
+  chat.value = null
+  messages.value = []
+  setActiveChat(currentChatId)
+
+  void fetchChat(currentChatId).then((chatRes) => {
+    if (token !== loadToken) return
+    if (chatRes.ok && chatRes.data?.chat) {
+      chat.value = chatRes.data.chat
+    }
+  }).finally(() => {
+    if (token === loadToken) {
+      chatLoading.value = false
+    }
+  })
+
+  void fetchChatMessages(currentChatId).then((msgRes) => {
+    if (token !== loadToken) return
+    if (msgRes.ok && Array.isArray(msgRes.data?.data)) {
+      messages.value = msgRes.data.data.map((m) => ({ ...m, _status: 'sent' }))
+      scheduleScrollBottom(true)
+    }
+  }).finally(() => {
+    if (token === loadToken) {
+      messagesLoading.value = false
+    }
+  })
+
+  void markChatAsRead(currentChatId).catch(() => {})
 }
 
-function maybeScrollBottom(isOwn) {
+function scheduleScrollBottom(force = false) {
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
+  }
+  scrollRafId = requestAnimationFrame(() => {
+    scrollRafId = 0
+    maybeScrollBottom(force)
+  })
+}
+
+function maybeScrollBottom(force) {
   if (!listEl.value) {
     return
   }
   const el = listEl.value
   const { scrollTop, scrollHeight, clientHeight } = el
   const nearBottom = scrollHeight - scrollTop - clientHeight < NEAR_BOTTOM_PX
-  if (isOwn || nearBottom) {
-    nextTick(() => {
-      if (listEl.value) {
-        listEl.value.scrollTop = listEl.value.scrollHeight
-      }
-    })
+  if (force || nearBottom) {
+    el.scrollTop = el.scrollHeight
   }
 }
 
@@ -171,7 +197,7 @@ async function submit() {
   }
   messages.value.push(optimistic)
   text.value = ''
-  nextTick(() => maybeScrollBottom(true))
+  scheduleScrollBottom(true)
 
   const res = await sendChatMessage(chatId.value, body)
   if (res.ok && res.data?.message) {
@@ -192,7 +218,7 @@ async function retryMessage(msg) {
     return
   }
   messages.value[idx] = { ...messages.value[idx], _status: 'pending' }
-  nextTick(() => maybeScrollBottom(true))
+  scheduleScrollBottom(true)
 
   const res = await sendChatMessage(chatId.value, body)
   if (res.ok && res.data?.message) {
@@ -218,6 +244,10 @@ watch(chatId, () => {
   void load()
 })
 onBeforeUnmount(() => {
+  if (scrollRafId) {
+    cancelAnimationFrame(scrollRafId)
+    scrollRafId = 0
+  }
   setActiveChat(null)
 })
 </script>
@@ -237,7 +267,9 @@ onBeforeUnmount(() => {
         {{ chat?.icon_emoji || '💬' }}
       </div>
       <div class="chat-thread__meta">
-        <h1 class="chat-thread__title">{{ chat?.title || t('chats.thread.title') }}</h1>
+        <h1 class="chat-thread__title">
+          {{ chatLoading ? t('chats.thread.loadingThread') : (chat?.title || t('chats.thread.title')) }}
+        </h1>
       </div>
       <span
         class="chat-thread__connection"
@@ -260,9 +292,10 @@ onBeforeUnmount(() => {
       </button>
     </header>
 
-    <p v-if="loading">{{ t('chats.thread.loadingThread') }}</p>
-    <div v-else ref="listEl" class="chat-thread__messages">
+    <div ref="listEl" class="chat-thread__messages">
+      <p v-if="messagesLoading">{{ t('chats.thread.loadingThread') }}</p>
       <div
+        v-else
         v-for="message in messagesWithMeta"
         :key="message.id"
         class="chat-thread__message"

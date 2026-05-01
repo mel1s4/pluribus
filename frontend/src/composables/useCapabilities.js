@@ -1,21 +1,6 @@
 import { sessionUser } from './useSession'
 
 /**
- * Community admins and root may access administrator-only navigation (e.g. Members list).
- * @returns {boolean}
- */
-export function isCommunityAdministrator() {
-  const user = sessionUser.value
-  if (!user) {
-    return false
-  }
-  if (user.is_root) {
-    return true
-  }
-  return user.user_type === 'admin'
-}
-
-/**
  * @param {string} capabilityId
  * @returns {boolean}
  */
@@ -29,6 +14,14 @@ export function hasCapability(capabilityId) {
     return false
   }
   return caps.includes(capabilityId)
+}
+
+/**
+ * Who may open the member directory and related admin flows (aligned with `users.view` on the server).
+ * @returns {boolean}
+ */
+export function isCommunityAdministrator() {
+  return hasCapability('users.view')
 }
 
 export function isVisitorUser() {

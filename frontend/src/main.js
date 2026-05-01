@@ -11,13 +11,50 @@ import './composables/useFavorites.js'
 
 initTheme()
 
-registerSW({ immediate: true })
+const BOOTSTRAP_TIMEOUT_MS = 8000
 
-createApp(App).use(router).mount('#app')
+function settleWithin(promise, timeoutMs, label) {
+  let timeoutId
+  const timeoutPromise = new Promise((resolve) => {
+    timeoutId = setTimeout(() => {
+      console.warn(`[bootstrap] ${label} timed out after ${timeoutMs}ms`)
+      resolve()
+    }, timeoutMs)
+  })
+  return Promise.race([Promise.resolve(promise), timeoutPromise]).finally(() => {
+    clearTimeout(timeoutId)
+  })
+}
 
-Promise.all([fetchCommunityBranding(), resolveSession()]).then(() =>
-  initI18n({
-    defaultLanguage: communityDefaultLanguage.value,
-    allowStoredLanguage: sessionStatus.value === 'authenticated',
-  }),
-)
+/**
+ * A leftover service worker from preview/production on the same origin can intercept
+ * Vite pre-bundles under /node_modules/.vite/deps/ and break FullCalendar (corrupted
+ * content, empty MIME). Unregister in dev before mounting.
+ */
+async function prepareDevServiceWorker() {
+  if (!import.meta.env.DEV || typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
+    return
+  }
+  const registrations = await navigator.serviceWorker.getRegistrations()
+  await Promise.all(registrations.map((r) => r.unregister()))
+}
+
+prepareDevServiceWorker().then(() => {
+  if (import.meta.env.PROD) {
+    registerSW({ immediate: true })
+  }
+
+  createApp(App).use(router).mount('#app')
+
+  void resolveSession().catch(() => {})
+  settleWithin(fetchCommunityBranding(), BOOTSTRAP_TIMEOUT_MS, 'community-branding').then(() => {
+    if (sessionStatus.value === 'unknown') {
+      // Never block public app shell forever because an upstream request stalled.
+      sessionStatus.value = 'guest'
+    }
+    initI18n({
+      defaultLanguage: communityDefaultLanguage.value,
+      allowStoredLanguage: sessionStatus.value === 'authenticated',
+    })
+  })
+})

@@ -12,6 +12,9 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: false,
+      },
       includeAssets: [
         'favicon.svg',
         'apple-touch-icon.png',
@@ -100,6 +103,7 @@ export default defineConfig({
     include: [
       'leaflet',
       'leaflet-draw',
+      '@fullcalendar/core',
       '@fullcalendar/list',
       '@fullcalendar/daygrid',
       '@fullcalendar/timegrid',

@@ -19,8 +19,9 @@ class ChatController extends Controller
     public function index(Request $request): AnonymousResourceCollection
     {
         $user = $request->user();
+        $userId = (int) $user->id;
         $chats = Chat::query()
-            ->visibleToUser((int) $user->id)
+            ->visibleToUser($userId)
             ->addSelect([
                 'last_message_at' => ChatMessage::query()
                     ->selectRaw('MAX(chat_messages.created_at)')
@@ -29,16 +30,16 @@ class ChatController extends Controller
             ->addSelect([
                 'unread_count' => ChatMessage::query()
                     ->selectRaw('COUNT(*)')
-                    ->join('chat_members as current_member', function ($join) use ($user): void {
-                        $join->on('current_member.chat_id', '=', 'chat_messages.chat_id')
-                            ->where('current_member.user_id', '=', (int) $user->id);
-                    })
                     ->whereColumn('chat_messages.chat_id', 'chats.id')
-                    ->where('chat_messages.user_id', '!=', (int) $user->id)
-                    ->where(function ($query): void {
-                        $query->whereNull('current_member.last_read_at')
-                            ->orWhereColumn('chat_messages.created_at', '>', 'current_member.last_read_at');
-                    }),
+                    ->where('chat_messages.user_id', '!=', $userId)
+                    ->where(
+                        'chat_messages.created_at',
+                        '>',
+                        DB::raw(sprintf(
+                            "COALESCE((SELECT cm.last_read_at FROM chat_members cm WHERE cm.chat_id = chats.id AND cm.user_id = %d LIMIT 1), '1970-01-01 00:00:00')",
+                            $userId
+                        ))
+                    ),
             ])
             ->with(['members:id,name,avatar_path', 'folder:id,name,icon_emoji,icon_bg_color,parent_id,sort_order,user_id'])
             ->orderByDesc(DB::raw('COALESCE(last_message_at, chats.updated_at)'))

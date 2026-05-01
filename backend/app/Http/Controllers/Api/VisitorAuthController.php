@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -21,7 +22,7 @@ class VisitorAuthController extends Controller
     public function requestLoginLink(RequestVisitorLoginLinkRequest $request): JsonResponse
     {
         $email = strtolower(trim((string) $request->validated('email')));
-        $user = User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
+        $user = $this->findUserByEmail($email);
         if (! $user instanceof User) {
             $user = User::query()->create([
                 'name' => Str::before($email, '@'),
@@ -43,9 +44,13 @@ class VisitorAuthController extends Controller
         $loginUrl = rtrim((string) config('app.frontend_url'), '/').'/visitor-auth/'.$plainToken;
 
         try {
-            Mail::to($email)->send(new VisitorLoginMail($loginUrl));
+            Mail::to($email)->queue(new VisitorLoginMail($loginUrl));
         } catch (\Throwable $e) {
             report($e);
+            Log::warning('auth.visitor_link.mail_queue_failed', [
+                'email' => $email,
+                'exception' => $e->getMessage(),
+            ]);
         }
 
         return response()->json(['ok' => true]);
@@ -81,5 +86,15 @@ class VisitorAuthController extends Controller
         return response()->json([
             'user' => UserResource::make($user->fresh()),
         ]);
+    }
+
+    private function findUserByEmail(string $email): ?User
+    {
+        $exact = User::query()->where('email', $email)->first();
+        if ($exact instanceof User) {
+            return $exact;
+        }
+
+        return User::query()->whereRaw('LOWER(email) = ?', [$email])->first();
     }
 }

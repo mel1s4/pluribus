@@ -27,6 +27,7 @@
       "users.update",
       "users.delete",
       "users.assign_types",
+      "users.personify",
       "invitations.manage",
       "notifications.view",
       "notifications.manage",
@@ -48,10 +49,12 @@
   "admin": {
     "entity_type": null,
     "role": "admin",
-    "description": "Community administrator; moderation and settings without the root flag or member-account management.",
+    "description": "Community administrator; moderation, member directory, and limited account edits without the root flag or privileged type assignment.",
     "capabilities": [
       "profile.view",
       "profile.update",
+      "users.view",
+      "users.update",
       "chats.view",
       "chats.send",
       "chats.delete_own",
@@ -135,7 +138,8 @@
       "posts.view",
       "posts.manage",
       "calendars.view",
-      "calendars.manage"
+      "calendars.manage",
+      "users.personify"
     ]
   },
   "visitor": {

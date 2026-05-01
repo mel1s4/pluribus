@@ -38,7 +38,8 @@ class ApiAuthenticationTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('user.id', $user->id)
-            ->assertJsonPath('user.email', $user->email);
+            ->assertJsonPath('user.email', $user->email)
+            ->assertJsonPath('personification.active', false);
     }
 
     public function test_login_fails_with_invalid_credentials(): void
@@ -64,7 +65,7 @@ class ApiAuthenticationTest extends TestCase
 
         $response->assertOk()
             ->assertJsonPath('user.id', $user->id)
-            ->assertJsonStructure(['user' => ['capabilities']]);
+            ->assertJsonStructure(['user' => ['capabilities'], 'personification']);
     }
 
     public function test_user_returns_unauthenticated_without_session(): void

@@ -26,6 +26,7 @@ class User extends Authenticatable
         'password',
         'is_root',
         'user_type',
+        'voting_id',
     ];
 
     /**
@@ -104,6 +105,16 @@ class User extends Authenticatable
         return $this->is_root === true;
     }
 
+    /** Community administrators (non-root admin role) and root accounts. */
+    public function isCommunityAdministrator(): bool
+    {
+        if ($this->isRoot()) {
+            return true;
+        }
+
+        return $this->user_type === 'admin';
+    }
+
     /**
      * @return HasMany<Place, $this>
      */
@@ -166,5 +177,21 @@ class User extends Authenticatable
     public function orders(): HasMany
     {
         return $this->hasMany(Order::class)->orderByDesc('created_at');
+    }
+
+    /**
+     * @return HasMany<TableSeating, $this>
+     */
+    public function tableSeatings(): HasMany
+    {
+        return $this->hasMany(TableSeating::class);
+    }
+
+    /**
+     * @return HasMany<UserVotingIdAudit, $this>
+     */
+    public function votingIdAudits(): HasMany
+    {
+        return $this->hasMany(UserVotingIdAudit::class)->orderByDesc('id');
     }
 }

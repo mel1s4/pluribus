@@ -26,13 +26,24 @@ class UserAdminApiTest extends TestCase
             ->json($method, $uri, $data);
     }
 
-    public function test_member_can_list_users(): void
+    public function test_member_cannot_list_users_without_search(): void
     {
         $user = User::factory()->create(['user_type' => 'member']);
 
         $this->actingAs($user);
 
         $this->statefulJson('GET', '/api/users')
+            ->assertForbidden();
+    }
+
+    public function test_member_can_search_users(): void
+    {
+        $member = User::factory()->create(['user_type' => 'member', 'name' => 'Alpha Member Unique']);
+        User::factory()->create(['name' => 'Other Person']);
+
+        $this->actingAs($member);
+
+        $this->statefulJson('GET', '/api/users?search='.rawurlencode('Alpha Member Unique'))
             ->assertOk()
             ->assertJsonStructure(['data', 'links', 'meta']);
     }
@@ -128,7 +139,7 @@ class UserAdminApiTest extends TestCase
         $this->statefulJson('DELETE', '/api/users/'.$root->id)->assertForbidden();
     }
 
-    public function test_member_can_show_user(): void
+    public function test_member_cannot_show_user(): void
     {
         $member = User::factory()->create(['user_type' => 'member']);
         $target = User::factory()->create();
@@ -136,9 +147,7 @@ class UserAdminApiTest extends TestCase
         $this->actingAs($member);
 
         $this->statefulJson('GET', '/api/users/'.$target->id)
-            ->assertOk()
-            ->assertJsonPath('user.id', $target->id)
-            ->assertJsonPath('user.email', $target->email);
+            ->assertForbidden();
     }
 
     public function test_admin_can_show_user(): void
@@ -167,7 +176,7 @@ class UserAdminApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_admin_cannot_update_non_root_user(): void
+    public function test_admin_can_update_non_root_user(): void
     {
         $admin = User::factory()->admin()->create();
         $target = User::factory()->create(['name' => 'Old Name']);
@@ -180,12 +189,15 @@ class UserAdminApiTest extends TestCase
             'name' => 'New Display',
             'email' => $newEmail,
             'username' => null,
-        ])->assertForbidden();
+        ])
+            ->assertOk()
+            ->assertJsonPath('user.name', 'New Display')
+            ->assertJsonPath('user.email', $newEmail);
 
         $this->assertDatabaseHas('users', [
             'id' => $target->id,
-            'name' => 'Old Name',
-            'email' => $target->email,
+            'name' => 'New Display',
+            'email' => $newEmail,
         ]);
     }
 

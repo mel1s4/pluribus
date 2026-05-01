@@ -1,15 +1,19 @@
 <template>
-  <component :is="tag" class="title">
+  <component :is="tag" class="title" :id="id || undefined">
     <slot />
   </component>
 </template>
 
 <script setup>
-const props = defineProps({
+defineProps({
   tag: {
     type: String,
     default: 'h1',
     validator: (v) => ['h1', 'h2', 'h3', 'h4'].includes(v),
+  },
+  id: {
+    type: String,
+    default: '',
   },
 })
 </script>

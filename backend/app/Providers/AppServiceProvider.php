@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Events\MessageSent;
+use App\Listeners\PublishChatMessageToSse;
 use App\Models\Place;
 use App\Models\Chat;
 use App\Models\Calendar;
@@ -18,6 +20,7 @@ use App\Policies\TaskPolicy;
 use App\Support\CapabilityResolver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -38,6 +41,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Event::listen(MessageSent::class, PublishChatMessageToSse::class);
+
         Route::bind('place', function (string $value) {
             if (ctype_digit($value)) {
                 return Place::query()->where('id', (int) $value)->firstOrFail();
@@ -78,16 +83,42 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by($request->ip());
         });
 
-        RateLimiter::for('join-invitation-register', function (Request $request) {
+        RateLimiter::for('join-invitation-verify-email', function (Request $request) {
             $token = (string) $request->route('token', '');
 
-            return Limit::perMinute(8)->by($request->ip().'|'.$token);
+            return Limit::perMinute(6)->by($request->ip().'|'.$token);
+        });
+
+        RateLimiter::for('join-invitation-verify-show', function (Request $request) {
+            $token = (string) $request->route('token', '');
+            $verify = (string) $request->route('verifyToken', '');
+
+            return Limit::perMinute(60)->by($request->ip().'|'.$token.'|'.$verify);
+        });
+
+        RateLimiter::for('join-invitation-register-verified', function (Request $request) {
+            $token = (string) $request->route('token', '');
+            $verify = (string) $request->route('verifyToken', '');
+
+            return Limit::perMinute(8)->by($request->ip().'|'.$token.'|'.$verify);
         });
 
         RateLimiter::for('visitor-login-request', function (Request $request) {
             $email = (string) $request->input('email', '');
 
             return Limit::perMinute(6)->by(strtolower($email).'|'.$request->ip());
+        });
+
+        RateLimiter::for('password-forgot', function (Request $request) {
+            $email = (string) $request->input('email', '');
+
+            return Limit::perMinute(5)->by(strtolower($email).'|'.$request->ip());
+        });
+
+        RateLimiter::for('password-reset', function (Request $request) {
+            $token = (string) $request->input('token', '');
+
+            return Limit::perMinute(10)->by($request->ip().'|'.substr($token, 0, 8));
         });
 
         RateLimiter::for('visitor-login-consume', function (Request $request) {
@@ -100,6 +131,18 @@ class AppServiceProvider extends ServiceProvider
             $token = (string) $request->route('token', '');
 
             return Limit::perMinute(120)->by($request->ip().'|'.$token);
+        });
+
+        RateLimiter::for('table-session-ping', function (Request $request) {
+            $user = $request->user();
+
+            return Limit::perMinute(60)->by($user ? (string) $user->id : $request->ip());
+        });
+
+        RateLimiter::for('personify', function (Request $request) {
+            $user = $request->user();
+
+            return Limit::perHour(30)->by($user ? (string) $user->id : $request->ip());
         });
     }
 }

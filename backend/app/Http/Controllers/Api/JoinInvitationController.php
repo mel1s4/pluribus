@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\RegisterViaInvitationRequest;
+use App\Http\Requests\RequestInvitationVerifyEmailRequest;
+use App\Http\Requests\RegisterViaInvitationVerifiedRequest;
 use App\Http\Resources\UserResource;
+use App\Mail\JoinInvitationEmailVerificationMail;
 use App\Models\Community;
 use App\Models\CommunityInvitation;
+use App\Models\CommunityInvitationEmailVerification;
 use App\Models\User;
 use App\Support\LocaleOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class JoinInvitationController extends Controller
@@ -58,9 +63,16 @@ class JoinInvitationController extends Controller
         ]);
     }
 
-    public function register(RegisterViaInvitationRequest $request, string $token): JsonResponse
+    public function requestVerifyEmail(RequestInvitationVerifyEmailRequest $request, string $token): JsonResponse
     {
         if (! $this->tokenLooksValid($token)) {
+            throw ValidationException::withMessages([
+                'token' => [__('This invitation link is not valid.')],
+            ]);
+        }
+
+        $invitation = CommunityInvitation::findByPlainToken($token);
+        if ($invitation === null || ! $invitation->isUsable()) {
             throw ValidationException::withMessages([
                 'token' => [__('This invitation link is not valid.')],
             ]);
@@ -69,7 +81,116 @@ class JoinInvitationController extends Controller
         $validated = $request->validated();
         $email = strtolower(trim($validated['email']));
 
-        $user = DB::transaction(function () use ($token, $validated, $email) {
+        $inviteEmail = $invitation->email !== null && $invitation->email !== ''
+            ? strtolower(trim($invitation->email))
+            : null;
+        if ($inviteEmail !== null && $inviteEmail !== $email) {
+            throw ValidationException::withMessages([
+                'email' => [__('This invitation was sent to a different email address.')],
+            ]);
+        }
+
+        if (User::query()->where('email', $email)->exists()) {
+            return response()->json(['ok' => true]);
+        }
+
+        $invitation->loadMissing('community');
+        $community = $invitation->community;
+
+        CommunityInvitationEmailVerification::query()
+            ->where('community_invitation_id', $invitation->id)
+            ->where('email', $email)
+            ->whereNull('consumed_at')
+            ->delete();
+
+        $plainVerify = Str::random(48);
+        CommunityInvitationEmailVerification::query()->create([
+            'community_invitation_id' => $invitation->id,
+            'email' => $email,
+            'token_hash' => CommunityInvitationEmailVerification::hashPlainToken($plainVerify),
+            'expires_at' => now()->addHours(24),
+            'consumed_at' => null,
+        ]);
+
+        $joinPath = $this->joinPathForCommunity($community);
+        $base = rtrim((string) config('app.frontend_url'), '/');
+        $completionUrl = $base.'/'.$joinPath.'/'.$token.'/verify/'.$plainVerify;
+
+        try {
+            Mail::to($email)->send(new JoinInvitationEmailVerificationMail(
+                $completionUrl,
+                (string) ($community?->name ?? ''),
+            ));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        return response()->json(['ok' => true]);
+    }
+
+    public function showVerify(Request $request, string $token, string $verifyToken): JsonResponse
+    {
+        if (! $this->tokenLooksValid($token) || ! $this->tokenLooksValid($verifyToken)) {
+            return response()->json([
+                'valid' => false,
+                'reason' => 'invalid_token',
+            ]);
+        }
+
+        $invitation = CommunityInvitation::findByPlainToken($token);
+        if ($invitation === null) {
+            return response()->json([
+                'valid' => false,
+                'reason' => 'invalid_token',
+            ]);
+        }
+
+        $invitation->loadMissing('community');
+
+        $reason = $invitation->failureReason();
+        if ($reason !== null) {
+            return response()->json([
+                'valid' => false,
+                'reason' => $reason,
+                'community_name' => $invitation->community?->name,
+                'default_language' => $this->inviteUiLanguage($invitation->community),
+            ]);
+        }
+
+        $verification = CommunityInvitationEmailVerification::findByPlainTokenForInvitation($invitation->id, $verifyToken);
+        if ($verification === null || ! $verification->isUsable()) {
+            return response()->json([
+                'valid' => false,
+                'reason' => 'invalid_verification',
+                'community_name' => $invitation->community?->name,
+                'default_language' => $this->inviteUiLanguage($invitation->community),
+            ]);
+        }
+
+        return response()->json([
+            'valid' => true,
+            'email_verified' => true,
+            'email' => $verification->email,
+            'community_name' => $invitation->community?->name,
+            'default_language' => $this->inviteUiLanguage($invitation->community),
+            'max_uses' => $invitation->max_uses,
+            'uses_count' => $invitation->uses_count,
+            'uses_remaining' => $invitation->usesRemaining(),
+            'locked_email' => true,
+        ]);
+    }
+
+    public function registerVerified(RegisterViaInvitationVerifiedRequest $request, string $token, string $verifyToken): JsonResponse
+    {
+        if (! $this->tokenLooksValid($token) || ! $this->tokenLooksValid($verifyToken)) {
+            throw ValidationException::withMessages([
+                'token' => [__('This invitation link is not valid.')],
+            ]);
+        }
+
+        $validated = $request->validated();
+
+        $user = DB::transaction(function () use ($token, $verifyToken, $validated) {
             $invitation = CommunityInvitation::query()
                 ->where('token_hash', CommunityInvitation::hashPlainToken($token))
                 ->lockForUpdate()
@@ -87,24 +208,36 @@ class JoinInvitationController extends Controller
                 ]);
             }
 
-            $inviteEmail = $invitation->email !== null && $invitation->email !== ''
-                ? strtolower(trim($invitation->email))
-                : null;
-            if ($inviteEmail !== null && $inviteEmail !== $email) {
+            $verification = CommunityInvitationEmailVerification::query()
+                ->where('community_invitation_id', $invitation->id)
+                ->where('token_hash', CommunityInvitationEmailVerification::hashPlainToken($verifyToken))
+                ->lockForUpdate()
+                ->first();
+
+            if ($verification === null || ! $verification->isUsable()) {
                 throw ValidationException::withMessages([
-                    'email' => [__('This invitation was sent to a different email address.')],
+                    'token' => [__('This verification link is not valid or has expired.')],
+                ]);
+            }
+
+            $email = strtolower(trim($verification->email));
+
+            if (User::query()->where('email', $email)->exists()) {
+                throw ValidationException::withMessages([
+                    'email' => [__('An account with this email already exists.')],
                 ]);
             }
 
             $created = User::query()->create([
                 'name' => $validated['name'],
-                'email' => $validated['email'],
+                'email' => $email,
                 'username' => null,
                 'password' => $validated['password'],
                 'user_type' => 'member',
                 'is_root' => false,
             ]);
 
+            $verification->forceFill(['consumed_at' => now()])->save();
             $invitation->increment('uses_count');
 
             return $created;
@@ -116,6 +249,16 @@ class JoinInvitationController extends Controller
         return response()->json([
             'user' => UserResource::make($user->fresh()),
         ], 201);
+    }
+
+    private function joinPathForCommunity(?Community $community): string
+    {
+        if ($community === null) {
+            return 'join';
+        }
+        $code = (string) $community->default_language;
+
+        return in_array($code, LocaleOptions::codes(), true) && $code === 'es' ? 'invitacion' : 'join';
     }
 
     private function tokenLooksValid(string $token): bool

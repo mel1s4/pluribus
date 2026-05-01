@@ -35,3 +35,13 @@ export async function clearCart() {
   await ensureCsrfCookie()
   return apiJson('DELETE', PREFIX)
 }
+
+export async function pingTableSession() {
+  await ensureCsrfCookie()
+  return apiJson('POST', '/api/table-session/ping', {})
+}
+
+export async function clearTableSession() {
+  await ensureCsrfCookie()
+  return apiJson('DELETE', '/api/table-session')
+}

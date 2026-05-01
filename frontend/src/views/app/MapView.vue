@@ -1,15 +1,12 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
+import PlaceMapMiniSitePreview from '../../molecules/PlaceMapMiniSitePreview.vue'
 import { fetchMapDiscovery } from '../../services/contentApi'
 import { fetchCommunity } from '../../services/communityApi.js'
 import { useCommunityPlacesMap } from '../../composables/useCommunityPlacesMap.js'
-
-const route = useRoute()
-const router = useRouter()
 
 const mapContainer = ref(null)
 const mapEntities = ref([])
@@ -46,6 +43,12 @@ const selectedEntity = computed(() => {
   const id = String(selectedEntityId.value || '')
   if (!id) return null
   return mapEntities.value.find((p) => String(p.id) === id) || null
+})
+
+const selectedPlaceForPreview = computed(() => {
+  const e = selectedEntity.value
+  if (!e || e.entity_kind !== 'place') return null
+  return e
 })
 
 const mapApi = useCommunityPlacesMap(mapContainer, {
@@ -195,6 +198,10 @@ onBeforeUnmount(() => {
           <p v-if="selectedEntity.entity_kind === 'post' && selectedEntity.influence_area_type && selectedEntity.influence_area_type !== 'none'" class="page__muted">
             {{ t('map.influenceVisible') }}
           </p>
+          <div v-if="selectedPlaceForPreview" class="map-view__miniSite">
+            <p class="map-view__miniSiteLabel">{{ t('map.placeMiniSitePreview') }}</p>
+            <PlaceMapMiniSitePreview :place="selectedPlaceForPreview" />
+          </div>
         </template>
         <p v-else class="page__muted">{{ t('map.selectPlaceHint') }}</p>
       </aside>
@@ -317,7 +324,7 @@ onBeforeUnmount(() => {
 }
 
 .map-view__details {
-  width: 320px;
+  width: min(100%, 380px);
   border-left: 1px solid var(--border);
   padding: 0.8rem;
   background: var(--bg);
@@ -325,6 +332,19 @@ onBeforeUnmount(() => {
 
 .map-view__close {
   float: right;
+}
+
+.map-view__miniSite {
+  margin-top: 0.85rem;
+}
+
+.map-view__miniSiteLabel {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
 }
 
 .map-view__error {

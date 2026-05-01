@@ -85,6 +85,53 @@ class UserFavoriteApiTest extends TestCase
             ->assertUnprocessable();
     }
 
+    public function test_member_cannot_add_users_favorite(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/user-favorites', ['route_key' => 'users'])
+            ->assertForbidden();
+    }
+
+    public function test_community_admin_can_add_users_favorite(): void
+    {
+        $user = User::factory()->admin()->create();
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/user-favorites', ['route_key' => 'users'])
+            ->assertCreated();
+    }
+
+    public function test_member_list_favorites_drops_users_rows(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+        UserFavorite::query()->create([
+            'user_id' => $user->id,
+            'route_key' => 'users',
+            'sort_order' => 0,
+        ]);
+        UserFavorite::query()->create([
+            'user_id' => $user->id,
+            'route_key' => 'map',
+            'sort_order' => 1,
+        ]);
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->getJson('/api/user-favorites')
+            ->assertOk()
+            ->assertJsonCount(1, 'favorites')
+            ->assertJsonPath('favorites.0.route_key', 'map');
+
+        $this->assertSame(
+            0,
+            UserFavorite::query()->where('user_id', $user->id)->where('route_key', 'users')->count()
+        );
+    }
+
     public function test_reorder_requires_exact_set(): void
     {
         $user = User::factory()->create();

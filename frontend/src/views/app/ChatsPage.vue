@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
@@ -15,8 +15,8 @@ import {
   fetchChats,
   updateChat,
 } from '../../services/chatApi.js'
-import { searchUsers } from '../../services/usersApi.js'
 import { useChatUnread } from '../../composables/useChatUnread.js'
+import { useChatMemberPicker } from '../../composables/useChatMemberPicker.js'
 
 const router = useRouter()
 const { hydrateFromChats, getChatUnread } = useChatUnread()
@@ -28,11 +28,23 @@ const chatDialogRef = ref(null)
 const folderDialogRef = ref(null)
 const chatSaving = ref(false)
 const folderSaving = ref(false)
-const memberSearchQuery = ref('')
-const memberSearchResults = ref([])
-const memberSearchLoading = ref(false)
-const selectedMembers = ref([])
-let memberSearchTimer = null
+
+const {
+  memberSearchQuery,
+  memberSearchResults,
+  memberSearchLoading,
+  selectedMembers,
+  groups,
+  groupsLoading,
+  groupMembersLoadingId,
+  reset: resetMemberPicker,
+  loadGroups,
+  isSelectedMember,
+  toggleMember,
+  removeSelectedMember,
+  onGroupCheckboxChange,
+  isGroupChecked,
+} = useChatMemberPicker({ unknownUserLabel: t('chats.unknownUser') })
 
 const chatForm = reactive({
   title: '',
@@ -115,9 +127,7 @@ function resetChatForm() {
   chatForm.title = ''
   chatForm.icon_emoji = '💬'
   chatForm.icon_bg_color = '#2563eb'
-  memberSearchQuery.value = ''
-  memberSearchResults.value = []
-  selectedMembers.value = []
+  resetMemberPicker()
 }
 
 function resetFolderForm() {
@@ -128,6 +138,7 @@ function resetFolderForm() {
 
 async function openNewChatDialog() {
   resetChatForm()
+  await loadGroups()
   await nextTick()
   chatDialogRef.value?.showModal()
 }
@@ -147,6 +158,7 @@ function onFolderDialogBackdrop(e) {
 }
 
 async function submitNewChat() {
+  if (selectedMembers.value.length === 0) return
   chatSaving.value = true
   const payload = {
     type: 'group',
@@ -252,60 +264,6 @@ function openFolder(folderId) {
   router.push({ name: 'chatFolder', params: { folderId } })
 }
 
-function isSelectedMember(memberId) {
-  return selectedMembers.value.some((member) => Number(member.id) === Number(memberId))
-}
-
-function toggleMember(member) {
-  const id = Number(member.id)
-  if (!Number.isFinite(id)) return
-  if (isSelectedMember(id)) {
-    selectedMembers.value = selectedMembers.value.filter((item) => Number(item.id) !== id)
-    return
-  }
-  selectedMembers.value = [...selectedMembers.value, member]
-}
-
-function removeSelectedMember(memberId) {
-  selectedMembers.value = selectedMembers.value.filter((item) => Number(item.id) !== Number(memberId))
-}
-
-function clearMemberSearchTimer() {
-  if (memberSearchTimer) {
-    clearTimeout(memberSearchTimer)
-    memberSearchTimer = null
-  }
-}
-
-watch(memberSearchQuery, (next) => {
-  clearMemberSearchTimer()
-  const q = String(next || '').trim()
-  if (q.length < 2) {
-    memberSearchResults.value = []
-    memberSearchLoading.value = false
-    return
-  }
-  memberSearchTimer = setTimeout(async () => {
-    memberSearchLoading.value = true
-    const res = await searchUsers(q, 10)
-    memberSearchLoading.value = false
-    if (!res.ok) {
-      memberSearchResults.value = []
-      return
-    }
-    const items = Array.isArray(res.data?.data) ? res.data.data : []
-    memberSearchResults.value = items.map((item) => ({
-      id: item.id,
-      name: item.name || t('chats.unknownUser'),
-      email: item.email || '',
-    }))
-  }, 300)
-})
-
-onBeforeUnmount(() => {
-  clearMemberSearchTimer()
-})
-
 onMounted(load)
 </script>
 
@@ -346,6 +304,41 @@ onMounted(load)
         <div class="chats-page__field">
           <span class="chats-page__label">{{ t('chats.info.editColor') }}</span>
           <ChatColorPicker v-model="chatForm.icon_bg_color" />
+        </div>
+        <div class="chats-page__field chats-page__field--groups">
+          <span id="chats-new-chat-groups-label" class="chats-page__label">{{ t('chats.modal.groupsLabel') }}</span>
+          <p class="chats-page__groupHint">{{ t('chats.modal.groupsHint') }}</p>
+          <p v-if="groupsLoading" class="chats-page__memberHint">
+            {{ t('chats.modal.groupsLoading') }}
+          </p>
+          <p v-else-if="groups.length === 0" class="chats-page__memberHint">
+            {{ t('chats.modal.groupsEmpty') }}
+          </p>
+          <ul
+            v-else
+            class="chats-page__groupList"
+            role="group"
+            aria-labelledby="chats-new-chat-groups-label"
+          >
+            <li v-for="g in groups" :key="g.id" class="chats-page__groupListItem">
+              <label class="chats-page__groupRow">
+                <input
+                  type="checkbox"
+                  class="chats-page__groupCheckbox"
+                  :checked="isGroupChecked(g.id)"
+                  :disabled="groupMembersLoadingId != null && groupMembersLoadingId !== g.id"
+                  @change="onGroupCheckboxChange(g, $event.target.checked)"
+                >
+                <span class="chats-page__groupRowText">
+                  <span class="chats-page__groupName">{{ g.name }}</span>
+                  <span v-if="g.members_count != null" class="chats-page__groupMeta">({{ g.members_count }})</span>
+                </span>
+              </label>
+            </li>
+          </ul>
+          <p v-if="groupMembersLoadingId != null" class="chats-page__memberHint">
+            {{ t('chats.modal.groupMembersLoading') }}
+          </p>
         </div>
         <div class="chats-page__field">
           <label for="chats-new-chat-members">{{ t('chats.modal.membersLabel') }}</label>
@@ -391,12 +384,18 @@ onMounted(load)
               </button>
             </span>
           </div>
+          <p v-else class="chats-page__memberHint">{{ t('chats.modal.membersRequired') }}</p>
         </div>
         <div class="chats-page__dialogActions">
           <button type="button" class="btn btn--secondary btn--sm" @click="chatDialogRef?.close()">
             {{ t('chats.modal.cancel') }}
           </button>
-          <button type="button" class="btn btn--primary btn--sm" :disabled="chatSaving" @click="submitNewChat">
+          <button
+            type="button"
+            class="btn btn--primary btn--sm"
+            :disabled="chatSaving || selectedMembers.length === 0"
+            @click="submitNewChat"
+          >
             {{ t('chats.modal.submitChat') }}
           </button>
         </div>
@@ -733,6 +732,63 @@ html[data-theme='dark'] .chats-page__dialog::backdrop {
   color: inherit;
   font: inherit;
 }
+
+.chats-page__groupHint {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  line-height: 1.35;
+}
+
+.chats-page__groupList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 0.4rem;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.chats-page__groupListItem {
+  border-bottom: 1px solid var(--border);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.chats-page__groupRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.chats-page__groupCheckbox {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.chats-page__groupRowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.chats-page__groupName {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.chats-page__groupMeta {
+  font-size: 0.8rem;
+  opacity: 0.75;
+}
+
 .chats-page__dialogActions {
   display: flex;
   justify-content: flex-end;

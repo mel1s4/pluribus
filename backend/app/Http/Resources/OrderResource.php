@@ -29,6 +29,13 @@ class OrderResource extends JsonResource
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
+            'customer' => $this->when(
+                $this->relationLoaded('user') && $this->user !== null,
+                fn (): array => [
+                    'id' => $this->user->id,
+                    'name' => (string) $this->user->name,
+                ]
+            ),
         ];
     }
 }

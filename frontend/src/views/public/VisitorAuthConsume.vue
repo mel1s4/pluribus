@@ -21,7 +21,7 @@ onMounted(async () => {
     message.value = 'This login link is invalid or expired.'
     return
   }
-  setSessionFromLoginUser(data.user)
+  setSessionFromLoginUser(data.user, data.personification)
   state.value = 'success'
   await router.replace('/dashboard')
 })

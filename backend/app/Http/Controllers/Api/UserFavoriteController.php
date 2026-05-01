@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Models\UserFavorite;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,6 +16,7 @@ class UserFavoriteController extends Controller
     public const ALLOWED_ROUTE_KEYS = [
         'dashboard',
         'users',
+        'support-personification',
         'community-settings',
         'chats',
         'folders',
@@ -34,6 +36,24 @@ class UserFavoriteController extends Controller
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        if (! $user->can('users.view')) {
+            UserFavorite::query()
+                ->where('user_id', $user->id)
+                ->where('route_key', 'users')
+                ->delete();
+        }
+
+        if (! $user->can('users.personify')) {
+            UserFavorite::query()
+                ->where('user_id', $user->id)
+                ->where('route_key', 'support-personification')
+                ->delete();
+        }
+
         $rows = UserFavorite::query()
             ->where('user_id', $user->id)
             ->orderBy('sort_order')
@@ -55,7 +75,19 @@ class UserFavoriteController extends Controller
         ]);
 
         $user = $request->user();
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
         $routeKey = $validated['route_key'];
+
+        if ($routeKey === 'users' && ! $user->can('users.view')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        if ($routeKey === 'support-personification' && ! $user->can('users.personify')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
 
         $existing = UserFavorite::query()
             ->where('user_id', $user->id)

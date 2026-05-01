@@ -49,6 +49,22 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  showPersonify: {
+    type: Boolean,
+    default: false,
+  },
+  personifyTo: {
+    type: Object,
+    default: null,
+  },
+  personifyDisabled: {
+    type: Boolean,
+    default: false,
+  },
+  personifyLabel: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['delete'])
@@ -161,15 +177,29 @@ const initials = computed(() => {
 
     <div v-if="showActions" class="user-card__actions">
       <RouterLink
+        v-if="showPersonify && personifyTo && !personifyDisabled"
+        class="user-card__personifyBtn"
+        :to="personifyTo"
+      >
+        {{ personifyLabel }}
+      </RouterLink>
+      <span
+        v-else-if="showPersonify && personifyDisabled"
+        class="user-card__personifyBtn user-card__personifyBtn--disabled"
+        aria-disabled="true"
+      >
+        {{ personifyLabel }}
+      </span>
+      <RouterLink
         v-if="showEdit && editTo && !editDisabled"
-        class="user-card__edit"
+        class="user-card__editBtn"
         :to="editTo"
       >
         {{ editLabel }}
       </RouterLink>
       <span
         v-else-if="showEdit"
-        class="user-card__editMuted"
+        class="user-card__editBtn user-card__editBtn--disabled"
         aria-disabled="true"
       >
         {{ editLabel }}
@@ -315,17 +345,49 @@ const initials = computed(() => {
   border-top: 1px solid var(--border);
 }
 
-.user-card__edit {
+.user-card__editBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background-color: #e5e7eb;
+  color: #111827;
+  text-decoration: none;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.user-card__editBtn:hover:not(.user-card__editBtn--disabled) {
+  background-color: #d1d5db;
+  border-color: #d1d5db;
+}
+.user-card__personifyBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.45rem;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #1d4ed8;
   text-decoration: none;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, #b45309 12%, var(--bg));
+  color: inherit;
 }
-.user-card__edit:hover {
-  text-decoration: underline;
+
+.user-card__personifyBtn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
-.user-card__editMuted {
-  font-size: 0.85rem;
-  color: var(--muted, #9ca3af);
+
+.user-card__editBtn--disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  border-color: var(--border, #e5e7eb);
+  background-color: color-mix(in srgb, var(--border, #e5e7eb) 80%, var(--bg, #fff));
+  color: var(--muted, #6b7280);
 }
 </style>

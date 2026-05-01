@@ -14,6 +14,40 @@ export default {
     'nav.openNavigation': 'Abrir navegación',
     'nav.closeNavigation': 'Cerrar navegación',
     'nav.sidebar': 'Navegación',
+    'nav.supportPersonification': 'Vista de soporte',
+
+    'personification.pageTitle': 'Personificación de usuario',
+    'personification.pageIntro':
+      'Busca un miembro por correo o nombre de usuario exacto, luego inicia una sesión de soporte limitada en el tiempo. Debes volver a ingresar tu contraseña. Todas las sesiones quedan auditadas.',
+    'personification.signedInAs': 'Sesión iniciada como:',
+    'personification.staffAccountLabel': 'Cuenta de personal:',
+    'personification.viewingAsLabel': 'Viendo la app como:',
+    'personification.personifiedModeHint':
+      'Hay una sesión de soporte activa como otro miembro. Los formularios están ocultos porque la sesión del navegador actúa como ese miembro. Usa “Detener personificación” en la franja superior y vuelve aquí si necesitas otra sesión.',
+    'personification.resolveHeading': 'Buscar cuenta',
+    'personification.resolveHint': 'Ingresa un correo o un nombre de usuario (no ambos).',
+    'personification.fieldEmail': 'Correo (coincidencia exacta)',
+    'personification.fieldUsername': 'Nombre de usuario',
+    'personification.resolveButton': 'Buscar',
+    'personification.resolveNeedOne': 'Ingresa un correo o un nombre de usuario.',
+    'personification.resolveError': 'No se pudo resolver el usuario (HTTP {status}).',
+    'personification.resolvedAs': 'Cuenta encontrada:',
+    'personification.startHeading': 'Iniciar personificación',
+    'personification.fieldTargetId': 'ID de usuario objetivo',
+    'personification.fieldReason': 'Motivo (obligatorio, específico)',
+    'personification.fieldTicket': 'Ticket / referencia (opcional)',
+    'personification.fieldYourPassword': 'Tu contraseña (confirmación)',
+    'personification.startButton': 'Iniciar personificación',
+    'personification.invalidTargetId': 'Ingresa un ID de usuario numérico válido.',
+    'personification.passwordRequired': 'Ingresa tu contraseña para confirmar.',
+    'personification.startError': 'No se pudo iniciar la personificación (HTTP {status}).',
+    'personification.bannerText':
+      'Vista de soporte: estás navegando como {target}. Cuenta de personal: {actor}.',
+    'personification.until': 'La sesión termina antes de:',
+    'personification.stop': 'Detener personificación',
+    'personification.stopError': 'No se pudo detener (HTTP {status}).',
+    'users.personifyCard': 'Vista de soporte',
+
     'header.searchPlaceholder': 'Buscar…',
     'header.searchLoading': 'Buscando…',
     'header.searchError': 'La busqueda fallo. Intentalo de nuevo.',
@@ -28,11 +62,60 @@ export default {
     'publicNav.legal': 'Legal',
 
     'contact.title': 'Contacto',
-    'contact.body': 'Puedes contactarnos por los canales que figuran aquí. Esta página es un marcador de posición.',
+    'contact.intro':
+      '¿Dudas sobre este espacio, tu cuenta o cómo funciona todo? Usa las ' +
+      'opciones de abajo. Cada comunidad puede gestionar el soporte de forma ' +
+      'distinta.',
+    'contact.sectionGeneral': 'Consultas generales',
+    'contact.generalBody':
+      'Si tu instalación publica un correo de soporte, aparece abajo. Si no, ' +
+      'inicia sesión y usa las herramientas de la app o pregunta a quien ' +
+      'organiza la comunidad.',
+    'contact.emailLinkLabel': 'Correo de soporte',
+    'contact.sectionCommunity': 'Tu comunidad',
+    'contact.communityBody':
+      'Este sitio está identificado como «{name}». Para normas, disputas o ' +
+      'reglas locales, contacta a quien gestiona esa comunidad.',
+    'contact.sectionAbuse': 'Seguridad e incidencias',
+    'contact.abuseBody':
+      'Para denunciar acoso, contenido ilegal o un problema de seguridad, ' +
+      'habla con el operador de tu comunidad o usa el correo indicado cuando ' +
+      'exista. En emergencias graves, acude a las autoridades locales.',
 
     'legal.title': 'Legal',
-    'legal.body':
-      'Términos, privacidad y otra información legal aparecerán aquí. Esta página es un marcador de posición.',
+    'legal.intro':
+      'Esta página resume cómo se usa el software. No es asesoramiento legal. ' +
+      'Los textos vinculantes deben publicarlos quien opere tu comunidad.',
+    'legal.disclaimer':
+      'Nada de esto sustituye unos Términos de uso o una Política de privacidad ' +
+      'revisados por un abogado para tu organización y jurisdicción.',
+    'legal.navTerms': 'Términos (borrador)',
+    'legal.navPrivacy': 'Privacidad (borrador)',
+    'legal.navCookies': 'Cookies (borrador)',
+    'legal.sectionTermsTitle': 'Términos de uso',
+    'legal.sectionTermsBody':
+      'El operador de cada instalación debería publicar reglas sobre cuentas, ' +
+      'uso aceptable y responsabilidad. Hasta entonces, considera el software ' +
+      'tal cual para los miembros de esa comunidad.',
+    'legal.sectionPrivacyTitle': 'Privacidad',
+    'legal.sectionPrivacyBody':
+      'Las categorías de datos, fines, subencargados, conservación y derechos ' +
+      'dependen de cómo tu operador configure y aloje el servicio. Pídeles el ' +
+      'aviso de privacidad definitivo.',
+    'legal.sectionCookiesTitle': 'Cookies y almacenamiento local',
+    'legal.sectionCookiesBody':
+      'La app usa el navegador para mantener la sesión y preferencias (por ' +
+      'ejemplo el tema). Una política de cookies completa debe listar cada ' +
+      'etiqueta y tercero que active tu operador.',
+    'legal.softwareContextTitle': 'Qué puede implicar esta aplicación',
+    'legal.softwareContextIntro':
+      'Las funciones varían según la instalación, pero suelen incluir:',
+    'legal.ctxAccounts': 'Cuentas, perfiles y autenticación.',
+    'legal.ctxMessaging': 'Chats y notificaciones entre miembros.',
+    'legal.ctxPlaces': 'Mapas, lugares y funciones relacionadas con ubicación.',
+    'legal.ctxCommerce': 'Ofertas, carritos y pedidos si el comercio está activo.',
+    'legal.contactLink': 'Contacto',
+    'legal.contactHint': 'Para datos de contacto del operador, ve la página de contacto.',
 
     'quickNav.chats': 'Chats',
     'quickNav.map': 'Mapa',
@@ -52,6 +135,40 @@ export default {
 
     'home.title': 'Inicio',
     'home.welcome': 'Te damos la bienvenida a {name}.',
+    'home.heroTitle': 'Tu comunidad, un solo espacio sereno.',
+    'home.heroSubtitle':
+      'Pluribus une flujos de chat familiares con lugares, ofertas, tareas y ' +
+      'más—para que {name} coordine sin perder el hilo.',
+    'home.ctaSignIn': 'Iniciar sesión',
+    'home.ctaSecondary': 'Cómo funciona',
+    'home.valuePropsTitle': 'Por qué encaja este modelo',
+    'home.valueProp1Title': 'Coordinación desde el chat',
+    'home.valueProp1Body':
+      'Parte de conversaciones que ya entiendes y salta al mapa, tareas o ' +
+      'tienda cuando haga falta.',
+    'home.valueProp2Title': 'Lugares y comercio',
+    'home.valueProp2Body':
+      'Muestra ofertas, necesidades y pedidos junto a ubicaciones reales para ' +
+      'que las decisiones tengan contexto.',
+    'home.valueProp3Title': 'Multilingüe, claro u oscuro',
+    'home.valueProp3Body':
+      'Trabaja en tu idioma y tema para que la herramienta pase desapercibida.',
+    'home.howTitle': 'Cómo funciona',
+    'home.howStep1Title': 'Únete a tu comunidad',
+    'home.howStep1Body':
+      'Entra con la cuenta que te hayan dado los organizadores. La marca ' +
+      'refleja la comunidad a la que perteneces.',
+    'home.howStep2Title': 'Pasa del mapa al chat y a las tareas',
+    'home.howStep2Body':
+      'Usa la barra lateral para abrir chats, mapa, calendario, carpetas y ' +
+      'otros módulos que tu instalación active.',
+    'home.howStep3Title': 'Mantén el comercio junto a la conversación',
+    'home.howStep3Body':
+      'Con tiendas activas, ofertas y carritos siguen ligados a miembros y ' +
+      'lugares con los que ya trabajas.',
+
+    'publicFooter.copyright': '© {year} {name}.',
+    'publicFooter.tagline': 'Pluribus — mundo de ideas.',
 
     'login.title': 'Iniciar sesión',
     'login.email': 'Correo o usuario',
@@ -62,11 +179,52 @@ export default {
     'login.rememberMe': 'Recuérdame',
     'login.errorInvalid': 'Las credenciales no coinciden con nuestros registros.',
     'login.errorRateLimit': 'Demasiados intentos. Inténtalo de nuevo en breve.',
+    'login.errorTimeout': 'La solicitud de inicio de sesión tardó demasiado. Inténtalo de nuevo.',
     'login.errorGeneric': 'Algo salió mal. Inténtalo de nuevo.',
     'login.sessionEndedTitle': 'Sesión cerrada',
     'login.sessionEndedBody':
       'Tu sesión ha finalizado. Vuelve a iniciar sesión para continuar.',
     'login.sessionEndedDismiss': 'Entendido',
+    'login.forgotPasswordLink': '¿Olvidaste tu contraseña?',
+    'login.passwordChangedTitle': 'Contraseña actualizada',
+    'login.passwordChangedBody':
+      'Tu contraseña fue cambiada y todas las demás sesiones se cerraron. Inicia sesión con tu nueva contraseña.',
+
+    'passwordReset.requestTitle': 'Recuperar contraseña',
+    'passwordReset.requestHint':
+      'Ingresa el correo asociado a tu cuenta y te enviaremos un enlace para restablecer tu contraseña.',
+    'passwordReset.email': 'Correo electrónico',
+    'passwordReset.emailPlaceholder': 'tu@ejemplo.com',
+    'passwordReset.requestSubmit': 'Enviar enlace',
+    'passwordReset.requestSent':
+      'Si una cuenta coincide con ese correo, en breve recibirás un enlace para restablecer tu contraseña.',
+    'passwordReset.requestSentTip':
+      'El enlace caduca en 60 minutos y solo puede usarse una vez. Revisa tu carpeta de spam si no lo ves.',
+    'passwordReset.backToLogin': 'Volver al inicio de sesión',
+    'passwordReset.resetTitle': 'Elige una nueva contraseña',
+    'passwordReset.resetHint':
+      'Elige una contraseña fuerte que no uses en ningún otro sitio.',
+    'passwordReset.newPassword': 'Nueva contraseña',
+    'passwordReset.newPasswordPlaceholder': 'Al menos 12 caracteres',
+    'passwordReset.confirmPassword': 'Confirma la nueva contraseña',
+    'passwordReset.confirmPasswordPlaceholder': 'Vuelve a escribir tu contraseña',
+    'passwordReset.resetSubmit': 'Actualizar contraseña',
+    'passwordReset.errorRateLimit':
+      'Demasiados intentos. Inténtalo de nuevo en unos momentos.',
+    'passwordReset.errorGeneric': 'Algo salió mal. Inténtalo de nuevo.',
+    'passwordReset.errorInvalidLink':
+      'Este enlace de restablecimiento es inválido o ha caducado. Solicita uno nuevo.',
+    'passwordReset.rulesTitle': 'Requisitos de la contraseña',
+    'passwordReset.rule.length': 'Al menos 12 caracteres',
+    'passwordReset.rule.case': 'Letras mayúsculas y minúsculas',
+    'passwordReset.rule.number': 'Al menos un número',
+    'passwordReset.rule.symbol': 'Al menos un símbolo',
+    'passwordReset.rule.match': 'Las dos contraseñas coinciden',
+    'passwordReset.strength.empty': 'Introduce una contraseña',
+    'passwordReset.strength.veryWeak': 'Muy débil',
+    'passwordReset.strength.weak': 'Débil',
+    'passwordReset.strength.good': 'Buena',
+    'passwordReset.strength.strong': 'Fuerte',
 
     'input.showPassword': 'Mostrar contraseña',
     'input.hidePassword': 'Ocultar contraseña',
@@ -169,6 +327,13 @@ export default {
     'chats.modal.membersPlaceholder': 'Busca miembros por nombre o correo…',
     'chats.modal.membersSearching': 'Buscando miembros…',
     'chats.modal.membersEmpty': 'No se encontraron miembros.',
+    'chats.modal.membersRequired':
+      'Elige al menos otro miembro (búsqueda o un grupo) para incluirlo y que pueda ver este chat.',
+    'chats.modal.groupsLabel': 'Añadir desde grupos',
+    'chats.modal.groupsHint': 'Selecciona un grupo para añadir a todos sus miembros. Puedes combinar grupos y búsqueda individual.',
+    'chats.modal.groupsLoading': 'Cargando grupos…',
+    'chats.modal.groupsEmpty': 'Aún no hay grupos. Crea grupos en Mis grupos.',
+    'chats.modal.groupMembersLoading': 'Cargando miembros del grupo…',
     'chats.modal.renameChatTitle': 'Renombrar chat',
     'chats.modal.editChatTitle': 'Editar chat',
     'map.title': 'Mapa',
@@ -194,6 +359,33 @@ export default {
     'map.geolocateDenied': 'Se denegó el acceso a la ubicación. Activa los permisos e inténtalo de nuevo.',
     'map.geolocateUnavailable': 'No se pudo determinar tu ubicación. Inténtalo de nuevo.',
     'map.geolocateTimeout': 'La solicitud de ubicación tardó demasiado. Inténtalo de nuevo.',
+    'map.placeMiniSitePreview': 'Vista previa del mini sitio',
+    'map.openMiniSiteNewTab': 'Abrir mini sitio en una pestaña nueva',
+    'map.placeStatusOpen': 'Abierto ahora',
+    'map.placeStatusClosed': 'Cerrado ahora',
+    'map.placeStatusClosedToday': 'Cerrado hoy',
+    'map.placeStatusNoHours': 'Sin horario publicado',
+    'map.placeTodayHours': 'Hoy: {hours}',
+    'map.placeNoPublicMiniSite': 'Este lugar aún no tiene un enlace público al mini sitio.',
+    'map.placeSeePhotos': 'Ver fotos',
+    'map.placeTabOverview': 'Resumen',
+    'map.placeTabHours': 'Horario',
+    'map.placeActionSite': 'Mini sitio',
+    'map.placeActionDirections': 'Cómo llegar',
+    'map.placeActionShare': 'Compartir',
+    'map.placeShareCopied': 'Enlace copiado al portapapeles.',
+    'map.placeCategoryFallback': 'Lugar',
+    'map.placeOpenInMaps': 'Abrir en Google Maps',
+    'map.placeSeeFullHours': 'Ver horario completo',
+    'map.placeBackOverview': '← Resumen',
+    'map.placeHoursLineOpen': 'Abierto · Cierra a las {time}',
+    'map.placeHoursLineClosedLaterToday': 'Cerrado · Abre a las {time}',
+    'map.placeHoursLineClosedTomorrow': 'Cerrado · Abre mañana a las {time}',
+    'map.placeHoursLineClosedFuture': 'Cerrado · Abre el {weekday} a las {time}',
+    'map.placeHoursLineClosedTodayShort': 'Cerrado hoy',
+    'map.placeHoursLineClosedSimple': 'Cerrado',
+    'map.placeHoursLineNoHours': 'Sin horario publicado',
+    'map.placeHighlights': 'Destacados',
 
     'groups.title': 'Mis grupos',
     'groups.intro': 'Crea y gestiona grupos que comparten carpetas, calendarios, tareas y publicaciones.',
@@ -439,6 +631,20 @@ export default {
     'myPlaces.tabEdit': 'Editar',
     'myPlaces.tabOffers': 'Ofertas',
     'myPlaces.tabOrders': 'Pedidos',
+    'myPlaces.tableOpenDetail': 'Abrir mesa',
+    'myPlaces.tableDetailTitle': 'Mesa',
+    'myPlaces.tableDetailBack': 'Volver a mesas',
+    'myPlaces.tableDetailLoadError': 'No se pudo cargar la mesa (HTTP {status}).',
+    'myPlaces.tableInviteHeading': 'Enlace de invitación',
+    'myPlaces.tableInviteHint':
+      'Crea un enlace nuevo o rota para invalidar los códigos QR anteriores. Copia la URL para compartir.',
+    'myPlaces.tableInviteCreate': 'Crear enlace',
+    'myPlaces.tableInviteRotate': 'Rotar enlace',
+    'myPlaces.tableSeatingsHeading': 'Clientes en esta mesa',
+    'myPlaces.tableSeatingsEmpty': 'No hay entradas recientes en esta mesa.',
+    'myPlaces.tableOrdersHeading': 'Pedidos de esta mesa',
+    'myPlaces.tableReassignLabel': 'Asignar línea a',
+    'myPlaces.tableReassignNone': 'Sin mesa',
     'myPlaces.tabRequirements': 'Necesidades',
     'myPlaces.tabBrand': 'Información de marca',
     'myPlaces.brandTitle': 'Enlaces de marca',
@@ -730,6 +936,20 @@ export default {
     'orders.status.ready': 'Listo',
     'orders.status.completed': 'Completado',
     'orders.status.cancelled': 'Cancelado',
+    'orders.liveViewTitle': 'Pedidos en vivo',
+    'orders.liveRealtimeOn': 'Actualizaciones en vivo',
+    'orders.liveViewExit': 'Salir',
+    'orders.liveViewOpen': 'Abrir vista en vivo',
+    'orders.filtersHeading': 'Filtros',
+    'orders.filterOffers': 'Productos',
+    'orders.filterTags': 'Etiquetas (separadas por coma)',
+    'orders.filterStatuses': 'Estados',
+    'orders.filterClear': 'Quitar filtros',
+    'orders.filterApply': 'Aplicar filtros',
+    'orders.placeOrderDetailLoadError': 'No se pudo cargar este pedido (HTTP {status}).',
+    'orders.print': 'Imprimir',
+    'orders.backToPlaceOrders': 'Volver a pedidos del lugar',
+    'orders.openOrderDetailAria': 'Abrir pedido {number}',
 
     'notifications.title': 'Notificaciones',
     'notifications.placeholder': 'Las notificaciones aparecerán aquí.',
@@ -791,6 +1011,8 @@ export default {
     'places.storefrontOffersHeading': 'Ofertas',
     'places.storefrontRequirementsHeading': 'Lo que necesitamos',
     'places.storefrontBack': 'Volver',
+    'places.tableSeatedBanner': 'Estás en la mesa {table}.',
+    'places.tableLeave': 'Salir de la mesa',
     'places.storefrontPrivateError':
       'Este lugar no es público o el enlace no es correcto. Inicia sesión con una cuenta que pueda verlo.',
     'places.storefrontNotFound': 'No encontramos un lugar en esta dirección.',
@@ -850,6 +1072,19 @@ export default {
     'users.loadingOne': 'Cargando usuario…',
     'users.fieldPasswordNew': 'Nueva contraseña (opcional)',
     'users.passwordOptionalHint': 'Déjala en blanco para conservar la contraseña actual.',
+    'users.fieldVotingId': 'Folio de Membresía (opcional)',
+    'users.fieldVotingIdHint':
+      'Exactamente seis dígitos; déjelo en blanco para borrar. Solo quienes pueden editar miembros pueden cambiarlo.',
+    'users.votingIdInvalid': 'Introduce exactamente seis dígitos o déjelo en blanco.',
+    'users.votingIdHistoryHeading': 'Historial de cambios del folio de membresía',
+    'users.votingIdHistoryEmpty': 'Aún no hay cambios registrados.',
+    'users.votingIdHistoryLoadError': 'No se pudo cargar el historial (HTTP {status}).',
+    'users.votingIdColWhen': 'Cuándo',
+    'users.votingIdColFrom': 'Anterior',
+    'users.votingIdColTo': 'Nuevo',
+    'users.votingIdColBy': 'Quién',
+    'users.votingIdDash': '—',
+    'users.loadingAudits': 'Cargando historial…',
     'users.fieldUserType': 'Tipo de usuario',
     'users.fieldIsRoot': 'Cuenta root',
     'users.colActions': 'Acciones',
@@ -963,10 +1198,15 @@ export default {
     'users.invitationsStatusInactive': 'Inactiva',
 
     'joinInvitation.title': 'Invitación',
-    'joinInvitation.lead': 'Crea tu cuenta de miembro con esta invitación.',
+    'joinInvitation.lead':
+      'Introduce tu correo. Te enviaremos un enlace para confirmarlo; solo entonces podrás terminar de crear tu cuenta.',
+    'joinInvitation.leadVerify':
+      'Tu correo está confirmado. Elige tu nombre y contraseña para terminar de crear tu cuenta.',
     'joinInvitation.tokenLabel': 'Referencia de la invitación:',
     'joinInvitation.loading': 'Comprobando la invitación…',
+    'joinInvitation.verifyLoading': 'Comprobando tu enlace de confirmación…',
     'joinInvitation.loadError': 'No se pudo verificar la invitación (HTTP {status}).',
+    'joinInvitation.verifyLoadError': 'No se pudo verificar tu enlace (HTTP {status}).',
     'joinInvitation.errorNoToken': 'Falta un token de invitación válido en esta página.',
     'joinInvitation.invalidHelp': 'Pide a un administrador un enlace nuevo si aún necesitas acceso.',
     'joinInvitation.communityLabel': 'Comunidad:',
@@ -974,8 +1214,14 @@ export default {
     'joinInvitation.usesRemaining': 'Altas restantes con este enlace: {n}.',
     'joinInvitation.fieldPasswordConfirm': 'Confirmar contraseña',
     'joinInvitation.createAccount': 'Crear cuenta',
+    'joinInvitation.sendVerificationEmail': 'Enviar correo de confirmación',
+    'joinInvitation.checkInbox':
+      'Si esa dirección puede recibir nuestros correos, te hemos enviado un enlace de confirmación. Ábrelo para seguir con el registro.',
+    'joinInvitation.verifyEmailError': 'No se pudo enviar el correo de confirmación (HTTP {status}).',
     'joinInvitation.registerError': 'No se pudo crear tu cuenta (HTTP {status}).',
     'joinInvitation.reason.invalid_token': 'Este enlace de invitación no es válido.',
+    'joinInvitation.reason.invalid_verification':
+      'Este enlace de confirmación no es válido o ha caducado. Solicita un correo nuevo desde la página de la invitación.',
     'joinInvitation.reason.expired': 'Esta invitación ha caducado.',
     'joinInvitation.reason.revoked': 'Esta invitación ha sido revocada.',
     'joinInvitation.reason.exhausted': 'Esta invitación ya se ha usado el número máximo de veces.',
@@ -1109,4 +1355,6 @@ export default {
     'folders.taskDescription': 'Descripción',
     'folders.taskDescriptionPlaceholder': 'Ingresa la descripción de la tarea (opcional)',
     'folders.create': 'Crear',
+
+    'votingId.registeredBadgeAria': 'Miembro con folio de membresía registrado',
 }

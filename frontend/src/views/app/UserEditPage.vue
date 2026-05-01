@@ -10,7 +10,7 @@ import ProfileStringListEditor from '../../molecules/ProfileStringListEditor.vue
 import { hasCapability } from '../../composables/useCapabilities'
 import { resolveSession, sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
-import { fetchUser, updateUser, userApiErrorMessage } from '../../services/usersApi.js'
+import { fetchUser, fetchVotingIdAudits, updateUser, userApiErrorMessage } from '../../services/usersApi.js'
 
 const ASSIGNABLE_USER_TYPES = ['admin', 'member', 'developer']
 
@@ -34,6 +34,7 @@ const form = reactive({
   contact_emails: [],
   aliases: [],
   external_links: [],
+  voting_id: '',
 })
 
 const loadError = ref('')
@@ -41,8 +42,15 @@ const loading = ref(true)
 const saveError = ref('')
 const saveLoading = ref(false)
 const usernameFieldError = ref('')
+const votingIdFieldError = ref('')
 
 const assignTypes = computed(() => hasCapability('users.assign_types'))
+
+const auditRows = ref([])
+const auditMeta = ref(null)
+const auditsLoading = ref(false)
+const auditsError = ref('')
+const auditPage = ref(1)
 
 const userId = computed(() => {
   const raw = route.params.userId
@@ -101,6 +109,61 @@ async function load() {
   form.contact_emails = cloneStringList(u.contact_emails)
   form.aliases = cloneStringList(u.aliases)
   form.external_links = cloneExternalLinks(u.external_links)
+  form.voting_id = u.voting_id != null && u.voting_id !== undefined ? String(u.voting_id) : ''
+  auditPage.value = 1
+  await loadAudits()
+}
+
+async function loadAudits() {
+  const id = userId.value
+  if (!id) return
+  auditsLoading.value = true
+  auditsError.value = ''
+  const { ok, status, data } = await fetchVotingIdAudits(id, auditPage.value, 20)
+  auditsLoading.value = false
+  if (!ok) {
+    auditRows.value = []
+    auditMeta.value = null
+    auditsError.value = t('users.votingIdHistoryLoadError').replace('{status}', String(status))
+    return
+  }
+  auditRows.value = Array.isArray(data?.data) ? data.data : []
+  auditMeta.value = data?.meta && typeof data.meta === 'object' ? data.meta : null
+}
+
+function formatAuditWhen(iso) {
+  if (typeof iso !== 'string' || !iso) return t('users.votingIdDash')
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return t('users.votingIdDash')
+  return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+function auditOldNew(val) {
+  if (val == null || val === '') return t('users.votingIdDash')
+  return String(val)
+}
+
+function auditActorName(row) {
+  const by = row?.changed_by
+  if (by && typeof by === 'object' && typeof by.name === 'string' && by.name.trim()) {
+    return by.name.trim()
+  }
+  return t('users.votingIdDash')
+}
+
+async function goAuditPrev() {
+  if (auditMeta.value && auditPage.value > 1) {
+    auditPage.value -= 1
+    await loadAudits()
+  }
+}
+
+async function goAuditNext() {
+  const m = auditMeta.value
+  if (m && typeof m.last_page === 'number' && auditPage.value < m.last_page) {
+    auditPage.value += 1
+    await loadAudits()
+  }
 }
 
 watch(userId, () => {
@@ -111,6 +174,13 @@ watch(
   () => form.username,
   () => {
     usernameFieldError.value = ''
+  },
+)
+
+watch(
+  () => form.voting_id,
+  () => {
+    votingIdFieldError.value = ''
   },
 )
 
@@ -140,11 +210,36 @@ function setUsernameFieldErrorFromResponse(data, status) {
   }
 }
 
+function setVotingIdFieldErrorFromResponse(data, status) {
+  votingIdFieldError.value = ''
+  if (status !== 422 || !data || typeof data !== 'object') {
+    return
+  }
+  const errors = data.errors
+  if (!errors || typeof errors !== 'object') {
+    return
+  }
+  const list = errors.voting_id
+  if (Array.isArray(list) && list.length > 0) {
+    votingIdFieldError.value = list.map(String).join(' ')
+  }
+}
+
 async function onSubmit() {
   const id = userId.value
   if (!id) return
   saveError.value = ''
   usernameFieldError.value = ''
+  votingIdFieldError.value = ''
+  const vid = String(form.voting_id ?? '').trim()
+  if (vid.length > 0 && vid.length !== 6) {
+    votingIdFieldError.value = t('users.votingIdInvalid')
+    return
+  }
+  if (vid.length > 0 && !/^[0-9]{6}$/.test(vid)) {
+    votingIdFieldError.value = t('users.votingIdInvalid')
+    return
+  }
   saveLoading.value = true
   const body = {
     name: form.name.trim(),
@@ -154,6 +249,7 @@ async function onSubmit() {
     contact_emails: form.contact_emails,
     aliases: form.aliases,
     external_links: form.external_links,
+    voting_id: vid === '' ? null : vid,
   }
   if (form.password.trim()) {
     body.password = form.password
@@ -170,6 +266,7 @@ async function onSubmit() {
   saveLoading.value = false
   if (!ok) {
     setUsernameFieldErrorFromResponse(data, status)
+    setVotingIdFieldErrorFromResponse(data, status)
     saveError.value = userApiErrorMessage(data, status, t('users.saveError'))
     return
   }
@@ -231,6 +328,17 @@ function goBack() {
             />
             <p v-if="usernameFieldError" class="user-edit-page__fieldError" role="alert">
               {{ usernameFieldError }}
+            </p>
+            <Input
+              v-model="form.voting_id"
+              name="edit-voting-id"
+              type="text"
+              autocomplete="off"
+              :label="t('users.fieldVotingId')"
+            />
+            <p class="user-edit-page__hint">{{ t('users.fieldVotingIdHint') }}</p>
+            <p v-if="votingIdFieldError" class="user-edit-page__fieldError" role="alert">
+              {{ votingIdFieldError }}
             </p>
             <Input
               v-model="form.password"
@@ -303,6 +411,65 @@ function goBack() {
             {{ t('users.saveUser') }}
           </Button>
         </form>
+      </Card>
+
+      <Card v-if="!loading && !loadError" class="user-edit-page__panel user-edit-page__panel--history">
+        <h2 class="user-edit-page__subheading">{{ t('users.votingIdHistoryHeading') }}</h2>
+        <p v-if="auditsLoading" class="user-edit-page__muted">{{ t('users.loadingAudits') }}</p>
+        <p v-else-if="auditsError" class="user-edit-page__error" role="alert">{{ auditsError }}</p>
+        <template v-else>
+          <p v-if="!auditRows.length" class="user-edit-page__muted">{{ t('users.votingIdHistoryEmpty') }}</p>
+          <div v-else class="user-edit-page__auditTableWrap">
+            <table class="user-edit-page__auditTable">
+              <thead>
+                <tr>
+                  <th scope="col">{{ t('users.votingIdColWhen') }}</th>
+                  <th scope="col">{{ t('users.votingIdColFrom') }}</th>
+                  <th scope="col">{{ t('users.votingIdColTo') }}</th>
+                  <th scope="col">{{ t('users.votingIdColBy') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="row in auditRows" :key="row.id">
+                  <td>{{ formatAuditWhen(row.created_at) }}</td>
+                  <td>{{ auditOldNew(row.old_voting_id) }}</td>
+                  <td>{{ auditOldNew(row.new_voting_id) }}</td>
+                  <td>{{ auditActorName(row) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div
+            v-if="auditMeta && auditMeta.last_page > 1"
+            class="user-edit-page__auditPager"
+          >
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="auditPage <= 1 || auditsLoading"
+              @click="goAuditPrev"
+            >
+              {{ t('users.prev') }}
+            </Button>
+            <span class="user-edit-page__auditPageInfo">
+              {{
+                t('users.pageInfo')
+                  .replace('{current}', String(auditMeta.current_page))
+                  .replace('{last}', String(auditMeta.last_page))
+              }}
+            </span>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              :disabled="auditPage >= auditMeta.last_page || auditsLoading"
+              @click="goAuditNext"
+            >
+              {{ t('users.next') }}
+            </Button>
+          </div>
+        </template>
       </Card>
     </template>
   </section>
@@ -410,5 +577,46 @@ function goBack() {
   margin: -0.35rem 0 0;
   color: #b91c1c;
   font-size: 0.85rem;
+}
+
+.user-edit-page__panel--history {
+  margin-top: 0.5rem;
+}
+
+.user-edit-page__auditTableWrap {
+  overflow-x: auto;
+  margin-top: 0.5rem;
+}
+
+.user-edit-page__auditTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.user-edit-page__auditTable th,
+.user-edit-page__auditTable td {
+  border: 1px solid var(--border);
+  padding: 0.45rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.user-edit-page__auditTable th {
+  background: color-mix(in srgb, var(--border) 35%, transparent);
+  font-weight: 600;
+}
+
+.user-edit-page__auditPager {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.user-edit-page__auditPageInfo {
+  font-size: 0.88rem;
+  opacity: 0.85;
 }
 </style>

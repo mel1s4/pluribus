@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { t } from '../i18n/i18n'
+import { ApiTimeoutError } from '../services/api'
 import Card from '../atoms/Card.vue'
 import Title from '../atoms/Title.vue'
 import LoginForm from '../molecules/LoginForm.vue'
@@ -32,6 +33,23 @@ function pickEmailError(data) {
 }
 
 async function onSubmit(payload) {
+  // #region agent log
+  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
+    body: JSON.stringify({
+      sessionId: '808933',
+      runId: 'login-hang-v1',
+      hypothesisId: 'H1',
+      location: 'LoginCard.vue:onSubmit:entry',
+      message: 'login submit start',
+      data: {
+        hasRedirectQuery: typeof route.query.redirect === 'string' && route.query.redirect.length > 0,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {})
+  // #endregion
   if (submitting.value) {
     return
   }
@@ -43,13 +61,50 @@ async function onSubmit(payload) {
 
   try {
     const { ok, status, data } = await loginRequest(payload)
+    // #region agent log
+    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
+      body: JSON.stringify({
+        sessionId: '808933',
+        runId: 'login-hang-v1',
+        hypothesisId: 'H1',
+        location: 'LoginCard.vue:onSubmit:response',
+        message: 'login response received',
+        data: {
+          ok,
+          status,
+          hasUser: Boolean(data && data.user),
+          hasPersonification: Boolean(data && data.personification),
+        },
+        timestamp: Date.now(),
+      }),
+    }).catch(() => {})
+    // #endregion
     if (ok && data?.user) {
-      setSessionFromLoginUser(data.user)
+      setSessionFromLoginUser(data.user, data.personification)
       const target =
         typeof route.query.redirect === 'string' && route.query.redirect
           ? route.query.redirect
           : '/dashboard'
       await router.replace(target)
+      // #region agent log
+      fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
+        body: JSON.stringify({
+          sessionId: '808933',
+          runId: 'login-hang-v1',
+          hypothesisId: 'H5',
+          location: 'LoginCard.vue:onSubmit:postReplace',
+          message: 'router replace completed after login',
+          data: {
+            target,
+          },
+          timestamp: Date.now(),
+        }),
+      }).catch(() => {})
+      // #endregion
       return
     }
     if (status === 422) {
@@ -58,6 +113,12 @@ async function onSubmit(payload) {
     }
     if (status === 429) {
       formError.value = t('login.errorRateLimit')
+      return
+    }
+    formError.value = t('login.errorGeneric')
+  } catch (error) {
+    if (error instanceof ApiTimeoutError) {
+      formError.value = t('login.errorTimeout')
       return
     }
     formError.value = t('login.errorGeneric')

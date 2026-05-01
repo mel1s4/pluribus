@@ -8,16 +8,28 @@ import { clearHadAuthenticatedSession } from '../../composables/useSession'
 const route = useRoute()
 const router = useRouter()
 const sessionEndedOpen = ref(false)
+const passwordResetOpen = ref(false)
 
 onMounted(() => {
-  if (route.query.sessionEnded !== '1') {
-    return
-  }
-  sessionEndedOpen.value = true
-  clearHadAuthenticatedSession()
   const nextQuery = { ...route.query }
-  delete nextQuery.sessionEnded
-  router.replace({ path: route.path, query: nextQuery })
+  let mutated = false
+
+  if (route.query.sessionEnded === '1') {
+    sessionEndedOpen.value = true
+    clearHadAuthenticatedSession()
+    delete nextQuery.sessionEnded
+    mutated = true
+  }
+
+  if (route.query.reset === '1') {
+    passwordResetOpen.value = true
+    delete nextQuery.reset
+    mutated = true
+  }
+
+  if (mutated) {
+    router.replace({ path: route.path, query: nextQuery })
+  }
 })
 </script>
 
@@ -39,6 +51,25 @@ onMounted(() => {
           type="button"
           class="page--login__notice-dismiss"
           @click="sessionEndedOpen = false"
+        >
+          {{ t('login.sessionEndedDismiss') }}
+        </button>
+      </div>
+      <div
+        v-if="passwordResetOpen"
+        class="page--login__notice page--login__notice--success"
+        role="status"
+      >
+        <p class="page--login__notice-title">
+          {{ t('login.passwordChangedTitle') }}
+        </p>
+        <p class="page--login__notice-body">
+          {{ t('login.passwordChangedBody') }}
+        </p>
+        <button
+          type="button"
+          class="page--login__notice-dismiss"
+          @click="passwordResetOpen = false"
         >
           {{ t('login.sessionEndedDismiss') }}
         </button>
@@ -71,6 +102,11 @@ onMounted(() => {
   background: var(--color-surface-elevated, rgba(0, 0, 0, 0.04));
   border: 1px solid var(--color-border, rgba(0, 0, 0, 0.12));
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.page--login__notice--success {
+  border-color: rgba(21, 128, 61, 0.4);
+  background: rgba(21, 128, 61, 0.08);
 }
 
 .page--login__notice-title {

@@ -4,6 +4,8 @@ import Button from '../../atoms/Button.vue'
 import UsersInvitationModals from './UsersInvitationModals.vue'
 import { t } from '../../i18n/i18n'
 
+const emit = defineEmits(['invitations-changed'])
+
 const modalsRef = ref(null)
 
 function openSendDialog() {
@@ -30,7 +32,7 @@ function openQrDialog() {
     <Button type="button" variant="secondary" @click="openQrDialog">
       {{ t('users.inviteQrCta') }}
     </Button>
-    <UsersInvitationModals ref="modalsRef" />
+    <UsersInvitationModals ref="modalsRef" @invitations-changed="emit('invitations-changed')" />
   </div>
 </template>
 

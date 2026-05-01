@@ -20,17 +20,26 @@ const route = useRoute()
 const router = useRouter()
 
 const token = computed(() => (typeof route.params.token === 'string' ? route.params.token : ''))
+const verifyToken = computed(() =>
+  typeof route.params.verifyToken === 'string' ? route.params.verifyToken : '',
+)
+const isVerifyStep = computed(() => verifyToken.value.length > 0)
 
 const previewLoading = ref(true)
 const previewError = ref('')
 const preview = ref(null)
 
-const form = reactive({
+const emailForm = reactive({ email: '' })
+const registerForm = reactive({
   name: '',
-  email: '',
   password: '',
   password_confirmation: '',
 })
+
+const verifyEmailError = ref('')
+const verifyEmailLoading = ref(false)
+const emailSent = ref(false)
+
 const registerError = ref('')
 const registerLoading = ref(false)
 
@@ -52,7 +61,23 @@ const reasonMessage = computed(() => {
   return msg === key ? t('joinInvitation.reason.unknown') : msg
 })
 
-const canRegister = computed(() => preview.value?.valid === true)
+const showEmailStepCard = computed(
+  () => preview.value?.valid === true && !isVerifyStep.value && !emailSent.value,
+)
+const showEmailSentMessage = computed(
+  () => preview.value?.valid === true && !isVerifyStep.value && emailSent.value,
+)
+const showRegisterCard = computed(
+  () => preview.value?.valid === true && isVerifyStep.value === true,
+)
+
+const loadingMessage = computed(() =>
+  isVerifyStep.value ? t('joinInvitation.verifyLoading') : t('joinInvitation.loading'),
+)
+
+const leadText = computed(() =>
+  isVerifyStep.value ? t('joinInvitation.leadVerify') : t('joinInvitation.lead'),
+)
 
 function pickLanguageForInvitePage(data) {
   const fromApi = data?.default_language
@@ -66,17 +91,22 @@ function pickLanguageForInvitePage(data) {
   return DEFAULT_LANGUAGE
 }
 
-function applyPreview(data) {
+function applyInvitationPreview(data) {
   preview.value = data
   if (data?.valid === true && data.locked_email === true && typeof data.email === 'string') {
-    form.email = data.email
+    emailForm.email = data.email
   }
 }
 
-async function loadPreview() {
+function applyVerifyPreview(data) {
+  preview.value = data
+}
+
+async function loadInvitationPreview() {
   previewLoading.value = true
   previewError.value = ''
   preview.value = null
+  emailSent.value = false
   if (!token.value) {
     previewLoading.value = false
     previewError.value = t('joinInvitation.errorNoToken')
@@ -89,24 +119,69 @@ async function loadPreview() {
     previewError.value = userApiErrorMessage(data, status, t('joinInvitation.loadError'))
     return
   }
-  applyPreview(data)
+  applyInvitationPreview(data)
+}
+
+async function loadVerifyPreview() {
+  previewLoading.value = true
+  previewError.value = ''
+  preview.value = null
+  if (!token.value || !verifyToken.value) {
+    previewLoading.value = false
+    previewError.value = t('joinInvitation.errorNoToken')
+    return
+  }
+  const path = `/api/join-invitations/${encodeURIComponent(token.value)}/verify/${encodeURIComponent(verifyToken.value)}`
+  const { ok, status, data } = await apiJson('GET', path)
+  previewLoading.value = false
+  if (!ok) {
+    previewError.value = userApiErrorMessage(data, status, t('joinInvitation.verifyLoadError'))
+    return
+  }
+  applyVerifyPreview(data)
+}
+
+async function loadPreviewForRoute() {
+  if (isVerifyStep.value) {
+    await loadVerifyPreview()
+  } else {
+    await loadInvitationPreview()
+  }
+}
+
+async function onRequestVerifyEmail() {
+  verifyEmailError.value = ''
+  verifyEmailLoading.value = true
+  await ensureCsrfCookie()
+  const path = `/api/join-invitations/${encodeURIComponent(token.value)}/verify-email`
+  const body = { email: emailForm.email.trim() }
+  const { ok, status, data } = await apiJson('POST', path, body)
+  verifyEmailLoading.value = false
+  if (ok && data?.ok === true) {
+    emailSent.value = true
+    return
+  }
+  verifyEmailError.value = userApiErrorMessage(
+    data,
+    status,
+    t('joinInvitation.verifyEmailError'),
+  )
 }
 
 async function onRegister() {
   registerError.value = ''
   registerLoading.value = true
   await ensureCsrfCookie()
-  const path = `/api/join-invitations/${encodeURIComponent(token.value)}/register`
+  const path = `/api/join-invitations/${encodeURIComponent(token.value)}/verify/${encodeURIComponent(verifyToken.value)}/register`
   const body = {
-    name: form.name.trim(),
-    email: form.email.trim(),
-    password: form.password,
-    password_confirmation: form.password_confirmation,
+    name: registerForm.name.trim(),
+    password: registerForm.password,
+    password_confirmation: registerForm.password_confirmation,
   }
   const { ok, status, data } = await apiJson('POST', path, body)
   registerLoading.value = false
   if (ok && data?.user) {
-    setSessionFromLoginUser(data.user)
+    setSessionFromLoginUser(data.user, data.personification)
     await router.replace('/dashboard')
     return
   }
@@ -119,7 +194,6 @@ async function onRegister() {
 
 onMounted(async () => {
   await applyJoinInvitationPageLanguage(pickLanguageForInvitePage(null))
-  loadPreview()
 })
 
 watch(preview, async (p) => {
@@ -127,6 +201,14 @@ watch(preview, async (p) => {
     await applyJoinInvitationPageLanguage(pickLanguageForInvitePage(p))
   }
 })
+
+watch(
+  () => [route.name, route.params.token, route.params.verifyToken],
+  () => {
+    loadPreviewForRoute()
+  },
+  { immediate: true },
+)
 
 onUnmounted(() => {
   clearJoinInvitationPageLanguage()
@@ -136,12 +218,12 @@ onUnmounted(() => {
 <template>
   <section class="page page--join-invitation">
     <Title tag="h1">{{ t('joinInvitation.title') }}</Title>
-    <p class="page--join-invitation__lead">{{ t('joinInvitation.lead') }}</p>
+    <p class="page--join-invitation__lead">{{ leadText }}</p>
     <p v-if="tokenPreview" class="page--join-invitation__token">
       {{ t('joinInvitation.tokenLabel') }} <code>{{ tokenPreview }}</code>
     </p>
 
-    <p v-if="previewLoading" class="page--join-invitation__muted">{{ t('joinInvitation.loading') }}</p>
+    <p v-if="previewLoading" class="page--join-invitation__muted">{{ loadingMessage }}</p>
     <p v-else-if="previewError" class="page--join-invitation__error" role="alert">
       {{ previewError }}
     </p>
@@ -150,7 +232,7 @@ onUnmounted(() => {
       <p class="page--join-invitation__muted">{{ t('joinInvitation.invalidHelp') }}</p>
     </template>
 
-    <Card v-else-if="canRegister" class="page--join-invitation__card">
+    <Card v-else-if="showEmailStepCard" class="page--join-invitation__card">
       <p v-if="preview.community_name" class="page--join-invitation__community">
         {{ t('joinInvitation.communityLabel') }} <strong>{{ preview.community_name }}</strong>
       </p>
@@ -163,9 +245,53 @@ onUnmounted(() => {
         }}
       </p>
 
+      <form class="page--join-invitation__form" @submit.prevent="onRequestVerifyEmail">
+        <Input
+          v-model="emailForm.email"
+          name="join-email"
+          type="email"
+          :label="t('users.fieldEmail')"
+          autocomplete="email"
+          required
+          :disabled="verifyEmailLoading || preview.locked_email === true"
+        />
+        <p v-if="verifyEmailError" class="page--join-invitation__error" role="alert">
+          {{ verifyEmailError }}
+        </p>
+        <Button type="submit" variant="primary" :loading="verifyEmailLoading">
+          {{ t('joinInvitation.sendVerificationEmail') }}
+        </Button>
+      </form>
+    </Card>
+
+    <Card v-else-if="showEmailSentMessage" class="page--join-invitation__card">
+      <p v-if="preview.community_name" class="page--join-invitation__community">
+        {{ t('joinInvitation.communityLabel') }} <strong>{{ preview.community_name }}</strong>
+      </p>
+      <p class="page--join-invitation__muted">{{ t('joinInvitation.checkInbox') }}</p>
+    </Card>
+
+    <Card v-else-if="showRegisterCard" class="page--join-invitation__card">
+      <p v-if="preview.community_name" class="page--join-invitation__community">
+        {{ t('joinInvitation.communityLabel') }} <strong>{{ preview.community_name }}</strong>
+      </p>
+      <p v-if="preview.uses_remaining === null" class="page--join-invitation__uses">
+        {{ t('joinInvitation.usesUnlimited') }}
+      </p>
+      <p v-else class="page--join-invitation__uses">
+        {{
+          t('joinInvitation.usesRemaining').replace('{n}', String(preview.uses_remaining))
+        }}
+      </p>
+
+      <p class="page--join-invitation__confirmed-email">
+        <span class="page--join-invitation__muted">{{ t('users.fieldEmail') }}:</span>
+        <strong>{{ preview.email }}</strong>
+      </p>
+
       <form class="page--join-invitation__form" @submit.prevent="onRegister">
         <Input
-          v-model="form.name"
+          v-model="registerForm.name"
           name="join-name"
           type="text"
           :label="t('users.fieldName')"
@@ -174,16 +300,7 @@ onUnmounted(() => {
           :disabled="registerLoading"
         />
         <Input
-          v-model="form.email"
-          name="join-email"
-          type="email"
-          :label="t('users.fieldEmail')"
-          autocomplete="email"
-          required
-          :disabled="registerLoading || preview.locked_email === true"
-        />
-        <Input
-          v-model="form.password"
+          v-model="registerForm.password"
           name="join-password"
           type="password"
           :label="t('users.fieldPassword')"
@@ -192,7 +309,7 @@ onUnmounted(() => {
           :disabled="registerLoading"
         />
         <Input
-          v-model="form.password_confirmation"
+          v-model="registerForm.password_confirmation"
           name="join-password-confirm"
           type="password"
           :label="t('joinInvitation.fieldPasswordConfirm')"
@@ -260,6 +377,11 @@ onUnmounted(() => {
   margin: 0 0 1rem;
   font-size: 0.9rem;
   color: var(--muted, #4b5563);
+}
+
+.page--join-invitation__confirmed-email {
+  margin: 0 0 1rem;
+  font-size: 0.95rem;
 }
 
 .page--join-invitation__form {

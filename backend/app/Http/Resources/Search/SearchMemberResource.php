@@ -24,6 +24,7 @@ class SearchMemberResource extends JsonResource
                 ? Storage::disk('public')->url($this->avatar_path)
                 : null,
             'to' => '/members/'.$slug,
+            'voting_id' => $this->voting_id,
         ];
     }
 }

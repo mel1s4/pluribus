@@ -14,6 +14,40 @@ export default {
     'nav.openNavigation': 'Open navigation',
     'nav.closeNavigation': 'Close navigation',
     'nav.sidebar': 'Navigation',
+    'nav.supportPersonification': 'Support view',
+
+    'personification.pageTitle': 'User personification',
+    'personification.pageIntro':
+      'Look up a member by exact email or username, then start a time-limited support session. You must re-enter your password. All sessions are audited.',
+    'personification.signedInAs': 'Signed in as:',
+    'personification.staffAccountLabel': 'Staff account:',
+    'personification.viewingAsLabel': 'Viewing the app as:',
+    'personification.personifiedModeHint':
+      'You are in an active support session as another member. The forms on this page are hidden because your browser session is acting as that member. Use “Stop personification” in the banner, then return here if you need to start another session.',
+    'personification.resolveHeading': 'Find account',
+    'personification.resolveHint': 'Enter either an exact email or a username (not both).',
+    'personification.fieldEmail': 'Email (exact match)',
+    'personification.fieldUsername': 'Username',
+    'personification.resolveButton': 'Look up',
+    'personification.resolveNeedOne': 'Enter an email or a username.',
+    'personification.resolveError': 'Could not resolve user (HTTP {status}).',
+    'personification.resolvedAs': 'Matched account:',
+    'personification.startHeading': 'Start personification',
+    'personification.fieldTargetId': 'Target user ID',
+    'personification.fieldReason': 'Reason (required, specific)',
+    'personification.fieldTicket': 'Ticket / reference (optional)',
+    'personification.fieldYourPassword': 'Your password (confirmation)',
+    'personification.startButton': 'Start personification',
+    'personification.invalidTargetId': 'Enter a valid numeric user ID.',
+    'personification.passwordRequired': 'Enter your password to confirm.',
+    'personification.startError': 'Could not start personification (HTTP {status}).',
+    'personification.bannerText':
+      'Support view: you are browsing as {target}. Staff account: {actor}.',
+    'personification.until': 'Session ends by:',
+    'personification.stop': 'Stop personification',
+    'personification.stopError': 'Could not stop (HTTP {status}).',
+    'users.personifyCard': 'Support view',
+
     'header.searchPlaceholder': 'Search…',
     'header.searchLoading': 'Searching…',
     'header.searchError': 'Search failed. Please try again.',
@@ -28,11 +62,59 @@ export default {
     'publicNav.legal': 'Legal',
 
     'contact.title': 'Contact',
-    'contact.body': 'Reach us using the channels listed here. This page is a placeholder.',
+    'contact.intro':
+      'Questions about this space, your account, or how things work? Use the ' +
+      'options below. Each community may handle support differently.',
+    'contact.sectionGeneral': 'General inquiries',
+    'contact.generalBody':
+      'If your deployment exposes a public support address, it appears below. ' +
+      'Otherwise, sign in and use in-app tools or ask a community organizer.',
+    'contact.emailLinkLabel': 'Email support',
+    'contact.sectionCommunity': 'Your community',
+    'contact.communityBody':
+      'This site is branded for “{name}”. For policies, disputes, or local ' +
+      'rules, contact whoever runs that community.',
+    'contact.sectionAbuse': 'Safety and abuse',
+    'contact.abuseBody':
+      'If you need to report harassment, illegal content, or a security issue, ' +
+      'reach the operator of your community or use the email above when ' +
+      'available. Serious emergencies should go to local authorities.',
 
     'legal.title': 'Legal',
-    'legal.body':
-      'Terms, privacy, and other legal information will appear here. This page is a placeholder.',
+    'legal.intro':
+      'This page summarizes how the software is used. It is not legal advice. ' +
+      'Binding terms and privacy notices must be published by whoever operates ' +
+      'your community.',
+    'legal.disclaimer':
+      'Nothing here replaces a Terms of Use or Privacy Policy reviewed by ' +
+      'qualified counsel for your organization and jurisdiction.',
+    'legal.navTerms': 'Terms of use (stub)',
+    'legal.navPrivacy': 'Privacy (stub)',
+    'legal.navCookies': 'Cookies (stub)',
+    'legal.sectionTermsTitle': 'Terms of use',
+    'legal.sectionTermsBody':
+      'The operator of each deployment should publish rules for accounts, ' +
+      'acceptable use, and liability. Until they do, treat this software as ' +
+      'provided as-is for that community’s members.',
+    'legal.sectionPrivacyTitle': 'Privacy',
+    'legal.sectionPrivacyBody':
+      'Personal data categories, purposes, subprocessors, retention, and user ' +
+      'rights depend on how your operator configures and hosts the service. Ask ' +
+      'them for the definitive privacy notice.',
+    'legal.sectionCookiesTitle': 'Cookies and local storage',
+    'legal.sectionCookiesBody':
+      'The app uses browser storage to keep you signed in and to remember ' +
+      'preferences (for example theme). A full cookie statement should list ' +
+      'every tag and third party your operator enables.',
+    'legal.softwareContextTitle': 'What this application may involve',
+    'legal.softwareContextIntro':
+      'Product surfaces vary by deployment, but commonly include:',
+    'legal.ctxAccounts': 'Accounts, profiles, and authentication.',
+    'legal.ctxMessaging': 'Chats and notifications between members.',
+    'legal.ctxPlaces': 'Maps, places, and location-related features.',
+    'legal.ctxCommerce': 'Offers, carts, and orders where commerce is enabled.',
+    'legal.contactLink': 'Contact',
+    'legal.contactHint': 'For operator contact details, see the contact page.',
 
     'quickNav.chats': 'Chats',
     'quickNav.map': 'Map',
@@ -52,6 +134,40 @@ export default {
 
     'home.title': 'Home',
     'home.welcome': 'Welcome to {name}.',
+    'home.heroTitle': 'Your community, one calm workspace.',
+    'home.heroSubtitle':
+      'Pluribus brings familiar chat flows together with places, offers, tasks, ' +
+      'and more—so {name} can coordinate without losing the thread.',
+    'home.ctaSignIn': 'Sign in',
+    'home.ctaSecondary': 'How it works',
+    'home.valuePropsTitle': 'Why teams pick this shape',
+    'home.valueProp1Title': 'Chat-first coordination',
+    'home.valueProp1Body':
+      'Start from conversations you already understand, then jump to map, ' +
+      'tasks, or storefront context when needed.',
+    'home.valueProp2Title': 'Places and commerce',
+    'home.valueProp2Body':
+      'Surface offers, requirements, and orders alongside real locations so ' +
+      'decisions stay grounded.',
+    'home.valueProp3Title': 'Multilingual, light or dark',
+    'home.valueProp3Body':
+      'Work in your language and theme so the tool stays in the background.',
+    'home.howTitle': 'How it works',
+    'home.howStep1Title': 'Join your community',
+    'home.howStep1Body':
+      'Sign in with the account your organizers issued. Branding reflects the ' +
+      'community you belong to.',
+    'home.howStep2Title': 'Move between map, chats, and tasks',
+    'home.howStep2Body':
+      'Use the sidebar to open chats, the map, calendar, folders, and other ' +
+      'modules your deployment enables.',
+    'home.howStep3Title': 'Keep commerce next to conversation',
+    'home.howStep3Body':
+      'When stores are enabled, offers and carts stay linked to members and ' +
+      'places you already work with.',
+
+    'publicFooter.copyright': '© {year} {name}.',
+    'publicFooter.tagline': 'Pluribus — world of ideas.',
 
     'login.title': 'Login',
     'login.email': 'Email or username',
@@ -62,11 +178,52 @@ export default {
     'login.rememberMe': 'Remember me',
     'login.errorInvalid': 'These credentials do not match our records.',
     'login.errorRateLimit': 'Too many attempts. Please try again shortly.',
+    'login.errorTimeout': 'Login request timed out. Please try again.',
     'login.errorGeneric': 'Something went wrong. Please try again.',
     'login.sessionEndedTitle': 'Signed out',
     'login.sessionEndedBody':
       'Your session has ended. Sign in again to continue.',
     'login.sessionEndedDismiss': 'OK',
+    'login.forgotPasswordLink': 'Forgot your password?',
+    'login.passwordChangedTitle': 'Password updated',
+    'login.passwordChangedBody':
+      'Your password was changed and all other sessions were signed out. Sign in with your new password.',
+
+    'passwordReset.requestTitle': 'Reset your password',
+    'passwordReset.requestHint':
+      'Enter the email associated with your account and we will send you a link to reset your password.',
+    'passwordReset.email': 'Email',
+    'passwordReset.emailPlaceholder': 'you@example.com',
+    'passwordReset.requestSubmit': 'Send reset link',
+    'passwordReset.requestSent':
+      'If an account matches that email, a reset link is on its way.',
+    'passwordReset.requestSentTip':
+      'The link expires in 60 minutes and can be used once. Check your spam folder if you do not see it.',
+    'passwordReset.backToLogin': 'Back to sign in',
+    'passwordReset.resetTitle': 'Choose a new password',
+    'passwordReset.resetHint':
+      'Pick a strong password you do not use anywhere else.',
+    'passwordReset.newPassword': 'New password',
+    'passwordReset.newPasswordPlaceholder': 'At least 12 characters',
+    'passwordReset.confirmPassword': 'Confirm new password',
+    'passwordReset.confirmPasswordPlaceholder': 'Re-type your new password',
+    'passwordReset.resetSubmit': 'Update password',
+    'passwordReset.errorRateLimit':
+      'Too many attempts. Please try again shortly.',
+    'passwordReset.errorGeneric': 'Something went wrong. Please try again.',
+    'passwordReset.errorInvalidLink':
+      'This password reset link is invalid or has expired. Request a new one.',
+    'passwordReset.rulesTitle': 'Password requirements',
+    'passwordReset.rule.length': 'At least 12 characters',
+    'passwordReset.rule.case': 'Upper and lower case letters',
+    'passwordReset.rule.number': 'At least one number',
+    'passwordReset.rule.symbol': 'At least one symbol',
+    'passwordReset.rule.match': 'Both passwords match',
+    'passwordReset.strength.empty': 'Enter a password',
+    'passwordReset.strength.veryWeak': 'Very weak',
+    'passwordReset.strength.weak': 'Weak',
+    'passwordReset.strength.good': 'Good',
+    'passwordReset.strength.strong': 'Strong',
 
     'input.showPassword': 'Show password',
     'input.hidePassword': 'Hide password',
@@ -168,6 +325,13 @@ export default {
     'chats.modal.membersPlaceholder': 'Search members by name or email…',
     'chats.modal.membersSearching': 'Searching members…',
     'chats.modal.membersEmpty': 'No members found.',
+    'chats.modal.membersRequired':
+      'Choose at least one other member (search or a group) so they are included and can see this chat.',
+    'chats.modal.groupsLabel': 'Add from groups',
+    'chats.modal.groupsHint': 'Select a group to add all of its members. You can combine groups and individual search.',
+    'chats.modal.groupsLoading': 'Loading groups…',
+    'chats.modal.groupsEmpty': 'No groups yet. Create groups under My groups.',
+    'chats.modal.groupMembersLoading': 'Loading group members…',
     'chats.modal.renameChatTitle': 'Rename chat',
     'chats.modal.editChatTitle': 'Edit chat',
     'map.title': 'Map',
@@ -193,6 +357,33 @@ export default {
     'map.geolocateDenied': 'Location access was denied. Allow location permissions and try again.',
     'map.geolocateUnavailable': 'Your location could not be determined. Try again.',
     'map.geolocateTimeout': 'Location request timed out. Try again.',
+    'map.placeMiniSitePreview': 'Mini site preview',
+    'map.openMiniSiteNewTab': 'Open mini site in new tab',
+    'map.placeStatusOpen': 'Open now',
+    'map.placeStatusClosed': 'Closed now',
+    'map.placeStatusClosedToday': 'Closed today',
+    'map.placeStatusNoHours': 'No hours listed',
+    'map.placeTodayHours': 'Today: {hours}',
+    'map.placeNoPublicMiniSite': 'This place has no public mini site link yet.',
+    'map.placeSeePhotos': 'See photos',
+    'map.placeTabOverview': 'Overview',
+    'map.placeTabHours': 'Hours',
+    'map.placeActionSite': 'Mini site',
+    'map.placeActionDirections': 'Directions',
+    'map.placeActionShare': 'Share',
+    'map.placeShareCopied': 'Link copied to clipboard.',
+    'map.placeCategoryFallback': 'Place',
+    'map.placeOpenInMaps': 'Open in Google Maps',
+    'map.placeSeeFullHours': 'See full hours',
+    'map.placeBackOverview': '← Overview',
+    'map.placeHoursLineOpen': 'Open · Closes {time}',
+    'map.placeHoursLineClosedLaterToday': 'Closed · Opens {time}',
+    'map.placeHoursLineClosedTomorrow': 'Closed · Opens tomorrow at {time}',
+    'map.placeHoursLineClosedFuture': 'Closed · Opens {weekday} at {time}',
+    'map.placeHoursLineClosedTodayShort': 'Closed today',
+    'map.placeHoursLineClosedSimple': 'Closed',
+    'map.placeHoursLineNoHours': 'No hours listed',
+    'map.placeHighlights': 'Highlights',
 
     'groups.title': 'My Groups',
     'groups.intro': 'Create and manage groups that share folders, calendars, tasks, and posts.',
@@ -436,6 +627,20 @@ export default {
     'myPlaces.tabEdit': 'Edit',
     'myPlaces.tabOffers': 'Offers',
     'myPlaces.tabOrders': 'Orders',
+    'myPlaces.tableOpenDetail': 'Open table',
+    'myPlaces.tableDetailTitle': 'Table',
+    'myPlaces.tableDetailBack': 'Back to tables',
+    'myPlaces.tableDetailLoadError': 'Could not load table (HTTP {status}).',
+    'myPlaces.tableInviteHeading': 'Invitation link',
+    'myPlaces.tableInviteHint':
+      'Create a new link or rotate to invalidate previous QR codes. Copy the URL to share.',
+    'myPlaces.tableInviteCreate': 'Create link',
+    'myPlaces.tableInviteRotate': 'Rotate link',
+    'myPlaces.tableSeatingsHeading': 'Guests at this table',
+    'myPlaces.tableSeatingsEmpty': 'No recent check-ins for this table.',
+    'myPlaces.tableOrdersHeading': 'Orders for this table',
+    'myPlaces.tableReassignLabel': 'Assign line to',
+    'myPlaces.tableReassignNone': 'No table',
     'myPlaces.tabRequirements': 'Requirements',
     'myPlaces.intro':
       'Create places with tags, set a location and optional service area on the map, and add offers. Only you can see your own places.',
@@ -701,6 +906,20 @@ export default {
     'orders.status.ready': 'Ready',
     'orders.status.completed': 'Completed',
     'orders.status.cancelled': 'Cancelled',
+    'orders.liveViewTitle': 'Live orders',
+    'orders.liveRealtimeOn': 'Live updates',
+    'orders.liveViewExit': 'Exit',
+    'orders.liveViewOpen': 'Open live view',
+    'orders.filtersHeading': 'Filters',
+    'orders.filterOffers': 'Products',
+    'orders.filterTags': 'Tags (comma-separated)',
+    'orders.filterStatuses': 'Statuses',
+    'orders.filterClear': 'Clear filters',
+    'orders.filterApply': 'Apply filters',
+    'orders.placeOrderDetailLoadError': 'Could not load this order (HTTP {status}).',
+    'orders.print': 'Print',
+    'orders.backToPlaceOrders': 'Back to place orders',
+    'orders.openOrderDetailAria': 'Open order {number}',
 
     'notifications.title': 'Notifications',
     'notifications.placeholder': 'Notifications will appear here.',
@@ -761,6 +980,8 @@ export default {
     'places.storefrontOffersHeading': 'Offers',
     'places.storefrontRequirementsHeading': 'What we need',
     'places.storefrontBack': 'Back',
+    'places.tableSeatedBanner': 'You are seated at table {table}.',
+    'places.tableLeave': 'Leave table',
     'places.storefrontPrivateError':
       'This place is not public, or the link is wrong. Sign in with a member account that can see this place.',
     'places.storefrontNotFound': 'We could not find a place at this address.',
@@ -816,6 +1037,19 @@ export default {
     'users.loadingOne': 'Loading user…',
     'users.fieldPasswordNew': 'New password (optional)',
     'users.passwordOptionalHint': 'Leave blank to keep the existing password.',
+    'users.fieldVotingId': 'Voting ID (optional)',
+    'users.fieldVotingIdHint':
+      'Exactly six digits, or leave blank to clear. Only people who can edit members may change this.',
+    'users.votingIdInvalid': 'Enter exactly six digits, or leave blank to clear.',
+    'users.votingIdHistoryHeading': 'Voting ID change history',
+    'users.votingIdHistoryEmpty': 'No changes recorded yet.',
+    'users.votingIdHistoryLoadError': 'Could not load history (HTTP {status}).',
+    'users.votingIdColWhen': 'When',
+    'users.votingIdColFrom': 'From',
+    'users.votingIdColTo': 'To',
+    'users.votingIdColBy': 'Changed by',
+    'users.votingIdDash': '—',
+    'users.loadingAudits': 'Loading history…',
     'users.fieldUserType': 'User type',
     'users.fieldIsRoot': 'Root account',
     'users.colActions': 'Actions',
@@ -927,10 +1161,15 @@ export default {
     'users.invitationsStatusInactive': 'Inactive',
 
     'joinInvitation.title': 'Invitation',
-    'joinInvitation.lead': 'Create your member account using this invitation.',
+    'joinInvitation.lead':
+      'Enter your email address. We will send you a link to confirm it; only then can you finish creating your account.',
+    'joinInvitation.leadVerify':
+      'Your email is confirmed. Choose your name and password to finish creating your account.',
     'joinInvitation.tokenLabel': 'Invitation reference:',
     'joinInvitation.loading': 'Checking invitation…',
+    'joinInvitation.verifyLoading': 'Checking your confirmation link…',
     'joinInvitation.loadError': 'Could not verify invitation (HTTP {status}).',
+    'joinInvitation.verifyLoadError': 'Could not verify your link (HTTP {status}).',
     'joinInvitation.errorNoToken': 'This page is missing a valid invitation token.',
     'joinInvitation.invalidHelp': 'Ask a community admin for a new link if you still need access.',
     'joinInvitation.communityLabel': 'Community:',
@@ -938,8 +1177,14 @@ export default {
     'joinInvitation.usesRemaining': 'Joins remaining on this link: {n}.',
     'joinInvitation.fieldPasswordConfirm': 'Confirm password',
     'joinInvitation.createAccount': 'Create account',
+    'joinInvitation.sendVerificationEmail': 'Send confirmation email',
+    'joinInvitation.checkInbox':
+      'If that address can receive mail from us, we sent a confirmation link. Open it to continue registration.',
+    'joinInvitation.verifyEmailError': 'Could not send the confirmation email (HTTP {status}).',
     'joinInvitation.registerError': 'Could not create your account (HTTP {status}).',
     'joinInvitation.reason.invalid_token': 'This invitation link is not valid.',
+    'joinInvitation.reason.invalid_verification':
+      'This confirmation link is not valid or has expired. Request a new email from the invitation page.',
     'joinInvitation.reason.expired': 'This invitation has expired.',
     'joinInvitation.reason.revoked': 'This invitation has been revoked.',
     'joinInvitation.reason.exhausted': 'This invitation has already been used the maximum number of times.',
@@ -1081,4 +1326,6 @@ export default {
     'folders.sharedWithGroup': 'Shared with group: {name}',
     'folders.makePrivate': 'Make private',
     'folders.makePrivateHint': 'Remove all sharing and make this folder private to you.',
+
+    'votingId.registeredBadgeAria': 'Member has a registered voting ID',
 }

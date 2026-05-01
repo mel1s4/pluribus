@@ -36,6 +36,17 @@ class UpdateUserRequest extends FormRequest
                 'external_links' => UserProfileContactNormalizer::externalLinks($this->input('external_links')),
             ]);
         }
+        if ($this->has('voting_id')) {
+            $v = $this->input('voting_id');
+            if ($v === '' || $v === null) {
+                $this->merge(['voting_id' => null]);
+            } elseif (is_string($v)) {
+                $t = trim($v);
+                $this->merge(['voting_id' => $t === '' ? null : $t]);
+            } elseif (is_int($v) || is_float($v)) {
+                $this->merge(['voting_id' => (string) $v]);
+            }
+        }
     }
 
     /**
@@ -72,6 +83,16 @@ class UpdateUserRequest extends FormRequest
             $rules['is_root'] = ['sometimes', 'boolean'];
         }
 
+        if ($actor && $actor->can('users.update')) {
+            $rules['voting_id'] = [
+                'sometimes',
+                'nullable',
+                'string',
+                'regex:/^[0-9]{6}$/',
+                Rule::unique('users', 'voting_id')->ignore($target->id),
+            ];
+        }
+
         return $rules;
     }
 
@@ -82,6 +103,7 @@ class UpdateUserRequest extends FormRequest
     {
         return [
             'username.unique' => 'This username is already taken.',
+            'voting_id.unique' => 'This voting ID is already assigned to another user.',
         ];
     }
 }

@@ -111,6 +111,18 @@ class MemberProfileApiTest extends TestCase
             ->assertJsonPath('member.profile_slug', $slug);
     }
 
+    public function test_member_profile_includes_voting_id_when_set(): void
+    {
+        $member = User::factory()->create(['voting_id' => '010203']);
+        $viewer = User::factory()->create();
+
+        $this->actingAs($viewer);
+
+        $this->statefulJson('GET', '/api/members/'.$member->id)
+            ->assertOk()
+            ->assertJsonPath('member.voting_id', '010203');
+    }
+
     public function test_stranger_can_view_place_details(): void
     {
         $owner = User::factory()->create();

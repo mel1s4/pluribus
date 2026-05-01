@@ -13,9 +13,12 @@ return new class extends Migration
             $table->string('sku', 64)->nullable()->after('place_id');
         });
 
-        Schema::table('place_requirements', function (Blueprint $table) {
-            $table->string('sku', 64)->nullable()->after('place_id');
-        });
+        $hasRequirements = Schema::hasTable('place_requirements');
+        if ($hasRequirements) {
+            Schema::table('place_requirements', function (Blueprint $table) {
+                $table->string('sku', 64)->nullable()->after('place_id');
+            });
+        }
 
         DB::table('place_offers')
             ->orderBy('id')
@@ -28,32 +31,38 @@ return new class extends Migration
                 }
             });
 
-        DB::table('place_requirements')
-            ->orderBy('id')
-            ->select(['id', 'place_id'])
-            ->chunkById(500, function ($rows): void {
-                foreach ($rows as $row) {
-                    DB::table('place_requirements')
-                        ->where('id', $row->id)
-                        ->update(['sku' => 'requirement-'.$row->place_id.'-'.$row->id]);
-                }
-            });
+        if ($hasRequirements) {
+            DB::table('place_requirements')
+                ->orderBy('id')
+                ->select(['id', 'place_id'])
+                ->chunkById(500, function ($rows): void {
+                    foreach ($rows as $row) {
+                        DB::table('place_requirements')
+                            ->where('id', $row->id)
+                            ->update(['sku' => 'requirement-'.$row->place_id.'-'.$row->id]);
+                    }
+                });
+        }
 
         Schema::table('place_offers', function (Blueprint $table) {
             $table->unique(['place_id', 'sku']);
         });
 
-        Schema::table('place_requirements', function (Blueprint $table) {
-            $table->unique(['place_id', 'sku']);
-        });
+        if ($hasRequirements) {
+            Schema::table('place_requirements', function (Blueprint $table) {
+                $table->unique(['place_id', 'sku']);
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::table('place_requirements', function (Blueprint $table) {
-            $table->dropUnique(['place_id', 'sku']);
-            $table->dropColumn('sku');
-        });
+        if (Schema::hasTable('place_requirements') && Schema::hasColumn('place_requirements', 'sku')) {
+            Schema::table('place_requirements', function (Blueprint $table) {
+                $table->dropUnique(['place_id', 'sku']);
+                $table->dropColumn('sku');
+            });
+        }
 
         Schema::table('place_offers', function (Blueprint $table) {
             $table->dropUnique(['place_id', 'sku']);

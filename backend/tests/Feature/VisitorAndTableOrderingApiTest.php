@@ -109,6 +109,123 @@ class VisitorAndTableOrderingApiTest extends TestCase
         ])->assertOk();
     }
 
+    public function test_table_consume_creates_seating_and_cart_shows_active_table(): void
+    {
+        $visitor = User::factory()->visitor()->create();
+        $owner = User::factory()->create();
+        $place = $this->createPlace($owner, true);
+        $this->actingAs($owner);
+        $table = $this->statefulJson('POST', "/api/places/{$place->id}/tables", ['name' => 'T1'])
+            ->assertCreated()
+            ->json('table');
+        $tableId = (int) $table['id'];
+        $url = $this->statefulJson('POST', "/api/places/{$place->id}/tables/{$tableId}/access-links")
+            ->assertCreated()
+            ->json('access_link.url');
+        $plain = basename((string) $url);
+
+        $this->actingAs($visitor);
+        $this->statefulJson('POST', '/api/table-access/'.$plain.'/consume')->assertOk();
+
+        $this->assertDatabaseHas('table_seatings', [
+            'user_id' => $visitor->id,
+            'place_id' => $place->id,
+            'table_id' => $tableId,
+        ]);
+
+        $this->statefulJson('GET', '/api/cart')
+            ->assertOk()
+            ->assertJsonPath('active_table.table_id', $tableId)
+            ->assertJsonPath('active_table.place_id', $place->id)
+            ->assertJsonPath('active_table.table_name', 'T1');
+    }
+
+    public function test_delete_table_session_clears_seating_for_place(): void
+    {
+        $visitor = User::factory()->visitor()->create();
+        $owner = User::factory()->create();
+        $place = $this->createPlace($owner, true);
+        $this->actingAs($owner);
+        $table = $this->statefulJson('POST', "/api/places/{$place->id}/tables", ['name' => 'T2'])
+            ->assertCreated()
+            ->json('table');
+        $tableId = (int) $table['id'];
+        $url = $this->statefulJson('POST', "/api/places/{$place->id}/tables/{$tableId}/access-links")
+            ->assertCreated()
+            ->json('access_link.url');
+        $plain = basename((string) $url);
+
+        $this->actingAs($visitor);
+        $this->statefulJson('POST', '/api/table-access/'.$plain.'/consume')->assertOk();
+        $this->assertDatabaseHas('table_seatings', ['user_id' => $visitor->id, 'place_id' => $place->id]);
+
+        $this->statefulJson('DELETE', '/api/table-session')->assertOk();
+        $this->assertDatabaseMissing('table_seatings', [
+            'user_id' => $visitor->id,
+            'place_id' => $place->id,
+        ]);
+    }
+
+    public function test_place_admin_can_fetch_table_detail(): void
+    {
+        $owner = User::factory()->create();
+        $place = $this->createPlace($owner, true);
+        $this->actingAs($owner);
+        $table = $this->statefulJson('POST', "/api/places/{$place->id}/tables", ['name' => 'Detail'])
+            ->assertCreated()
+            ->json('table');
+        $tableId = (int) $table['id'];
+
+        $this->statefulJson('GET', "/api/places/{$place->id}/tables/{$tableId}")
+            ->assertOk()
+            ->assertJsonPath('table.name', 'Detail')
+            ->assertJsonPath('seatings', []);
+    }
+
+    public function test_place_orders_can_filter_by_offer_tag(): void
+    {
+        $visitor = User::factory()->visitor()->create();
+        $owner = User::factory()->create();
+        $place = $this->createPlace($owner, true);
+        $kitchen = PlaceOffer::query()->create([
+            'place_id' => $place->id,
+            'title' => 'Soup',
+            'description' => null,
+            'price' => 3.00,
+            'visibility_scope' => PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
+            'tags' => ['kitchen'],
+        ]);
+        $bar = PlaceOffer::query()->create([
+            'place_id' => $place->id,
+            'title' => 'Beer',
+            'description' => null,
+            'price' => 4.00,
+            'visibility_scope' => PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
+            'tags' => ['bar'],
+        ]);
+
+        $this->actingAs($visitor);
+        $this->statefulJson('POST', '/api/cart/items', [
+            'place_offer_id' => $kitchen->id,
+            'quantity' => 1,
+        ])->assertOk();
+        $this->statefulJson('POST', '/api/cart/items', [
+            'place_offer_id' => $bar->id,
+            'quantity' => 1,
+        ])->assertOk();
+        $orderId = (int) $this->statefulJson('POST', '/api/orders')->assertCreated()->json('order.id');
+
+        $this->actingAs($owner);
+        $this->statefulJson('GET', "/api/places/{$place->id}/orders?tags[]=kitchen")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', $orderId);
+
+        $this->statefulJson('GET', "/api/places/{$place->id}/orders?tags[]=nope")
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     private function extractTokenFromMail(): ?string
     {
         $found = null;

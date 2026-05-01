@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Icon from '../../atoms/Icon.vue'
+import VotingIdVerifiedBadge from '../../molecules/VotingIdVerifiedBadge.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import { useCart } from '../../composables/useCart'
@@ -258,7 +259,13 @@ onBeforeUnmount(() => {
                       </span>
                       <span class="app-header__resultName">{{ item.name }}</span>
                     </div>
-                    <p v-if="item.subtitle" class="app-header__resultSubtitle">{{ item.subtitle }}</p>
+                    <p v-if="item.subtitle" class="app-header__resultSubtitle">
+                      <span class="app-header__resultSubtitleText">{{ item.subtitle }}</span>
+                      <VotingIdVerifiedBadge
+                        v-if="section.key === 'members' && item.voting_id"
+                        :model-value="true"
+                      />
+                    </p>
                     <ul v-if="Array.isArray(item.tags) && item.tags.length" class="app-header__tagList">
                       <li v-for="tag in item.tags.slice(0, 3)" :key="`${item.id}-${tag}`" class="app-header__tag">
                         {{ tag }}
@@ -526,6 +533,14 @@ onBeforeUnmount(() => {
   margin: 0.25rem 0 0;
   font-size: 0.8rem;
   opacity: 0.82;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.app-header__resultSubtitleText {
+  min-width: 0;
 }
 
 .app-header__tagList {

@@ -29,4 +29,12 @@ class Table extends Model
     {
         return $this->hasMany(TableAccessLink::class);
     }
+
+    /**
+     * @return HasMany<TableSeating, $this>
+     */
+    public function seatings(): HasMany
+    {
+        return $this->hasMany(TableSeating::class);
+    }
 }

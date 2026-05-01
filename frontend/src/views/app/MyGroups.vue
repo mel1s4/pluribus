@@ -5,14 +5,12 @@ import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { t } from '../../i18n/i18n'
 import { createGroup, fetchGroupMembers, fetchGroups, removeGroupMember } from '../../services/contentApi'
-import { fetchUsersPage } from '../../services/usersApi'
 import { sessionUser } from '../../composables/useSession'
 
 const router = useRouter()
 
 const groups = ref([])
 const membersByGroup = ref({})
-const users = ref([])
 const loading = ref(false)
 const error = ref('')
 const name = ref('')
@@ -29,14 +27,13 @@ function unwrapList(payload) {
 async function load() {
   loading.value = true
   error.value = ''
-  const [groupsRes, usersRes] = await Promise.all([fetchGroups(), fetchUsersPage(1, 100)])
+  const groupsRes = await fetchGroups()
   loading.value = false
   if (!groupsRes.ok) {
     error.value = `HTTP ${groupsRes.status}`
     return
   }
   groups.value = unwrapList(groupsRes.data)
-  users.value = unwrapList(usersRes.data)
   await Promise.all(groups.value.map(async (group) => {
     const membersRes = await fetchGroupMembers(group.id)
     if (membersRes.ok) {

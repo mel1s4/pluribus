@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Events\PlaceOrdersChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderItemTableRequest;
@@ -17,6 +18,7 @@ use App\Support\PlaceMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
@@ -106,6 +108,7 @@ class OrderController extends Controller
         });
 
         assert($order instanceof Order);
+        $this->notifyPlaceOrdersListenersForOrder($order);
 
         return response()->json([
             'order' => new OrderResource($order),
@@ -129,11 +132,51 @@ class OrderController extends Controller
     public function placeIndex(Request $request, Place $place): JsonResponse
     {
         $this->authorize('update', $place);
-        $orders = Order::query()
-            ->whereHas('items', fn ($q) => $q->where('place_id', $place->id))
-            ->with(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])])
+        $validated = $request->validate([
+            'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
+            'place_offer_ids' => ['sometimes', 'array'],
+            'place_offer_ids.*' => ['integer'],
+            'tags' => ['sometimes', 'array'],
+            'tags.*' => ['string', 'max:64'],
+            'statuses' => ['sometimes', 'array'],
+            'statuses.*' => ['string', Rule::in(Order::STATUSES)],
+        ]);
+        $perPage = (int) ($validated['per_page'] ?? 20);
+        /** @var list<int> $offerIds */
+        $offerIds = array_values(array_unique(array_map('intval', $validated['place_offer_ids'] ?? [])));
+        /** @var list<string> $tags */
+        $tags = array_values(array_filter($validated['tags'] ?? [], static fn ($t): bool => is_string($t) && $t !== ''));
+        /** @var list<string> $statuses */
+        $statuses = array_values(array_filter($validated['statuses'] ?? [], static fn ($s): bool => is_string($s) && $s !== ''));
+
+        $query = Order::query()
+            ->whereHas('items', fn ($q) => $q->where('place_id', $place->id));
+
+        if ($statuses !== []) {
+            $query->whereIn('status', $statuses);
+        }
+
+        if ($offerIds !== [] || $tags !== []) {
+            $query->where(function ($outer) use ($place, $offerIds, $tags): void {
+                foreach ($offerIds as $oid) {
+                    $outer->orWhereHas('items', fn ($iq) => $iq->where('place_id', $place->id)->where('place_offer_id', $oid));
+                }
+                foreach ($tags as $tag) {
+                    $outer->orWhereHas('items', function ($iq) use ($place, $tag): void {
+                        $iq->where('place_id', $place->id)
+                            ->where(function ($w) use ($tag): void {
+                                $w->whereHas('offer', fn ($oq) => $oq->whereJsonContains('tags', $tag))
+                                    ->orWhereJsonContains('offer_snapshot->tags', $tag);
+                            });
+                    });
+                }
+            });
+        }
+
+        $orders = $query
+            ->with(['user:id,name', 'items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])])
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate($perPage);
 
         $orders->getCollection()->transform(function (Order $order): Order {
             $sub = '0.00';
@@ -154,7 +197,7 @@ class OrderController extends Controller
         if (! $order->items()->where('place_id', $place->id)->exists()) {
             abort(404);
         }
-        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
+        $order->load(['user:id,name', 'items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $item) {
             $sub = $this->addMoney($sub, (string) $item->subtotal);
@@ -173,12 +216,14 @@ class OrderController extends Controller
             abort(404);
         }
         $order->update(['status' => $request->validated('status')]);
-        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
+        $order->load(['user:id,name', 'items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $item) {
             $sub = $this->addMoney($sub, (string) $item->subtotal);
         }
         $order->setAttribute('place_subtotal', $sub);
+
+        $this->notifyPlaceOrdersListeners((int) $place->id);
 
         return response()->json([
             'order' => new OrderResource($order),
@@ -203,16 +248,32 @@ class OrderController extends Controller
             }
         }
         $item->update(['table_id' => $tableId]);
-        $order->load(['items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
+        $order->load(['user:id,name', 'items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $line) {
             $sub = $this->addMoney($sub, (string) $line->subtotal);
         }
         $order->setAttribute('place_subtotal', $sub);
 
+        $this->notifyPlaceOrdersListeners((int) $place->id);
+
         return response()->json([
             'order' => new OrderResource($order),
         ]);
+    }
+
+    private function notifyPlaceOrdersListeners(int $placeId): void
+    {
+        broadcast(new PlaceOrdersChanged($placeId));
+    }
+
+    private function notifyPlaceOrdersListenersForOrder(Order $order): void
+    {
+        $order->loadMissing('items');
+        $ids = $order->items->pluck('place_id')->unique()->filter()->values();
+        foreach ($ids as $pid) {
+            $this->notifyPlaceOrdersListeners((int) $pid);
+        }
     }
 
     private function authorizeOfferForCheckout(Request $request, PlaceOffer $offer): void
@@ -246,12 +307,19 @@ class OrderController extends Controller
      */
     private function snapshotFromOffer(PlaceOffer $offer): array
     {
+        $tags = $offer->tags;
+        if (! is_array($tags)) {
+            $tags = [];
+        }
+
         return [
+            'place_offer_id' => $offer->id,
             'title' => $offer->title,
             'description' => $offer->description,
             'price' => (string) $offer->price,
             'photo_path' => $offer->photo_path,
             'photo_url' => PlaceMedia::publicUrl($offer->photo_path),
+            'tags' => $tags,
         ];
     }
 

@@ -40,8 +40,8 @@ export async function deleteGroup(groupId) {
   return result
 }
 
-export function fetchGroupMembers(groupId) {
-  return cachedGet(`/api/groups/${groupId}/members`)
+export function fetchGroupMembers(groupId, options = {}) {
+  return cachedGet(`/api/groups/${groupId}/members`, options)
 }
 
 export async function addGroupMember(groupId, payload) {

@@ -1,4 +1,16 @@
 import { apiJson, ensureCsrfCookie } from './api.js'
+
+/**
+ * @param {number|string} userId
+ * @param {number} [page]
+ * @param {number} [perPage]
+ * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
+ */
+export async function fetchVotingIdAudits(userId, page = 1, perPage = 20) {
+  const slug = encodeURIComponent(String(userId))
+  const path = `/api/users/${slug}/voting-id-audits?page=${page}&per_page=${perPage}`
+  return apiJson('GET', path)
+}
 import { cachedGet, invalidateCache } from './cachedApi.js'
 
 /**
@@ -27,7 +39,8 @@ export async function searchUsers(query, perPage = 10) {
 }
 
 export async function fetchInvitations() {
-  return cachedGet('/api/invitations')
+  // Admin list must reflect creates/deletes immediately; do not use the default GET cache TTL.
+  return cachedGet('/api/invitations', { skipCache: true })
 }
 
 /**

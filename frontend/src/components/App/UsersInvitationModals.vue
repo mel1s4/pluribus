@@ -62,6 +62,8 @@ const sendCopyHint = ref('')
 const linkCopyHint = ref('')
 const qrCopyHint = ref('')
 
+const emit = defineEmits(['invitations-changed'])
+
 function resetSendState() {
   sendEmail.value = ''
   sendError.value = ''
@@ -171,6 +173,7 @@ async function submitSendInvitation() {
     sendEmailSent.value = Boolean(inv.email_sent)
     sendResultMaxUses.value =
       inv.max_uses === null || inv.max_uses === undefined ? null : Number(inv.max_uses)
+    emit('invitations-changed')
   }
 }
 
@@ -203,6 +206,7 @@ async function submitCreateLink() {
     linkResultUrl.value = inv.join_url
     linkResultMaxUses.value =
       inv.max_uses === null || inv.max_uses === undefined ? null : Number(inv.max_uses)
+    emit('invitations-changed')
   }
 }
 
@@ -245,6 +249,7 @@ async function submitCreateQr() {
     } catch {
       qrError.value = t('users.inviteQrGenerateError')
     }
+    emit('invitations-changed')
   }
 }
 

@@ -5,9 +5,13 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\User;
+use App\Models\UserPersonificationAudit;
+use App\Support\PersonificationSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -32,11 +36,30 @@ class AuthController extends Controller
 
         return response()->json([
             'user' => UserResource::make($request->user()),
+            'personification' => ['active' => false],
         ]);
     }
 
     public function logout(Request $request): JsonResponse
     {
+        $payload = PersonificationSession::payload($request);
+        if (is_array($payload)) {
+            $actorId = (int) ($payload['actor_user_id'] ?? 0);
+            $targetId = (int) ($payload['target_user_id'] ?? 0);
+            if ($actorId > 0 && $targetId > 0) {
+                UserPersonificationAudit::query()->create([
+                    'actor_user_id' => $actorId,
+                    'target_user_id' => $targetId,
+                    'action' => UserPersonificationAudit::ACTION_FORCED_LOGOUT,
+                    'reason' => 'Session ended by logout',
+                    'ticket_reference' => isset($payload['ticket_reference']) ? (string) $payload['ticket_reference'] : null,
+                    'ip' => $request->ip(),
+                    'user_agent' => substr((string) $request->userAgent(), 0, 2000),
+                ]);
+            }
+        }
+        PersonificationSession::forget($request);
+
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
@@ -47,8 +70,24 @@ class AuthController extends Controller
 
     public function user(Request $request): JsonResponse
     {
-        return response()->json([
-            'user' => UserResource::make($request->user()),
+        $startedAt = microtime(true);
+        $user = $request->user();
+        if (! $user instanceof User) {
+            abort(401);
+        }
+
+        $body = [
+            'user' => UserResource::make($user),
+            'personification' => PersonificationSession::summaryForRequest($request),
+        ];
+
+        $response = response()->json($body);
+        Log::debug('auth.user.response', [
+            'user_id' => $user->id,
+            'personification_active' => (bool) ($body['personification']['active'] ?? false),
+            'elapsed_ms' => (int) round((microtime(true) - $startedAt) * 1000),
         ]);
+
+        return $response;
     }
 }

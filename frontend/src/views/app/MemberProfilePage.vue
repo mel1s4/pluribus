@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import Card from '../../atoms/Card.vue'
+import VotingIdVerifiedBadge from '../../molecules/VotingIdVerifiedBadge.vue'
 import { isCommunityAdministrator } from '../../composables/useCapabilities'
 import { t } from '../../i18n/i18n'
 import { fetchMemberProfile } from '../../services/membersApi.js'
@@ -109,7 +110,10 @@ load()
         </div>
         <div class="member-profile-page__headText">
           <h1 class="member-profile-page__title">{{ member.name }}</h1>
-          <p v-if="member.username" class="member-profile-page__username">@{{ member.username }}</p>
+          <p v-if="member.username" class="member-profile-page__username">
+            <span class="member-profile-page__usernameText">@{{ member.username }}</span>
+            <VotingIdVerifiedBadge :model-value="Boolean(member.voting_id)" />
+          </p>
         </div>
       </div>
 
@@ -254,6 +258,14 @@ load()
 .member-profile-page__username {
   margin: 0.25rem 0 0;
   opacity: 0.85;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.member-profile-page__usernameText {
+  min-width: 0;
 }
 
 .member-profile-page__card {

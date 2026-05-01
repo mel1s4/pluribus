@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::create('place_requirements', function (Blueprint $table) {
             $table->id();
             $table->foreignId('place_id')->constrained('places')->cascadeOnDelete();
+            $table->string('sku', 64)->nullable();
             $table->string('title');
             $table->text('description')->nullable();
             $table->decimal('quantity', 14, 4);
@@ -21,6 +22,8 @@ return new class extends Migration
             $table->json('gallery_paths')->nullable();
             $table->json('tags')->nullable();
             $table->timestamps();
+
+            $table->unique(['place_id', 'sku']);
         });
     }
 

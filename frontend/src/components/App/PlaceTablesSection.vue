@@ -1,8 +1,10 @@
 <script setup>
 import { onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import QRCode from 'qrcode'
 import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
+import { t } from '../../i18n/i18n'
 import {
   createPlaceTable,
   createTableAccessLink,
@@ -86,6 +88,12 @@ onMounted(load)
       <li v-for="table in tables" :key="table.id" class="place-tables__item">
         <strong>{{ table.name }}</strong>
         <div class="place-tables__actions">
+          <RouterLink
+            class="place-tables__open"
+            :to="{ name: 'placeTableDetail', params: { placeId: String(placeId), tableId: String(table.id) } }"
+          >
+            {{ t('myPlaces.tableOpenDetail') }}
+          </RouterLink>
           <Button size="sm" variant="secondary" @click="generateQr(table.id, false)">Create QR</Button>
           <Button size="sm" variant="secondary" @click="generateQr(table.id, true)">Rotate QR</Button>
           <Button size="sm" variant="danger" @click="removeTable(table.id)">Delete</Button>
@@ -104,7 +112,16 @@ onMounted(load)
 .place-tables__create { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
 .place-tables__list { list-style: none; padding: 0; margin: 0; display: grid; gap: 0.75rem; }
 .place-tables__item { border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem; }
-.place-tables__actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; }
+.place-tables__actions { display: flex; gap: 0.35rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center; }
+.place-tables__open {
+  font-size: 0.85rem;
+  margin-right: 0.25rem;
+  color: var(--primary, #2563eb);
+  text-decoration: none;
+}
+.place-tables__open:hover {
+  text-decoration: underline;
+}
 .place-tables__qr { margin-top: 0.75rem; display: grid; gap: 0.5rem; }
 .place-tables__qr img { width: 180px; height: 180px; object-fit: contain; }
 </style>

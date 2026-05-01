@@ -17,6 +17,10 @@ export function useVersionCheck() {
 
   async function fetchVersion() {
     try {
+      if (import.meta.env.DEV) {
+        return null
+      }
+
       // Add timestamp to prevent caching
       const response = await fetch(`/version.json?t=${Date.now()}`, {
         cache: 'no-store',
@@ -27,6 +31,11 @@ export function useVersionCheck() {
       })
 
       if (!response.ok) {
+        return null
+      }
+
+      const ct = response.headers.get('content-type') || ''
+      if (!ct.includes('application/json')) {
         return null
       }
 

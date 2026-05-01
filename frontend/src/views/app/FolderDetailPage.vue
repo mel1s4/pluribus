@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import FolderBreadcrumb from '../../molecules/FolderBreadcrumb.vue'
@@ -15,7 +15,7 @@ import { getFolderAncestors, useFolders } from '../../composables/useFolders.js'
 import { t } from '../../i18n/i18n'
 import { bulkMoveFolderItems, createChat, deleteChat, fetchChats, fetchFolderStats, updateFolder } from '../../services/chatApi.js'
 import { createTask, deleteTask, fetchTasks } from '../../services/contentApi.js'
-import { searchUsers } from '../../services/usersApi.js'
+import { useChatMemberPicker } from '../../composables/useChatMemberPicker.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -48,11 +48,22 @@ const chatDialogRef = ref(null)
 const chatForm = reactive({
   title: '',
 })
-const memberSearchQuery = ref('')
-const memberSearchResults = ref([])
-const memberSearchLoading = ref(false)
-const selectedMembers = ref([])
-let memberSearchTimer = null
+const {
+  memberSearchQuery,
+  memberSearchResults,
+  memberSearchLoading,
+  selectedMembers,
+  groups,
+  groupsLoading,
+  groupMembersLoadingId,
+  reset: resetMemberPicker,
+  loadGroups,
+  isSelectedMember,
+  toggleMember,
+  removeSelectedMember,
+  onGroupCheckboxChange,
+  isGroupChecked,
+} = useChatMemberPicker({ unknownUserLabel: t('chats.unknownUser') })
 
 const taskDialogRef = ref(null)
 const taskForm = reactive({
@@ -157,31 +168,6 @@ async function load() {
 watch(folderId, () => {
   bulk.clear()
   load()
-})
-
-watch(memberSearchQuery, (next) => {
-  clearMemberSearchTimer()
-  const q = String(next || '').trim()
-  if (q.length < 2) {
-    memberSearchResults.value = []
-    memberSearchLoading.value = false
-    return
-  }
-  memberSearchTimer = setTimeout(async () => {
-    memberSearchLoading.value = true
-    const res = await searchUsers(q, 10)
-    memberSearchLoading.value = false
-    if (!res.ok) {
-      memberSearchResults.value = []
-      return
-    }
-    const items = Array.isArray(res.data?.data) ? res.data.data : []
-    memberSearchResults.value = items.map((item) => ({
-      id: item.id,
-      name: item.name || t('folders.chatUntitled'),
-      email: item.email || '',
-    }))
-  }, 300)
 })
 
 function navigateBreadcrumb(id) {
@@ -302,42 +288,23 @@ function onIconDialogBackdrop(e) {
 function onChatDialogBackdrop(e) {
   if (e.target === chatDialogRef.value) {
     chatDialogRef.value?.close()
-    memberSearchQuery.value = ''
-    memberSearchResults.value = []
-    selectedMembers.value = []
+    resetMemberPicker()
   }
+}
+
+async function openNewChatDialog() {
+  chatForm.title = ''
+  resetMemberPicker()
+  await loadGroups()
+  chatDialogRef.value?.showModal()
 }
 
 function onTaskDialogBackdrop(e) {
   if (e.target === taskDialogRef.value) taskDialogRef.value?.close()
 }
 
-function isSelectedMember(memberId) {
-  return selectedMembers.value.some((member) => Number(member.id) === Number(memberId))
-}
-
-function toggleMember(member) {
-  const id = Number(member.id)
-  if (!Number.isFinite(id)) return
-  if (isSelectedMember(id)) {
-    selectedMembers.value = selectedMembers.value.filter((item) => Number(item.id) !== id)
-    return
-  }
-  selectedMembers.value = [...selectedMembers.value, member]
-}
-
-function removeSelectedMember(memberId) {
-  selectedMembers.value = selectedMembers.value.filter((item) => Number(item.id) !== Number(memberId))
-}
-
-function clearMemberSearchTimer() {
-  if (memberSearchTimer) {
-    clearTimeout(memberSearchTimer)
-    memberSearchTimer = null
-  }
-}
-
 async function submitCreateChat() {
+  if (selectedMembers.value.length === 0) return
   const payload = {
     type: 'group',
     title: chatForm.title.trim() || null,
@@ -348,9 +315,7 @@ async function submitCreateChat() {
   if (!res.ok) return
   chatDialogRef.value?.close()
   chatForm.title = ''
-  memberSearchQuery.value = ''
-  memberSearchResults.value = []
-  selectedMembers.value = []
+  resetMemberPicker()
   await load()
   const id = res.data?.chat?.id
   if (id != null) router.push({ name: 'chatThread', params: { chatId: id } })
@@ -398,7 +363,6 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('keydown', onKeydown)
   document.removeEventListener('click', onDocumentClick)
-  clearMemberSearchTimer()
 })
 </script>
 
@@ -436,7 +400,7 @@ onUnmounted(() => {
       </div>
 
       <div class="folder-detail-page__actions">
-        <Button size="sm" @click="chatDialogRef.showModal()">+ {{ t('folders.newChat') }}</Button>
+        <Button size="sm" @click="openNewChatDialog">+ {{ t('folders.newChat') }}</Button>
         <Button size="sm" variant="secondary" @click="taskDialogRef.showModal()">+ {{ t('folders.newTask') }}</Button>
         <div class="folder-detail-page__more" @click.stop>
           <button
@@ -614,6 +578,41 @@ onUnmounted(() => {
           <span>{{ t('folders.chatTitle') }}</span>
           <input v-model="chatForm.title" :placeholder="t('folders.chatTitlePlaceholder')" maxlength="255">
         </label>
+        <div class="folder-detail-page__field folder-detail-page__field--groups">
+          <span id="folder-detail-chat-groups-label" class="folder-detail-page__fieldLabel">{{ t('chats.modal.groupsLabel') }}</span>
+          <p class="folder-detail-page__groupHint">{{ t('chats.modal.groupsHint') }}</p>
+          <p v-if="groupsLoading" class="folder-detail-page__memberHint">
+            {{ t('chats.modal.groupsLoading') }}
+          </p>
+          <p v-else-if="groups.length === 0" class="folder-detail-page__memberHint">
+            {{ t('chats.modal.groupsEmpty') }}
+          </p>
+          <ul
+            v-else
+            class="folder-detail-page__groupList"
+            role="group"
+            aria-labelledby="folder-detail-chat-groups-label"
+          >
+            <li v-for="g in groups" :key="g.id" class="folder-detail-page__groupListItem">
+              <label class="folder-detail-page__groupRow">
+                <input
+                  type="checkbox"
+                  class="folder-detail-page__groupCheckbox"
+                  :checked="isGroupChecked(g.id)"
+                  :disabled="groupMembersLoadingId != null && groupMembersLoadingId !== g.id"
+                  @change="onGroupCheckboxChange(g, $event.target.checked)"
+                >
+                <span class="folder-detail-page__groupRowText">
+                  <span class="folder-detail-page__groupName">{{ g.name }}</span>
+                  <span v-if="g.members_count != null" class="folder-detail-page__groupMeta">({{ g.members_count }})</span>
+                </span>
+              </label>
+            </li>
+          </ul>
+          <p v-if="groupMembersLoadingId != null" class="folder-detail-page__memberHint">
+            {{ t('chats.modal.groupMembersLoading') }}
+          </p>
+        </div>
         <div class="folder-detail-page__field">
           <label for="folder-detail-chat-members">{{ t('chats.modal.membersLabel') }}</label>
           <input
@@ -658,10 +657,11 @@ onUnmounted(() => {
               </button>
             </span>
           </div>
+          <p v-else class="folder-detail-page__memberHint">{{ t('chats.modal.membersRequired') }}</p>
         </div>
         <div class="folder-detail-page__dialogActions">
           <Button type="button" variant="secondary" @click="chatDialogRef.close()">{{ t('folders.cancel') }}</Button>
-          <Button type="submit">{{ t('folders.create') }}</Button>
+          <Button type="submit" :disabled="selectedMembers.length === 0">{{ t('folders.create') }}</Button>
         </div>
       </form>
     </dialog>
@@ -1077,6 +1077,68 @@ onUnmounted(() => {
     font-weight: 500;
     color: var(--text-muted, #374151);
   }
+}
+
+.folder-detail-page__fieldLabel {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--text-muted, #374151);
+}
+
+.folder-detail-page__groupHint {
+  margin: 0;
+  font-size: 0.8rem;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.35;
+}
+
+.folder-detail-page__groupList {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 0.5rem;
+  max-height: 11rem;
+  overflow-y: auto;
+}
+
+.folder-detail-page__groupListItem {
+  border-bottom: 1px solid var(--border, #e5e7eb);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.folder-detail-page__groupRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0.65rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.folder-detail-page__groupCheckbox {
+  margin-top: 0.15rem;
+  flex-shrink: 0;
+}
+
+.folder-detail-page__groupRowText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.folder-detail-page__groupName {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.folder-detail-page__groupMeta {
+  font-size: 0.8rem;
+  opacity: 0.75;
 }
 
 .folder-detail-page__dialogActions {

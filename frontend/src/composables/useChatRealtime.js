@@ -1,22 +1,31 @@
 import Echo from 'laravel-echo'
 import Pusher from 'pusher-js'
-import { onBeforeUnmount, ref, watch } from 'vue'
 
 window.Pusher = Pusher
 
 let echo
+
+function realtimeDisabled() {
+  return import.meta.env.VITE_REALTIME_ENABLED === 'false'
+}
 
 function resolveAuthEndpoint() {
   const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:9122'
   return `${base.replace(/\/$/, '')}/broadcasting/auth`
 }
 
+/**
+ * Echo/Pusher client for non-chat features (e.g. place order updates). Chat uses SSE.
+ * Set VITE_REALTIME_ENABLED=false when Reverb/WebSocket is not deployed to avoid connection errors.
+ */
 export function getChatEcho() {
+  if (realtimeDisabled()) {
+    return null
+  }
   if (!echo) {
     echo = new Echo({
       broadcaster: 'pusher',
       key: import.meta.env.VITE_PUSHER_APP_KEY || 'pluribus-key',
-      // pusher-js 8+ requires cluster even when wsHost points at Reverb / self-hosted.
       cluster: import.meta.env.VITE_PUSHER_APP_CLUSTER || 'mt1',
       wsHost: import.meta.env.VITE_WS_HOST || '127.0.0.1',
       wsPort: Number(import.meta.env.VITE_WS_PORT || 6001),
@@ -33,42 +42,4 @@ export function getChatEcho() {
     })
   }
   return echo
-}
-
-export function useChatRealtime(chatIdRef, onMessage) {
-  const connected = ref(false)
-  let channelName = null
-
-  function join(chatId) {
-    if (!chatId) return
-    const e = getChatEcho()
-    channelName = `chat.${chatId}`
-    e.private(`chat.${chatId}`)
-      .listen('.message.sent', (event) => {
-        if (event && event.message) {
-          onMessage(event.message)
-        }
-      })
-      .subscribed(() => {
-        connected.value = true
-      })
-  }
-
-  function leave() {
-    if (!channelName) return
-    getChatEcho().leave(channelName)
-    channelName = null
-    connected.value = false
-  }
-
-  watch(chatIdRef, (next, prev) => {
-    if (prev) leave()
-    if (next) join(next)
-  }, { immediate: true })
-
-  onBeforeUnmount(() => {
-    leave()
-  })
-
-  return { connected }
 }
