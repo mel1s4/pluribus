@@ -7,9 +7,11 @@ function emptyForm() {
     title: '',
     description: '',
     content_markdown: '',
+    video_url: '',
     tagsInput: '',
     showSummary: false,
     visibility_scope: 'private',
+    community_id: '',
     shared_group_id: '',
     calendar_id: '',
     place_id: '',
@@ -71,10 +73,12 @@ export function usePostComposerForm() {
     form.title = typeof post.title === 'string' ? post.title : ''
     form.description = typeof post.description === 'string' ? post.description : ''
     form.content_markdown = typeof post.content_markdown === 'string' ? post.content_markdown : ''
+    form.video_url = typeof post.video_url === 'string' ? post.video_url : ''
     form.tagsInput = Array.isArray(post.tags) ? post.tags.join(', ') : ''
     form.showSummary = Boolean(form.description)
     form.visibility_scope =
       post.visibility_scope === 'community' || post.visibility_scope === 'group' ? post.visibility_scope : 'private'
+    form.community_id = post.community_id != null ? String(post.community_id) : ''
     form.shared_group_id = post.shared_group_id != null ? String(post.shared_group_id) : ''
     form.calendar_id = post.calendar_id != null ? String(post.calendar_id) : ''
     form.place_id = post.place_id != null ? String(post.place_id) : ''
@@ -144,8 +148,10 @@ export function usePostComposerForm() {
       title,
       description: form.description.trim() || null,
       content_markdown: form.content_markdown.trim() || null,
+      video_url: form.video_url.trim() || null,
       tags: tags.length ? tags : null,
       visibility_scope: form.visibility_scope,
+      community_id: optionalNumber(form.community_id),
       shared_group_id:
         form.visibility_scope === 'group' ? optionalNumber(form.shared_group_id) : null,
       calendar_id: optionalNumber(form.calendar_id),

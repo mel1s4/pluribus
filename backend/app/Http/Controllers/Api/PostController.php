@@ -16,8 +16,10 @@ class PostController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $communityId = $this->resolveCommunityId($request);
         $query = Post::query()
             ->visibleToUser((int) $request->user()->id)
+            ->where('community_id', $communityId)
             ->orderByDesc('start_at')
             ->orderByDesc('id');
 
@@ -35,8 +37,9 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request): JsonResponse
     {
+        $communityId = $this->requestedOrActiveCommunityId($request);
         $post = Post::query()->create([
-            'community_id' => Community::current()->id,
+            'community_id' => $communityId,
             'author_id' => $request->user()->id,
             ...$request->validated(),
         ]);
@@ -66,6 +69,30 @@ class PostController extends Controller
         $post->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    private function resolveCommunityId(Request $request): int
+    {
+        $requested = (int) $request->query('community_id', 0);
+        if ($requested > 0) {
+            return $requested;
+        }
+        $active = $request->attributes->get('active_community');
+        if ($active instanceof Community) {
+            return (int) $active->id;
+        }
+
+        return Community::current()->id;
+    }
+
+    private function requestedOrActiveCommunityId(Request $request): int
+    {
+        $requested = (int) $request->input('community_id', 0);
+        if ($requested > 0) {
+            return $requested;
+        }
+
+        return $this->resolveCommunityId($request);
     }
 }
 

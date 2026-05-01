@@ -14,7 +14,7 @@ use Illuminate\Validation\Rule;
 class PlaceOfferCsvService
 {
     /** @var list<string> */
-    public const HEADERS = ['sku', 'title', 'description', 'price', 'visibility_scope', 'audience_keys', 'tags'];
+    public const HEADERS = ['sku', 'title', 'description', 'price', 'visibility_scope', 'audience_keys', 'tags', 'category'];
 
     /**
      * @return list<array<string, string>>
@@ -34,6 +34,7 @@ class PlaceOfferCsvService
                     'visibility_scope' => (string) $offer->visibility_scope,
                     'audience_keys' => $offer->audiences->pluck('name')->implode(','),
                     'tags' => implode(',', $offer->tags ?? []),
+                    'category' => (string) ($offer->category ?? ''),
                 ];
             })
             ->values()
@@ -99,6 +100,7 @@ class PlaceOfferCsvService
                 'visibility_scope' => trim($assoc['visibility_scope'] ?? PlaceOffer::VISIBILITY_SCOPE_PUBLIC),
                 'audience_ids' => $audienceIds,
                 'tags' => $this->splitList($assoc['tags'] ?? ''),
+                'category' => trim((string) ($assoc['category'] ?? '')),
             ];
 
             $validator = Validator::make($data, [
@@ -110,6 +112,7 @@ class PlaceOfferCsvService
                 'audience_ids' => ['array'],
                 'tags' => ['array', 'max:50'],
                 'tags.*' => ['string', 'max:64'],
+                'category' => ['nullable', 'string', 'max:128'],
             ]);
             $validator->after(function ($v) use ($data): void {
                 if ($data['visibility_scope'] === PlaceOffer::VISIBILITY_SCOPE_AUDIENCE && $data['audience_ids'] === []) {
@@ -136,6 +139,7 @@ class PlaceOfferCsvService
                 'description' => $data['description'],
                 'price' => $data['price'],
                 'tags' => $data['tags'] === [] ? null : $data['tags'],
+                'category' => $data['category'] === '' ? null : $data['category'],
                 'visibility_scope' => $data['visibility_scope'],
             ]);
             $offer->save();

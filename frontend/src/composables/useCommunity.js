@@ -28,8 +28,16 @@ export function useCommunity() {
   }
 }
 
-export async function fetchCommunityBranding() {
-  const { ok, data } = await cachedGet('/api/community/branding')
+/**
+ * @param {string | null | undefined} activeCommunitySlug Optional slug from scoped route or microsite (X-Community-Slug).
+ */
+export async function fetchCommunityBranding(activeCommunitySlug) {
+  const slug =
+    typeof activeCommunitySlug === 'string' && activeCommunitySlug.trim() !== ''
+      ? activeCommunitySlug.trim()
+      : ''
+  const requestOpts = slug !== '' ? { headers: { 'X-Community-Slug': slug } } : {}
+  const { ok, data } = await cachedGet('/api/community/branding', requestOpts)
   if (!ok || !data || typeof data !== 'object' || !data.community) {
     communityName.value = null
     communityLogoUrl.value = null

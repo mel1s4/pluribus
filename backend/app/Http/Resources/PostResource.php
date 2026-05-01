@@ -25,6 +25,7 @@ class PostResource extends JsonResource
             'title' => $this->title,
             'description' => $this->description,
             'content_markdown' => $this->content_markdown,
+            'video_url' => $this->video_url,
             'tags' => is_array($this->tags) ? $this->tags : [],
             'start_at' => $this->start_at?->toIso8601String(),
             'end_at' => $this->end_at?->toIso8601String(),

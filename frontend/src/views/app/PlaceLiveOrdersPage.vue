@@ -5,7 +5,6 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Title from '../../atoms/Title.vue'
 import { useCommunity } from '../../composables/useCommunity'
-import { usePlaceOrdersRealtime } from '../../composables/usePlaceOrdersRealtime.js'
 import { t } from '../../i18n/i18n'
 import { fetchPlaceOrders, patchPlaceOrderStatus } from '../../services/ordersApi'
 import { formatOfferPrice } from '../../utils/formatPrice'
@@ -15,10 +14,6 @@ const router = useRouter()
 const { communityCurrencyCode } = useCommunity()
 
 const placeId = computed(() => String(route.params.placeId || ''))
-const placeIdNum = computed(() => {
-  const n = Number(placeId.value)
-  return Number.isFinite(n) && n > 0 ? n : null
-})
 
 const loading = ref(true)
 const error = ref('')
@@ -27,7 +22,7 @@ const busyId = ref(0)
 
 const STATUS_OPTIONS = ['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']
 
-const POLL_MS = 16000
+const POLL_MS = 8000
 /** @type {ReturnType<typeof setInterval> | null} */
 let pollTimer = null
 
@@ -158,10 +153,6 @@ function exitLive() {
   router.push({ name: 'placeEdit', params: { placeId: placeId.value, tab: 'orders' } })
 }
 
-const { connected: realtimeConnected } = usePlaceOrdersRealtime(placeIdNum, () => {
-  void loadOrders()
-})
-
 function startPoll() {
   clearPoll()
   pollTimer = setInterval(() => void loadOrders(), POLL_MS)
@@ -196,8 +187,6 @@ onUnmounted(() => {
     <header class="place-live-orders__header">
       <Title tag="h1" class="place-live-orders__title">{{ t('orders.liveViewTitle') }}</Title>
       <div class="place-live-orders__headerActions">
-        <span v-if="realtimeConnected" class="place-live-orders__liveDot" aria-hidden="true" />
-        <span v-if="realtimeConnected" class="place-live-orders__liveLabel">{{ t('orders.liveRealtimeOn') }}</span>
         <Button type="button" variant="secondary" size="sm" @click="exitLive">
           {{ t('orders.liveViewExit') }}
         </Button>
@@ -280,19 +269,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.place-live-orders__liveDot {
-  width: 0.55rem;
-  height: 0.55rem;
-  border-radius: 50%;
-  background: #22c55e;
-  display: inline-block;
-}
-
-.place-live-orders__liveLabel {
-  font-size: 0.8rem;
-  color: var(--text-muted, #64748b);
 }
 
 .place-live-orders__filters {

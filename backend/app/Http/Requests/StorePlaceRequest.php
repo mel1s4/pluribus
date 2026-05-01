@@ -22,7 +22,7 @@ class StorePlaceRequest extends FormRequest
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'slug' => [
-                'required',
+                'nullable',
                 'string',
                 'min:2',
                 'max:64',
@@ -52,6 +52,9 @@ class StorePlaceRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('slug') && is_string($this->input('slug')) && trim($this->input('slug')) === '') {
+            $this->merge(['slug' => null]);
+        }
         if ($this->has('tags') && is_string($this->input('tags'))) {
             $raw = trim($this->input('tags'));
             if ($raw === '' || strcasecmp($raw, 'null') === 0) {

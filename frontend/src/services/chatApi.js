@@ -45,6 +45,13 @@ export function fetchChatMessages(chatId, cursor = null) {
   return cachedGet(`/api/chats/${chatId}/messages${suffix}`, { skipCache: true })
 }
 
+export function fetchChatUpdates(sinceId = 0, limit = 100) {
+  const q = new URLSearchParams()
+  q.set('since_id', String(Math.max(0, Number(sinceId) || 0)))
+  q.set('limit', String(Math.min(100, Math.max(1, Number(limit) || 100))))
+  return cachedGet(`/api/chats/updates?${q.toString()}`, { skipCache: true })
+}
+
 export async function sendChatMessage(chatId, body) {
   await ensureCsrfCookie()
   return apiJson('POST', `/api/chats/${chatId}/messages`, { body })
@@ -53,6 +60,20 @@ export async function sendChatMessage(chatId, body) {
 export async function markChatRead(chatId) {
   await ensureCsrfCookie()
   const result = await apiJson('POST', `/api/chats/${chatId}/read`)
+  if (result.ok) invalidateChatCaches()
+  return result
+}
+
+export async function addChatMembers(chatId, userIds) {
+  await ensureCsrfCookie()
+  const result = await apiJson('POST', `/api/chats/${chatId}/members`, { user_ids: userIds })
+  if (result.ok) invalidateChatCaches()
+  return result
+}
+
+export async function removeChatMember(chatId, userId) {
+  await ensureCsrfCookie()
+  const result = await apiJson('DELETE', `/api/chats/${chatId}/members/${userId}`)
   if (result.ok) invalidateChatCaches()
   return result
 }

@@ -12,6 +12,7 @@ function emptyOfferForm() {
     description: '',
     price: '',
     tags: [],
+    category: '',
     visibility_scope: 'public',
     audience_ids: [],
   }
@@ -28,7 +29,7 @@ function normalizeAudienceIds(ids) {
 }
 
 function stepForField(field) {
-  if (field === 'title' || field === 'price' || field === 'description' || field === 'tags') {
+  if (field === 'title' || field === 'price' || field === 'description' || field === 'tags' || field === 'category') {
     return 1
   }
   if (field === 'photo' || field === 'gallery') {
@@ -44,6 +45,7 @@ function cloneForm(form) {
   return {
     ...form,
     tags: Array.isArray(form.tags) ? [...form.tags] : [],
+    category: typeof form.category === 'string' ? form.category : '',
     audience_ids: normalizeAudienceIds(form.audience_ids),
   }
 }
@@ -114,6 +116,7 @@ export function useOfferCreateForm(placeIdRef) {
         ...emptyOfferForm(),
         ...parsed,
         tags: Array.isArray(parsed.tags) ? parsed.tags : [],
+        category: typeof parsed.category === 'string' ? parsed.category : '',
         audience_ids: normalizeAudienceIds(parsed.audience_ids),
       }
     } catch {
@@ -222,6 +225,7 @@ export function useOfferCreateForm(placeIdRef) {
     fd.append('description', form.value.description?.trim() || '')
     fd.append('price', String(form.value.price))
     fd.append('tags', JSON.stringify(Array.isArray(form.value.tags) ? form.value.tags : []))
+    fd.append('category', typeof form.value.category === 'string' ? form.value.category.trim() : '')
     fd.append('visibility_scope', form.value.visibility_scope || 'public')
     fd.append('audience_ids', JSON.stringify(normalizeAudienceIds(form.value.audience_ids)))
     if (photoFile.value) {
@@ -232,11 +236,13 @@ export function useOfferCreateForm(placeIdRef) {
   }
 
   function toJsonBody() {
+    const cat = typeof form.value.category === 'string' ? form.value.category.trim() : ''
     return {
       title: form.value.title.trim(),
       description: form.value.description?.trim() || null,
       price: Number(form.value.price),
       tags: Array.isArray(form.value.tags) ? form.value.tags : [],
+      category: cat === '' ? null : cat,
       visibility_scope: form.value.visibility_scope || 'public',
       audience_ids: normalizeAudienceIds(form.value.audience_ids),
     }

@@ -2,11 +2,15 @@
 import { computed } from 'vue'
 import Icon from '../../atoms/Icon.vue'
 import FavoritesList from './FavoritesList.vue'
+import SidebarMyCommunities from './SidebarMyCommunities.vue'
 import { useCommunity } from '../../composables/useCommunity'
+import { useActiveCommunity } from '../../composables/useActiveCommunity'
+import { sessionUser } from '../../composables/useSession'
 import { SIDEBAR_LINK_DEFS, isSidebarLinkDefAccessible } from '../../navigation/sidebarLinks'
 import { t } from '../../i18n/i18n'
 
 const { displayName } = useCommunity()
+const { withCommunityPath } = useActiveCommunity()
 
 defineProps({
   open: {
@@ -19,15 +23,21 @@ const emit = defineEmits(['close'])
 
 const sidebarId = 'app-sidebar'
 
-const links = computed(() =>
-  SIDEBAR_LINK_DEFS.filter((item) => isSidebarLinkDefAccessible(item)).map((item) => ({
+const links = computed(() => {
+  const scopedKeys = new Set(['dashboard', 'communities'])
+  return SIDEBAR_LINK_DEFS
+    .filter((item) => {
+      if (item.hideInPrimaryNav) return false
+      return isSidebarLinkDefAccessible(item)
+    })
+    .map((item) => ({
     key: item.key,
-    to: item.to,
+    to: scopedKeys.has(item.key) ? withCommunityPath(item.to) : item.to,
     label: t(item.labelKey),
     icon: item.icon,
     capability: item.capability,
-  })),
-)
+    }))
+})
 
 function maybeCloseMobile() {
   if (typeof window !== 'undefined' && window.matchMedia('(max-width: 1023px)').matches) {
@@ -50,6 +60,11 @@ function maybeCloseMobile() {
       </button>
     </div>
 
+    <SidebarMyCommunities
+      v-if="Number(sessionUser?.community_count || 0) > 0"
+      class="app-sidebar__my-communities"
+      @navigate="maybeCloseMobile"
+    />
     <FavoritesList class="app-sidebar__favorites" @navigate="maybeCloseMobile" />
 
     <nav class="app-sidebar__nav" aria-label="Main">

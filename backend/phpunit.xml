@@ -21,7 +21,6 @@
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
         <env name="BCRYPT_ROUNDS" value="4"/>
-        <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/>
@@ -30,10 +29,12 @@
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="FRONTEND_URL" value="http://localhost:9123"/>
+        <env name="WALLET_LEDGER_SECRET_KEY" value="n7pBrVqjkgf+Fcc853cwOHKIvLAS8E8cuKIKdo6a1ZvTzYwgayOUYZXvJUoSqqGLjnl0IQ8ThSM9LaEL/b2U5g=="/>
+        <env name="WALLET_LEDGER_PUBLIC_KEY" value="082MIGsjlGGV7yVKEqqhi455dCEPE4UjPS2hC/29lOY="/>
+        <env name="WALLET_LEDGER_ENTRIES_PER_BLOCK" value="1"/>
         <env name="SANCTUM_STATEFUL_DOMAINS" value="localhost,localhost:9123"/>
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="CHAT_REALTIME_DRIVER" value="database"/>
     </php>
 </phpunit>

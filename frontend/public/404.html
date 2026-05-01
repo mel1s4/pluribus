@@ -160,9 +160,8 @@
       // redirect to the main app to let Vue Router handle it
       (function() {
         const path = window.location.pathname;
-        const appRoutes = ['/join/', '/invitacion/', '/dashboard', '/profile', '/settings', '/map', '/users', '/places', '/my-places', '/community', '/members/'];
-        
-        const isAppRoute = appRoutes.some(route => path.startsWith(route));
+        const appRoutes = ['/join/', '/invitacion/', '/dashboard', '/profile', '/settings', '/map', '/users', '/places', '/my-places', '/community/', '/community-settings', '/members/'];
+        const isAppRoute = appRoutes.some(route => path.startsWith(route)) || path === '/community';
         
         if (isAppRoute) {
           // Redirect to index.html with the original path preserved

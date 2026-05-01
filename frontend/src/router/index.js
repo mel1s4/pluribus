@@ -4,6 +4,7 @@ import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
   resolveSession,
+  sessionUser,
   sessionStatus,
 } from '../composables/useSession'
 
@@ -19,6 +20,7 @@ const TableAccessView = () => import('../views/public/TableAccessPage.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
 const ChatsView = () => import('../views/app/ChatsPage.vue')
+const MyContactsPage = () => import('../views/app/MyContactsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
 const ChatInfoPage = () => import('../views/app/ChatInfoPage.vue')
 const FolderPage = () => import('../views/app/ChatFolderPage.vue')
@@ -28,6 +30,7 @@ const FoldersPage = () => import('../views/app/FoldersPage.vue')
 const FolderDetailPage = () => import('../views/app/FolderDetailPage.vue')
 const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
+const PostDetailPage = () => import('../views/app/PostDetailPage.vue')
 const PostComposerPage = () => import('../views/app/PostComposerPage.vue')
 const MyGroupsPage = () => import('../views/app/MyGroups.vue')
 const GroupDetailPage = () => import('../views/app/GroupDetailPage.vue')
@@ -49,9 +52,20 @@ const PlaceLiveOrdersPage = () => import('../views/app/PlaceLiveOrdersPage.vue')
 const PlaceOrderDetailPage = () => import('../views/app/PlaceOrderDetailPage.vue')
 const PlaceOfferCreatePage = () => import('../views/app/PlaceOfferCreatePage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
+const CommunityMicrositePage = () => import('../views/app/CommunityMicrositePage.vue')
+const CommunityCreditsPage = () => import('../views/app/CommunityCreditsPage.vue')
+const CommunityMembershipManagementPage = () =>
+  import('../views/app/CommunityMembershipManagementPage.vue')
+const CommunitiesPage = () => import('../views/app/CommunitiesPage.vue')
+const CommunityCreatePage = () => import('../views/app/CommunityCreatePage.vue')
+const CommunityEditPage = () => import('../views/app/CommunityEditPage.vue')
+const MyCommunitiesPage = () => import('../views/app/MyCommunitiesPage.vue')
 const CartPage = () => import('../views/app/CartPage.vue')
 const OrdersPage = () => import('../views/app/OrdersPage.vue')
 const OrderDetailPage = () => import('../views/app/OrderDetailPage.vue')
+const MyWalletPage = () => import('../views/app/MyWalletPage.vue')
+const WalletSendPage = () => import('../views/app/WalletSendPage.vue')
+const WalletMovementDetailPage = () => import('../views/app/WalletMovementDetailPage.vue')
 
 const routes = [
   {
@@ -139,6 +153,30 @@ const routes = [
     },
   },
   {
+    path: '/:communitySlug([a-z0-9-]+)/dashboard',
+    name: 'dashboardScoped',
+    component: DashboardView,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'dashboard.title',
+      sidebarKey: 'dashboard',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/community-settings/:tab?',
+    name: 'communitySettingsScoped',
+    component: CommunitySettingsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'communitySettings.title',
+      sidebarKey: 'community-settings',
+    },
+  },
+  {
     path: '/dashboard',
     name: 'dashboard',
     component: DashboardView,
@@ -185,6 +223,18 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'chats.title',
       sidebarKey: 'chats',
+    },
+  },
+  {
+    path: '/my-contacts',
+    name: 'myContacts',
+    component: MyContactsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'contacts.title',
+      sidebarKey: 'my-contacts',
     },
   },
   {
@@ -305,6 +355,18 @@ const routes = [
     },
   },
   {
+    path: '/posts/:id',
+    name: 'posts-detail',
+    component: PostDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'posts.detailPageTitle',
+      sidebarKey: 'posts',
+    },
+  },
+  {
     path: '/posts',
     name: 'posts',
     component: PostsPage,
@@ -347,6 +409,7 @@ const routes = [
     meta: {
       layout: 'app',
       requiresAuth: true,
+      requiresCapability: 'notifications.view',
       hideHeader: false,
       headerTitleKey: 'notifications.title',
       sidebarKey: 'notifications',
@@ -398,6 +461,53 @@ const routes = [
     },
   },
   {
+    path: '/community',
+    redirect: '/community-settings',
+  },
+  {
+    path: '/community/leadership',
+    redirect: '/community-settings/leadership',
+  },
+  {
+    path: '/community/settings',
+    redirect: '/community-settings/settings',
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)/members',
+    name: 'communityMemberships',
+    component: CommunityMembershipManagementPage,
+    beforeEnter: communityMembershipsBeforeEnter,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'community.memberships.manage',
+      hideHeader: false,
+      headerTitleKey: 'communityMemberships.title',
+    },
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)/credits',
+    name: 'communityCredits',
+    component: CommunityCreditsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: false,
+      hideHeader: false,
+      headerTitleKey: 'communityCredits.pageTitle',
+    },
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)',
+    name: 'communityMicrosite',
+    component: CommunityMicrositePage,
+    meta: {
+      layout: 'app',
+      requiresAuth: false,
+      hideHeader: false,
+      headerTitleKey: 'communityMicrosite.title',
+    },
+  },
+  {
     path: '/places/:placeId',
     name: 'placeView',
     component: PlaceViewPage,
@@ -433,7 +543,11 @@ const routes = [
     },
   },
   {
-    path: '/users/:tab?',
+    path: '/users/invitations',
+    redirect: { name: 'users' },
+  },
+  {
+    path: '/users',
     name: 'users',
     component: UsersView,
     meta: {
@@ -446,7 +560,85 @@ const routes = [
     },
   },
   {
-    path: '/community/:tab?',
+    path: '/:communitySlug([a-z0-9-]+)/communities/new',
+    name: 'communityCreateScoped',
+    component: CommunityCreatePage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.manage',
+      hideHeader: false,
+      headerTitleKey: 'communities.createPageTitle',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/communities/:communityId(\\d+)/edit',
+    name: 'communityEditScoped',
+    component: CommunityEditPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.view',
+      hideHeader: false,
+      headerTitleKey: 'communities.editPageTitle',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/communities',
+    name: 'communitiesScoped',
+    component: CommunitiesPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.view',
+      hideHeader: false,
+      headerTitleKey: 'communities.title',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/communities/new',
+    name: 'communityCreate',
+    component: CommunityCreatePage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.manage',
+      hideHeader: false,
+      headerTitleKey: 'communities.createPageTitle',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/communities/:communityId(\\d+)/edit',
+    name: 'communityEdit',
+    component: CommunityEditPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.view',
+      hideHeader: false,
+      headerTitleKey: 'communities.editPageTitle',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/communities',
+    name: 'communities',
+    component: CommunitiesPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'communities.view',
+      hideHeader: false,
+      headerTitleKey: 'communities.title',
+      sidebarKey: 'communities',
+    },
+  },
+  {
+    path: '/community-settings/:tab?',
     name: 'communitySettings',
     component: CommunitySettingsPage,
     meta: {
@@ -455,6 +647,96 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'communitySettings.title',
       sidebarKey: 'community-settings',
+    },
+  },
+  {
+    path: '/my-communities',
+    name: 'myCommunities',
+    component: MyCommunitiesPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'myCommunities.title',
+      sidebarKey: 'my-communities',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/wallet/send',
+    name: 'walletSendScoped',
+    component: WalletSendPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.sendPageTitle',
+      sidebarKey: 'my-wallet',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/wallet/movements/:transactionId(\\d+)',
+    name: 'walletMovementScoped',
+    component: WalletMovementDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.movementDetailTitle',
+      sidebarKey: 'my-wallet',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/wallet',
+    name: 'walletScoped',
+    component: MyWalletPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.title',
+      sidebarKey: 'my-wallet',
+    },
+  },
+  {
+    path: '/wallet/send',
+    name: 'walletSend',
+    component: WalletSendPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.sendPageTitle',
+      sidebarKey: 'my-wallet',
+    },
+  },
+  {
+    path: '/wallet/movements/:transactionId(\\d+)',
+    name: 'walletMovement',
+    component: WalletMovementDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.movementDetailTitle',
+      sidebarKey: 'my-wallet',
+    },
+  },
+  {
+    path: '/wallet',
+    name: 'wallet',
+    component: MyWalletPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      requiresCapability: 'wallet.view',
+      hideHeader: false,
+      headerTitleKey: 'wallet.title',
+      sidebarKey: 'my-wallet',
     },
   },
   {
@@ -577,27 +859,39 @@ const router = createRouter({
   routes,
 })
 
+function dashboardFallbackRoute(to) {
+  const scopedSlug = typeof to.params?.communitySlug === 'string' ? to.params.communitySlug : ''
+  if (scopedSlug) {
+    return { name: 'dashboardScoped', params: { communitySlug: scopedSlug } }
+  }
+  return { name: 'dashboard' }
+}
+
+function hasCommunityMembership(user) {
+  return Number(user?.community_count || 0) > 0
+}
+
+function communityMembershipsBeforeEnter(to) {
+  const slug = typeof to.params.slug === 'string' ? to.params.slug.trim() : ''
+  if (!slug) {
+    return { name: 'dashboard' }
+  }
+  const u = sessionUser.value
+  if (!u) {
+    return true
+  }
+  if (u.is_root) {
+    return true
+  }
+  const list = Array.isArray(u.communities) ? u.communities : []
+  const row = list.find((c) => c && String(c.slug || '').trim() === slug)
+  if (row && row.role === 'admin') {
+    return true
+  }
+  return { name: 'dashboard' }
+}
+
 router.beforeEach(async (to) => {
-  // #region agent log
-  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-    body: JSON.stringify({
-      sessionId: '808933',
-      runId: 'login-hang-v1',
-      hypothesisId: 'H5',
-      location: 'router/index.js:beforeEach:entry',
-      message: 'router beforeEach entry',
-      data: {
-        toName: String(to.name || ''),
-        toPath: to.fullPath,
-        requiresAuth: Boolean(to.meta.requiresAuth),
-        sessionStatus: sessionStatus.value,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
   const requiresAuth = Boolean(to.meta.requiresAuth)
   const unknownSession = sessionStatus.value === 'unknown'
   const needsResolution =
@@ -606,25 +900,6 @@ router.beforeEach(async (to) => {
 
   if (needsResolution) {
     await resolveSession()
-    // #region agent log
-    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-      body: JSON.stringify({
-        sessionId: '808933',
-        runId: 'login-hang-v1',
-        hypothesisId: 'H2',
-        location: 'router/index.js:beforeEach:postResolve',
-        message: 'router after resolveSession',
-        data: {
-          toName: String(to.name || ''),
-          toPath: to.fullPath,
-          sessionStatus: sessionStatus.value,
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
   }
   if (unknownSession && !requiresAuth) {
     // Resolve in background so public first paint/navigation is never blocked.
@@ -638,23 +913,65 @@ router.beforeEach(async (to) => {
     }
     return { name: 'login', query }
   }
-  if (to.name === 'login' && sessionStatus.value === 'authenticated') {
-    return { name: 'dashboard' }
-  }
   if (
     sessionStatus.value === 'authenticated'
     && to.meta.requiresCapability
     && typeof to.meta.requiresCapability === 'string'
     && !hasCapability(to.meta.requiresCapability)
   ) {
-    return { name: 'dashboard' }
+    return dashboardFallbackRoute(to)
+  }
+  if (
+    sessionStatus.value === 'authenticated'
+    && !sessionUser.value?.is_root
+    && !hasCommunityMembership(sessionUser.value)
+    && ![
+      'profile',
+      'settings',
+      'myCommunities',
+      'joinInvitation',
+      'joinInvitationVerify',
+      'login',
+      'dashboard',
+      'dashboardScoped',
+      'wallet',
+      'walletScoped',
+      'walletSend',
+      'walletSendScoped',
+      'walletMovement',
+      'walletMovementScoped',
+      'communityMicrosite',
+      'communityCredits',
+      'communityMemberships',
+      'communities',
+      'communitiesScoped',
+      'communityCreate',
+      'communityEdit',
+      'communityCreateScoped',
+      'communityEditScoped',
+    ].includes(String(to.name || ''))
+  ) {
+    return { name: 'myCommunities' }
   }
   if (
     sessionStatus.value === 'authenticated'
     && isVisitorUser()
-    && !['dashboard', 'map', 'placePublic', 'cart', 'orders', 'orderDetail', 'profile', 'settings', 'visitorAuthConsume'].includes(String(to.name || ''))
+    && ![
+      'dashboard',
+      'dashboardScoped',
+      'map',
+      'placePublic',
+      'communityMicrosite',
+      'communityCredits',
+      'cart',
+      'orders',
+      'orderDetail',
+      'profile',
+      'settings',
+      'visitorAuthConsume',
+    ].includes(String(to.name || ''))
   ) {
-    return { name: 'dashboard' }
+    return dashboardFallbackRoute(to)
   }
   return true
 })

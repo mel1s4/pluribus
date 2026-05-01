@@ -52,12 +52,23 @@ class PlaceOffersApiTest extends TestCase
                 'description' => 'Limited',
                 'price' => '19.99',
                 'tags' => ['deal', 'winter'],
+                'category' => 'Seasonal specials',
             ])
             ->assertCreated();
 
         $this->assertSame('Winter deal', $offerRes->json('offer.title'));
         $this->assertSame('19.99', $offerRes->json('offer.price'));
         $this->assertSame(['deal', 'winter'], $offerRes->json('offer.tags'));
+        $this->assertSame('Seasonal specials', $offerRes->json('offer.category'));
+
+        $offerId = (int) $offerRes->json('offer.id');
+        $patchRes = $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->patchJson('/api/places/'.$placeId.'/offers/'.$offerId, [
+                'category' => 'Clearance',
+            ])
+            ->assertOk();
+        $this->assertSame('Clearance', $patchRes->json('offer.category'));
     }
 
     public function test_offer_must_belong_to_place_when_scoped(): void

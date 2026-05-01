@@ -42,6 +42,26 @@ function isOwnMessage(msg) {
   return user.value != null && Number(msg.user_id) === Number(user.value.id)
 }
 
+function isSystemMessage(msg) {
+  return msg?.type === 'system'
+}
+
+function systemMessageText(msg) {
+  const actor = msg?.event_meta?.actor_name || msg?.user?.name || t('chats.unknownUser')
+  const target = msg?.event_meta?.target_name || t('chats.unknownUser')
+  if (msg?.event_key === 'member_added') {
+    return t('chats.thread.system.memberAdded')
+      .replace('{actor}', actor)
+      .replace('{target}', target)
+  }
+  if (msg?.event_key === 'member_removed') {
+    return t('chats.thread.system.memberRemoved')
+      .replace('{actor}', actor)
+      .replace('{target}', target)
+  }
+  return msg?.body || ''
+}
+
 function replaceOptimistic(tempId, realMessage, status) {
   const idx = messages.value.findIndex((m) => m._tempId === tempId)
   if (idx === -1) {
@@ -84,6 +104,8 @@ const messagesWithMeta = computed(() =>
     const prev = i > 0 ? messages.value[i - 1] : null
     const isGrouped =
       Boolean(prev)
+      && msg?.type !== 'system'
+      && prev?.type !== 'system'
       && Number(prev.user_id) === Number(msg.user_id)
       && prev._status !== 'error'
       && msg._status !== 'error'
@@ -301,10 +323,15 @@ onBeforeUnmount(() => {
         class="chat-thread__message"
         :class="{
           'chat-thread__message--own': isOwnMessage(message),
+          'chat-thread__message--system': isSystemMessage(message),
           'chat-thread__message--grouped': message.isGrouped,
         }"
       >
+        <div v-if="isSystemMessage(message)" class="chat-thread__system-message">
+          {{ systemMessageText(message) }}
+        </div>
         <div
+          v-else
           class="chat-thread__bubble"
           :class="{
             'chat-thread__bubble--pending': isOwnMessage(message) && message._status === 'pending',
@@ -390,8 +417,16 @@ onBeforeUnmount(() => {
 .chat-thread__messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 0.5rem; }
 .chat-thread__message { display: flex; }
 .chat-thread__message--own { justify-content: flex-end; }
+.chat-thread__message--system { justify-content: center; }
 .chat-thread__message--grouped { margin-top: -0.25rem; }
 .chat-thread__message--grouped .chat-thread__bubble { margin-top: 0.15rem; }
+.chat-thread__system-message {
+  font-size: 0.78rem;
+  opacity: 0.75;
+  background: color-mix(in srgb, var(--border) 40%, transparent);
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+}
 .chat-thread__bubble {
   max-width: 70%;
   border-radius: 0.5rem;

@@ -34,6 +34,7 @@ class StorePlaceOfferRequest extends FormRequest
             'audience_ids.*' => ['integer', Rule::exists('place_audiences', 'id')->where('place_id', $placeId)],
             'tags' => ['nullable', 'array', 'max:50'],
             'tags.*' => ['string', 'max:64'],
+            'category' => ['nullable', 'string', 'max:128'],
             'photo' => ['nullable', 'file', 'image', 'max:5120'],
             'gallery' => ['nullable', 'array', 'max:20'],
             'gallery.*' => ['file', 'image', 'max:5120'],
@@ -42,6 +43,10 @@ class StorePlaceOfferRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
+        if ($this->has('category') && is_string($this->input('category'))) {
+            $cat = trim($this->input('category'));
+            $this->merge(['category' => $cat === '' ? null : $cat]);
+        }
         if ($this->has('tags') && is_string($this->input('tags'))) {
             $raw = trim($this->input('tags'));
             if ($raw === '' || strcasecmp($raw, 'null') === 0) {

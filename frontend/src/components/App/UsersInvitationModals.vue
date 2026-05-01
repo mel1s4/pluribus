@@ -62,7 +62,20 @@ const sendCopyHint = ref('')
 const linkCopyHint = ref('')
 const qrCopyHint = ref('')
 
+const props = defineProps({
+  /** Merged into apiJson (e.g. `{ headers: { 'X-Community-Slug': slug } }`). */
+  requestOptions: {
+    type: Object,
+    default: () => ({}),
+  },
+})
+
 const emit = defineEmits(['invitations-changed'])
+
+function invitationRequestOpts() {
+  const o = props.requestOptions
+  return o && typeof o === 'object' ? o : {}
+}
 
 function resetSendState() {
   sendEmail.value = ''
@@ -156,10 +169,15 @@ async function submitSendInvitation() {
   }
   sendLoading.value = true
   await ensureCsrfCookie()
-  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
-    email,
-    join_url_locale: language.value,
-  })
+  const { ok, status, data } = await apiJson(
+    'POST',
+    '/api/invitations',
+    {
+      email,
+      join_url_locale: language.value,
+    },
+    invitationRequestOpts(),
+  )
   sendLoading.value = false
   if (!ok) {
     sendError.value =
@@ -190,10 +208,15 @@ async function submitCreateLink() {
   linkLoading.value = true
   await ensureCsrfCookie()
   const maxUses = inviteUsageToMaxUses(linkUsage.value)
-  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
-    max_uses: maxUses,
-    join_url_locale: language.value,
-  })
+  const { ok, status, data } = await apiJson(
+    'POST',
+    '/api/invitations',
+    {
+      max_uses: maxUses,
+      join_url_locale: language.value,
+    },
+    invitationRequestOpts(),
+  )
   linkLoading.value = false
   if (!ok) {
     linkError.value =
@@ -224,10 +247,15 @@ async function submitCreateQr() {
   qrLoading.value = true
   await ensureCsrfCookie()
   const maxUses = inviteUsageToMaxUses(qrUsage.value)
-  const { ok, status, data } = await apiJson('POST', '/api/invitations', {
-    max_uses: maxUses,
-    join_url_locale: language.value,
-  })
+  const { ok, status, data } = await apiJson(
+    'POST',
+    '/api/invitations',
+    {
+      max_uses: maxUses,
+      join_url_locale: language.value,
+    },
+    invitationRequestOpts(),
+  )
   qrLoading.value = false
   if (!ok) {
     qrError.value =

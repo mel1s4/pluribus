@@ -1,5 +1,5 @@
 import { onBeforeUnmount, ref, watch } from 'vue'
-import { apiBaseUrl, chatSseHeaders, ensureCsrfCookie } from '../services/api.js'
+import { apiJson, ensureCsrfCookie } from '../services/api.js'
 
 /** @type {Map<string, Set<(payload: { chat_id: number, message: unknown }) => void>>} */
 const handlers = new Map()
@@ -10,6 +10,12 @@ const httpOkSubscribers = new Set()
 let abortController = null
 let loopRunning = false
 let csrfReady = false
+let sinceId = 0
+const activeThreadIds = new Set()
+
+const FAST_POLL_MS = 2000
+const BACKGROUND_POLL_MS = 10000
+const MAX_BACKOFF_MS = 30000
 
 function notifyHttpOk() {
   for (const cb of httpOkSubscribers) {
@@ -21,7 +27,7 @@ function notifyHttpOk() {
   }
 }
 
-/** Fires after each successful GET to `/api/chats/stream` (including reconnects). */
+/** Fires after each successful polling request (including reconnects). */
 export function subscribeChatSseHttpOk(cb) {
   httpOkSubscribers.add(cb)
   return () => {
@@ -37,26 +43,7 @@ function handlerCount() {
   return n
 }
 
-/**
- * @param {string} block
- */
-function dispatchSseBlock(block) {
-  const dataLines = []
-  for (const line of block.split('\n')) {
-    if (line.startsWith('data:')) {
-      dataLines.push(line.slice(5).trimStart())
-    }
-  }
-  if (dataLines.length === 0) {
-    return
-  }
-  const json = dataLines.join('\n')
-  let payload
-  try {
-    payload = JSON.parse(json)
-  } catch {
-    return
-  }
+function dispatchPayload(payload) {
   if (payload == null || typeof payload !== 'object' || payload.message == null) {
     return
   }
@@ -77,21 +64,6 @@ function dispatchSseBlock(block) {
   }
 }
 
-/**
- * @param {string} buffer
- * @returns {string}
- */
-function consumeCompleteBlocks(buffer) {
-  const parts = buffer.split('\n\n')
-  const tail = parts.pop() ?? ''
-  for (const block of parts) {
-    if (block.length > 0) {
-      dispatchSseBlock(block)
-    }
-  }
-  return tail
-}
-
 function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms))
 }
@@ -101,44 +73,45 @@ function withBackoffJitter(ms) {
   return Math.max(250, Math.round(ms * jitterFactor))
 }
 
+function currentPollIntervalMs() {
+  return activeThreadIds.size > 0 ? FAST_POLL_MS : BACKGROUND_POLL_MS
+}
+
 async function readOneSession(signal) {
   if (!csrfReady) {
     await ensureCsrfCookie()
     csrfReady = true
   }
-  const res = await fetch(`${apiBaseUrl()}/api/chats/stream`, {
-    method: 'GET',
-    credentials: 'include',
-    headers: chatSseHeaders(),
-    signal,
+  const query = new URLSearchParams({
+    since_id: String(sinceId),
+    limit: '100',
   })
-  if (!res.ok) {
-    if (res.status === 401 || res.status === 419) {
+  const result = await apiJson('GET', `/api/chats/updates?${query.toString()}`)
+  if (!result.ok) {
+    if (result.status === 401 || result.status === 419) {
       csrfReady = false
     }
-    throw new Error(`sse_http_${res.status}`)
+    throw new Error(`poll_http_${result.status}`)
   }
   notifyHttpOk()
-  const reader = res.body?.getReader()
-  if (!reader) {
-    throw new Error('sse_no_body')
-  }
-  const decoder = new TextDecoder()
-  let buffer = ''
-  while (!signal.aborted) {
-    const { done, value } = await reader.read()
-    if (done) {
+
+  const payload = result.data && typeof result.data === 'object' ? result.data : null
+  const nextSinceIdRaw = payload && 'next_since_id' in payload ? Number(payload.next_since_id) : sinceId
+  const nextSinceId = Number.isFinite(nextSinceIdRaw) ? Math.max(sinceId, nextSinceIdRaw) : sinceId
+  const rows = payload && Array.isArray(payload.data) ? payload.data : []
+
+  for (const row of rows) {
+    if (signal.aborted) {
       break
     }
-    buffer += decoder.decode(value, { stream: true })
-    buffer = consumeCompleteBlocks(buffer)
+    dispatchPayload(row)
   }
+  sinceId = nextSinceId
 }
 
 async function runLoop() {
   loopRunning = true
   let backoffMs = 1000
-  const maxBackoffMs = 30_000
   try {
     while (handlerCount() > 0) {
       abortController = new AbortController()
@@ -155,12 +128,12 @@ async function runLoop() {
           continue
         }
         const delay = withBackoffJitter(backoffMs)
-        backoffMs = Math.min(maxBackoffMs, backoffMs * 2)
+        backoffMs = Math.min(MAX_BACKOFF_MS, backoffMs * 2)
         await sleep(delay)
         continue
       }
       if (handlerCount() > 0) {
-        await sleep(500)
+        await sleep(currentPollIntervalMs())
       }
     }
   } finally {
@@ -205,6 +178,15 @@ export function registerChatSseListener(chatId, callback) {
 }
 
 /**
+ * @param {string|number} chatId
+ * @param {(payload: { chat_id: number, message: unknown }) => void} callback
+ * @returns {() => void}
+ */
+export function registerChatPollListener(chatId, callback) {
+  return registerChatSseListener(chatId, callback)
+}
+
+/**
  * @param {import('vue').Ref<string|number|null|undefined>} chatIdRef
  * @param {(message: unknown) => void} onMessage
  */
@@ -212,6 +194,7 @@ export function useChatSseForThread(chatIdRef, onMessage) {
   const connected = ref(false)
   let unregister = null
   let offHttpOk = null
+  let trackedThreadId = null
 
   function attach(chatId) {
     offHttpOk?.()
@@ -219,9 +202,15 @@ export function useChatSseForThread(chatIdRef, onMessage) {
     offHttpOk = null
     unregister = null
     connected.value = false
+    if (trackedThreadId) {
+      activeThreadIds.delete(trackedThreadId)
+      trackedThreadId = null
+    }
     if (!chatId) {
       return
     }
+    trackedThreadId = String(chatId)
+    activeThreadIds.add(trackedThreadId)
     offHttpOk = subscribeChatSseHttpOk(() => {
       connected.value = true
     })
@@ -241,6 +230,10 @@ export function useChatSseForThread(chatIdRef, onMessage) {
   )
 
   onBeforeUnmount(() => {
+    if (trackedThreadId) {
+      activeThreadIds.delete(trackedThreadId)
+      trackedThreadId = null
+    }
     offHttpOk?.()
     offHttpOk = null
     unregister?.()

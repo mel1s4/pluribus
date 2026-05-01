@@ -140,7 +140,6 @@ function onLogoBackgroundColorInput(ev) {
       :value="modelValue.slug ?? ''"
       class="place-basics-form__input"
       type="text"
-      required
       maxlength="64"
       pattern="[a-z0-9]+(-[a-z0-9]+)*"
       autocomplete="off"

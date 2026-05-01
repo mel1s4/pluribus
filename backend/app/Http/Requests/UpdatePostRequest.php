@@ -3,11 +3,19 @@
 namespace App\Http\Requests;
 
 use App\Models\Post;
+use App\Support\PostVideoUrl;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class UpdatePostRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('video_url') === '') {
+            $this->merge(['video_url' => null]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -26,6 +34,15 @@ class UpdatePostRequest extends FormRequest
             'title' => ['sometimes', 'required', 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'content_markdown' => ['sometimes', 'nullable', 'string'],
+            'video_url' => [
+                'sometimes',
+                'nullable',
+                'string',
+                'max:2048',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    PostVideoUrl::validate($value, $fail);
+                },
+            ],
             'tags' => ['sometimes', 'nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
             'start_at' => ['sometimes', 'nullable', 'date'],

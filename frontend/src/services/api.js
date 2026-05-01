@@ -50,7 +50,7 @@ function readCookie(name) {
   return ''
 }
 
-function xsrfHeaders() {
+export function xsrfHeaders() {
   const token = readCookie('XSRF-TOKEN')
   if (!token) {
     return {}
@@ -124,10 +124,11 @@ async function requestWithTimeout(method, path, url, init, timeoutMsOverride) {
     && typeof AbortSignal.timeout === 'function'
   const signal = supportsAbortTimeout ? AbortSignal.timeout(timeoutMs) : undefined
   try {
-    return await fetch(url, {
+    const response = await fetch(url, {
       ...init,
       ...(signal ? { signal } : {}),
     })
+    return response
   } catch (error) {
     if (error instanceof Error && error.name === 'TimeoutError') {
       throw new ApiTimeoutError(String(method).toUpperCase(), path, timeoutMs)
@@ -136,16 +137,11 @@ async function requestWithTimeout(method, path, url, init, timeoutMsOverride) {
   }
 }
 
-/** Headers for authenticated GET `/api/chats/stream` (Sanctum cookie + CSRF). */
-export function chatSseHeaders() {
-  return {
-    Accept: 'text/event-stream',
-    ...xsrfHeaders(),
-  }
-}
-
 function shouldSkipGlobalUnauthorizedHandler(method, path) {
   if (method === 'GET' && /^\/api\/places\/[^/]+\/public$/.test(path)) {
+    return true
+  }
+  if (method === 'GET' && /^\/api\/communities\/[^/]+\/microsite$/.test(path)) {
     return true
   }
   return (
@@ -156,21 +152,6 @@ function shouldSkipGlobalUnauthorizedHandler(method, path) {
 }
 
 export async function ensureCsrfCookie() {
-  // #region agent log
-  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-    body: JSON.stringify({
-      sessionId: '808933',
-      runId: 'login-hang-v2',
-      hypothesisId: 'H7',
-      location: 'api.js:ensureCsrfCookie:entry',
-      message: 'ensureCsrfCookie start',
-      data: {},
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
   const now = Date.now()
   if (csrfReadyUntil > now) {
     return
@@ -188,25 +169,7 @@ export async function ensureCsrfCookie() {
         headers: { Accept: 'application/json' },
       }, 3000)
       csrfReadyUntil = Date.now() + CSRF_CACHE_TTL_MS
-  } catch (err) {
-    // #region agent log
-    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-      body: JSON.stringify({
-        sessionId: '808933',
-        runId: 'login-hang-v2',
-        hypothesisId: 'H11',
-        location: 'api.js:ensureCsrfCookie:catch',
-        message: 'ensureCsrfCookie failed or timed out',
-        data: {
-          errorName: err instanceof Error ? err.name : typeof err,
-          errorMessage: err instanceof Error ? err.message : String(err),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
+  } catch {
       csrfReadyUntil = 0
     }
   })()
@@ -215,21 +178,6 @@ export async function ensureCsrfCookie() {
   } finally {
     pendingCsrfRequest = null
   }
-  // #region agent log
-  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-    body: JSON.stringify({
-      sessionId: '808933',
-      runId: 'login-hang-v2',
-      hypothesisId: 'H7',
-      location: 'api.js:ensureCsrfCookie:exit',
-      message: 'ensureCsrfCookie done',
-      data: {},
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
 }
 
 const CSRF_CACHE_TTL_MS = 60_000
@@ -248,12 +196,17 @@ let pendingCsrfRequest = null
  * @param {FormData} formData
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
-export async function apiForm(method, path, formData) {
+export async function apiForm(method, path, formData, requestOptions = undefined) {
   await ensureCsrfCookie()
   const url = `${apiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`
+  const extra =
+    requestOptions && typeof requestOptions === 'object' && requestOptions.headers
+      ? requestOptions.headers
+      : {}
   const headers = {
     Accept: 'application/json',
     ...xsrfHeaders(),
+    ...extra,
   }
   const res = await requestWithTimeout(method, path, url, {
     method,
@@ -277,28 +230,16 @@ export async function apiForm(method, path, formData) {
   return { ok: res.ok, status: res.status, data }
 }
 
-export async function apiJson(method, path, body) {
+export async function apiJson(method, path, body, requestOptions = undefined) {
   const url = `${apiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`
-  // #region agent log
-  if (path === '/api/login') {
-    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-      body: JSON.stringify({
-        sessionId: '808933',
-        runId: 'login-hang-v2',
-        hypothesisId: 'H8',
-        location: 'api.js:apiJson:loginRequestStart',
-        message: 'apiJson login request start',
-        data: { method, path },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-  }
-  // #endregion
+  const extra =
+    requestOptions && typeof requestOptions === 'object' && requestOptions.headers
+      ? requestOptions.headers
+      : {}
   const headers = {
     Accept: 'application/json',
     ...xsrfHeaders(),
+    ...extra,
   }
   const opts = {
     method,
@@ -314,23 +255,6 @@ export async function apiJson(method, path, body) {
     opts.body = JSON.stringify(body)
   }
   const res = await requestWithTimeout(method, path, url, opts)
-  // #region agent log
-  if (path === '/api/login') {
-    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-      body: JSON.stringify({
-        sessionId: '808933',
-        runId: 'login-hang-v2',
-        hypothesisId: 'H8',
-        location: 'api.js:apiJson:loginResponseStart',
-        message: 'apiJson login response received',
-        data: { status: res.status, ok: res.ok },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-  }
-  // #endregion
   const text = await res.text()
   let data = null
   if (text) {

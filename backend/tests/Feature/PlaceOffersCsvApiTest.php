@@ -40,13 +40,15 @@ class PlaceOffersCsvApiTest extends TestCase
             'description' => 'Fresh',
             'price' => 3.99,
             'visibility_scope' => 'public',
+            'category' => 'Hot drinks',
         ]);
 
         $response = $this->actingAs($user)->get('/api/places/'.$place->id.'/offers/export.csv');
         $response->assertOk();
         $response->assertHeader('content-type', 'text/csv; charset=UTF-8');
-        $response->assertSee('sku,title,description,price,visibility_scope,audience_keys,tags', false);
+        $response->assertSee('sku,title,description,price,visibility_scope,audience_keys,tags,category', false);
         $response->assertSee('coffee-1', false);
+        $response->assertSee('Hot drinks', false);
     }
 
     public function test_import_offers_csv_upserts_by_sku_and_reports_partial_errors(): void
@@ -63,10 +65,10 @@ class PlaceOffersCsvApiTest extends TestCase
         ]);
 
         $csv = implode("\n", [
-            'sku,title,description,price,visibility_scope,audience_keys,tags',
-            'coffee-1,Coffee Updated,Fresh roast,4.25,public,,"hot,beans"',
-            'tea-1,Tea New,Herbal,2.10,audience,Vips,herbal',
-            'bad-row,,Missing title,1.00,public,,',
+            'sku,title,description,price,visibility_scope,audience_keys,tags,category',
+            'coffee-1,Coffee Updated,Fresh roast,4.25,public,,"hot,beans",Drinks',
+            'tea-1,Tea New,Herbal,2.10,audience,Vips,herbal,"Cold drinks, iced"',
+            'bad-row,,Missing title,1.00,public,,,',
         ]);
         $file = UploadedFile::fake()->createWithContent('offers.csv', $csv);
 
@@ -83,6 +85,7 @@ class PlaceOffersCsvApiTest extends TestCase
             'place_id' => $place->id,
             'sku' => 'coffee-1',
             'title' => 'Coffee Updated',
+            'category' => 'Drinks',
         ]);
         $this->assertDatabaseHas('place_offers', [
             'place_id' => $place->id,
@@ -97,5 +100,6 @@ class PlaceOffersCsvApiTest extends TestCase
         $tea = $place->offers()->where('sku', 'tea-1')->firstOrFail();
         $this->assertSame('audience', $tea->visibility_scope);
         $this->assertSame([(int) $audience->id], $tea->audiences()->pluck('place_audiences.id')->map(fn ($id) => (int) $id)->all());
+        $this->assertSame('Cold drinks, iced', $tea->category);
     }
 }

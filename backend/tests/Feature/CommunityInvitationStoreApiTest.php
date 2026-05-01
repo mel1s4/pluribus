@@ -24,11 +24,28 @@ class CommunityInvitationStoreApiTest extends TestCase
         return ['Origin' => 'http://localhost:9123'];
     }
 
-    private function statefulJson(string $method, string $uri, array $data = []): TestResponse
+    /**
+     * @param  array<string, string>  $extraHeaders
+     */
+    private function statefulJson(string $method, string $uri, array $data = [], array $extraHeaders = []): TestResponse
     {
-        return $this->withHeaders($this->statefulHeaders())
+        return $this->withHeaders(array_merge($this->statefulHeaders(), $extraHeaders))
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->json($method, $uri, $data);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function slugHeaders(Community $community): array
+    {
+        $slug = (string) $community->slug;
+        if ($slug === '') {
+            $slug = 'community';
+            $community->forceFill(['slug' => $slug])->save();
+        }
+
+        return ['X-Community-Slug' => $slug];
     }
 
     public function test_email_invitation_ignores_client_max_uses_and_is_single_use(): void
@@ -76,12 +93,14 @@ class CommunityInvitationStoreApiTest extends TestCase
     {
         Mail::fake();
 
+        $community = Community::current();
         $admin = User::factory()->admin()->create();
+        $admin->communities()->syncWithoutDetaching([$community->id => ['role' => 'admin']]);
         $this->actingAs($admin);
 
         $this->statefulJson('POST', '/api/invitations', [
             'max_uses' => 4,
-        ])->assertCreated()
+        ], $this->slugHeaders($community))->assertCreated()
             ->assertJsonPath('invitation.max_uses', 4)
             ->assertJsonPath('invitation.email', null);
 

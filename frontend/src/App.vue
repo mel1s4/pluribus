@@ -1,7 +1,7 @@
 <script setup>
 import { computed, defineAsyncComponent, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { communityName } from './composables/useCommunity'
+import { communityName, fetchCommunityBranding } from './composables/useCommunity'
 import { sessionStatus } from './composables/useSession'
 import { i18nReady, language } from './i18n/i18n'
 import { syncDocumentTitle } from './utils/documentTitle'
@@ -12,8 +12,10 @@ const AppShellLayout = defineAsyncComponent(() => import('./layouts/AppShellLayo
 
 const route = useRoute()
 
+const routeRequiresAuth = computed(() => Boolean(route.meta?.requiresAuth))
+
 const showBootstrap = computed(
-  () => sessionStatus.value === 'unknown' || !i18nReady.value,
+  () => !i18nReady.value || (routeRequiresAuth.value && sessionStatus.value === 'unknown'),
 )
 
 const layoutComponent = computed(() =>
@@ -27,6 +29,25 @@ watch(
   () => [route.fullPath, communityName.value, language.value],
   () => syncDocumentTitle(route),
   { immediate: true },
+)
+
+watch(
+  () => {
+    const name = String(route.name || '')
+    if (typeof route.params.communitySlug === 'string' && route.params.communitySlug.trim() !== '') {
+      return route.params.communitySlug.trim()
+    }
+    if (
+      (name === 'communityMicrosite' || name === 'communityMemberships')
+      && typeof route.params.slug === 'string'
+    ) {
+      return route.params.slug.trim()
+    }
+    return ''
+  },
+  (slug) => {
+    void fetchCommunityBranding(slug || null)
+  },
 )
 </script>
 

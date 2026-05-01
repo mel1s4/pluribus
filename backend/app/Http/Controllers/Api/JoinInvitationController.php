@@ -10,6 +10,7 @@ use App\Mail\JoinInvitationEmailVerificationMail;
 use App\Models\Community;
 use App\Models\CommunityInvitation;
 use App\Models\CommunityInvitationEmailVerification;
+use App\Models\CommunityMembership;
 use App\Models\User;
 use App\Support\LocaleOptions;
 use Illuminate\Http\JsonResponse;
@@ -222,20 +223,27 @@ class JoinInvitationController extends Controller
 
             $email = strtolower(trim($verification->email));
 
-            if (User::query()->where('email', $email)->exists()) {
-                throw ValidationException::withMessages([
-                    'email' => [__('An account with this email already exists.')],
+            $created = User::query()->where('email', $email)->first();
+            if (! $created instanceof User) {
+                $created = User::query()->create([
+                    'name' => $validated['name'],
+                    'email' => $email,
+                    'username' => null,
+                    'password' => $validated['password'],
+                    'user_type' => 'member',
+                    'is_root' => false,
                 ]);
             }
 
-            $created = User::query()->create([
-                'name' => $validated['name'],
-                'email' => $email,
-                'username' => null,
-                'password' => $validated['password'],
-                'user_type' => 'member',
-                'is_root' => false,
-            ]);
+            CommunityMembership::query()->updateOrCreate(
+                [
+                    'community_id' => $invitation->community_id,
+                    'user_id' => $created->id,
+                ],
+                [
+                    'role' => 'member',
+                ]
+            );
 
             $verification->forceFill(['consumed_at' => now()])->save();
             $invitation->increment('uses_count');

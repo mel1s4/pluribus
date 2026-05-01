@@ -55,6 +55,12 @@ class PlaceOfferController extends Controller
         $tags = $validated['tags'] ?? [];
         $tags = is_array($tags) ? array_values(array_filter(array_map('strval', $tags), fn (string $t) => $t !== '')) : [];
 
+        $category = null;
+        if (array_key_exists('category', $validated) && $validated['category'] !== null) {
+            $cat = is_string($validated['category']) ? trim($validated['category']) : '';
+            $category = $cat !== '' ? $cat : null;
+        }
+
         $offer = $place->offers()->create([
             'sku' => PlaceSku::generate($validated['sku'] ?? $validated['title']),
             'title' => $validated['title'],
@@ -63,6 +69,7 @@ class PlaceOfferController extends Controller
             'photo_path' => $photoPath,
             'gallery_paths' => $galleryPaths === [] ? null : $galleryPaths,
             'tags' => $tags === [] ? null : $tags,
+            'category' => $category,
             'visibility_scope' => $validated['visibility_scope'] ?? PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
         ]);
         $offer->audiences()->sync(
@@ -119,6 +126,12 @@ class PlaceOfferController extends Controller
             $tags = $validated['tags'] ?? [];
             $tags = is_array($tags) ? array_values(array_filter(array_map('strval', $tags), fn (string $t) => $t !== '')) : [];
             $offer->tags = $tags === [] ? null : $tags;
+        }
+
+        if (array_key_exists('category', $validated)) {
+            $rawCat = $validated['category'];
+            $cat = is_string($rawCat) ? trim($rawCat) : '';
+            $offer->category = $rawCat === null || $cat === '' ? null : $cat;
         }
 
         $offer->fill([

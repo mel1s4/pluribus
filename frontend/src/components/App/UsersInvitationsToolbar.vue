@@ -4,6 +4,13 @@ import Button from '../../atoms/Button.vue'
 import UsersInvitationModals from './UsersInvitationModals.vue'
 import { t } from '../../i18n/i18n'
 
+defineProps({
+  requestOptions: {
+    type: Object,
+    default: () => ({}),
+  },
+})
+
 const emit = defineEmits(['invitations-changed'])
 
 const modalsRef = ref(null)
@@ -32,7 +39,11 @@ function openQrDialog() {
     <Button type="button" variant="secondary" @click="openQrDialog">
       {{ t('users.inviteQrCta') }}
     </Button>
-    <UsersInvitationModals ref="modalsRef" @invitations-changed="emit('invitations-changed')" />
+    <UsersInvitationModals
+      ref="modalsRef"
+      :request-options="requestOptions"
+      @invitations-changed="emit('invitations-changed')"
+    />
   </div>
 </template>
 

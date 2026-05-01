@@ -10,6 +10,7 @@ import PlaceServiceScheduleDisplay from '../../molecules/PlaceServiceScheduleDis
 import { t } from '../../i18n/i18n'
 import { fetchPlace } from '../../services/placesApi.js'
 import { placeApiErrorMessage } from '../../utils/placeForm.js'
+import { buildPlaceOfferSections } from '../../utils/placeOfferSections.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -155,7 +156,19 @@ load()
 
       <Card class="place-view-page__card">
         <h2 class="place-view-page__cardTitle">{{ t('places.viewOffersSection') }}</h2>
-        <PlaceOffersPublicList :offers="place.offers || []" :place-id="place.id" />
+        <template v-if="offerSections.length === 1 && offerSections[0].key === 'all'">
+          <PlaceOffersPublicList :offers="offerSections[0].offers" :place-id="place.id" />
+        </template>
+        <template v-else>
+          <div
+            v-for="sec in offerSections"
+            :key="sec.key"
+            class="place-view-page__offerCategoryBlock"
+          >
+            <h3 class="place-view-page__offerCategoryTitle">{{ sec.title }}</h3>
+            <PlaceOffersPublicList :offers="sec.offers" :place-id="place.id" />
+          </div>
+        </template>
       </Card>
 
       <Card class="place-view-page__card">
@@ -271,6 +284,17 @@ load()
   margin: 0 0 0.75rem;
   font-size: 1.05rem;
   font-weight: 600;
+}
+
+.place-view-page__offerCategoryBlock:not(:first-child) {
+  margin-top: 1.25rem;
+}
+
+.place-view-page__offerCategoryTitle {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text, inherit);
 }
 
 .place-view-page__scheduleIntro {

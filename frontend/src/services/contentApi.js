@@ -94,6 +94,7 @@ export function fetchPosts(params = {}) {
   const q = new URLSearchParams()
   if (params.type) q.set('type', String(params.type))
   if (params.calendar_id) q.set('calendar_id', String(params.calendar_id))
+  if (params.community_id) q.set('community_id', String(params.community_id))
   const qs = q.toString()
   return cachedGet(`/api/posts${qs ? `?${qs}` : ''}`)
 }
@@ -132,6 +133,7 @@ export function fetchTasks(params = {}) {
   if (params.folder_id) q.set('folder_id', String(params.folder_id))
   if (params.calendar_id) q.set('calendar_id', String(params.calendar_id))
   if (params.only_open) q.set('only_open', '1')
+  if (params.community_id) q.set('community_id', String(params.community_id))
   const qs = q.toString()
   return cachedGet(`/api/tasks${qs ? `?${qs}` : ''}`)
 }

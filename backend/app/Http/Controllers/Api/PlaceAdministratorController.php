@@ -8,6 +8,7 @@ use App\Http\Requests\UpdatePlaceAdministratorRequest;
 use App\Http\Resources\PlaceAdministratorResource;
 use App\Models\Place;
 use App\Models\User;
+use App\Notifications\PlaceAdministratorAddedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -48,6 +49,15 @@ class PlaceAdministratorController extends Controller
 
         $user = $place->administrators()->where('users.id', $userId)->first();
         assert($user instanceof User);
+
+        $inviter = $request->user();
+        assert($inviter !== null);
+        $user->notify(new PlaceAdministratorAddedNotification(
+            (int) $place->id,
+            (string) $place->name,
+            (string) $inviter->name,
+            (string) $request->validated('role'),
+        ));
 
         return response()->json([
             'administrator' => new PlaceAdministratorResource($user),

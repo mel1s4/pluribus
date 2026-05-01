@@ -17,6 +17,7 @@ import {
   updateTask,
 } from '../../services/contentApi'
 import { createFolder, fetchFolders } from '../../services/chatApi'
+import { sessionUser } from '../../composables/useSession'
 
 const tasks = ref([])
 const folders = ref([])
@@ -30,6 +31,9 @@ const searchQuery = ref('')
 const statusFilter = ref('all')
 /** '' = all folders, '0' = unfiled only, else folder id */
 const folderScope = ref('')
+const communityScope = ref('')
+const memberships = computed(() => Array.isArray(sessionUser.value?.communities) ? sessionUser.value.communities : [])
+const showCommunityScope = computed(() => memberships.value.length > 1)
 
 const detailOpen = ref(false)
 const detailTask = ref(null)
@@ -94,6 +98,9 @@ async function load() {
   if (scope && scope !== '0') {
     params.folder_id = Number(scope)
   }
+  if (communityScope.value) {
+    params.community_id = Number(communityScope.value)
+  }
 
   const [tasksRes, foldersRes, calsRes, groupsRes] = await Promise.all([
     fetchTasks(params),
@@ -131,7 +138,7 @@ async function load() {
   }
 }
 
-watch([statusFilter, folderScope], () => {
+watch([statusFilter, folderScope, communityScope], () => {
   load()
 })
 
@@ -327,6 +334,8 @@ async function onInlineDelete(task) {
 }
 
 onMounted(() => {
+  const active = Number(sessionUser.value?.active_community_id || 0)
+  if (active > 0) communityScope.value = String(active)
   checkMobile()
   globalThis.addEventListener('resize', checkMobile)
   load()
@@ -403,6 +412,12 @@ onUnmounted(() => {
         :folders="folders"
       />
     </div>
+    <label v-if="showCommunityScope" class="tasks-page__scope">
+      <span>{{ t('communityScope.label') }}</span>
+      <select v-model="communityScope">
+        <option v-for="c in memberships" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+      </select>
+    </label>
 
     <BottomSheet v-if="isMobile" v-model:open="filtersOpen" :title="t('tasks.filters')">
       <TaskToolbar
@@ -701,5 +716,10 @@ onUnmounted(() => {
 .tasks-page__groups {
   display: grid;
   gap: 0.85rem;
+}
+.tasks-page__scope {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 20rem;
 }
 </style>

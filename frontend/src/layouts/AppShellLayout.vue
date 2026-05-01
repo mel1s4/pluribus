@@ -102,6 +102,9 @@ watch(
 }
 
 .app-shell__headerWrap {
+  position: relative;
+  z-index: 40;
+
   @media (max-width: 1023px) {
     position: fixed;
     top: 0;
@@ -141,6 +144,7 @@ watch(
 
 .app-shell__main {
   min-width: 0;
+  width: 90%;
 }
 
 .app-shell__sidebarDesktop {
@@ -173,6 +177,8 @@ watch(
   }
 
   .app-shell__sidebarDesktop {
+    position: relative;
+    z-index: 30;
     display: block;
     width: 0;
     overflow: hidden;
@@ -186,6 +192,8 @@ watch(
   }
 
   .app-shell__main {
+    position: relative;
+    z-index: 1;
     flex: 1 1 auto;
   }
 }

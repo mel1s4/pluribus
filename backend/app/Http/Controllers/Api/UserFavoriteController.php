@@ -16,6 +16,8 @@ class UserFavoriteController extends Controller
     public const ALLOWED_ROUTE_KEYS = [
         'dashboard',
         'users',
+        'communities',
+        'my-communities',
         'support-personification',
         'community-settings',
         'chats',
@@ -27,6 +29,8 @@ class UserFavoriteController extends Controller
         'my-cart',
         'my-places',
         'orders',
+        'my-wallet',
+        'my-contacts',
         'map',
         'notifications',
         'profile',
@@ -51,6 +55,19 @@ class UserFavoriteController extends Controller
             UserFavorite::query()
                 ->where('user_id', $user->id)
                 ->where('route_key', 'support-personification')
+                ->delete();
+        }
+
+        if (! $user->can('communities.view')) {
+            UserFavorite::query()
+                ->where('user_id', $user->id)
+                ->where('route_key', 'communities')
+                ->delete();
+        }
+        if (! $user->can('wallet.view')) {
+            UserFavorite::query()
+                ->where('user_id', $user->id)
+                ->where('route_key', 'my-wallet')
                 ->delete();
         }
 
@@ -86,6 +103,13 @@ class UserFavoriteController extends Controller
         }
 
         if ($routeKey === 'support-personification' && ! $user->can('users.personify')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        if ($routeKey === 'communities' && ! $user->can('communities.view')) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+        if ($routeKey === 'my-wallet' && ! $user->can('wallet.view')) {
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 

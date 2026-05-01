@@ -10,6 +10,15 @@ import { t } from '../../i18n/i18n'
 const route = useRoute()
 const router = useRouter()
 
+const scopedCommunitySlug = computed(() => {
+  const raw = route.params.communitySlug
+  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : ''
+})
+
+const settingsRouteName = computed(() =>
+  scopedCommunitySlug.value !== '' ? 'communitySettingsScoped' : 'communitySettings',
+)
+
 const activeTab = computed(() => {
   const raw = route.params.tab
   if (raw === 'settings') return 'settings'
@@ -18,8 +27,16 @@ const activeTab = computed(() => {
 })
 
 function setTab(id) {
+  const name = settingsRouteName.value
+  const slug = scopedCommunitySlug.value
   if (id === 'leadership') {
-    router.push({ name: 'communitySettings' })
+    if (name === 'communitySettingsScoped') {
+      router.push({ name, params: { communitySlug: slug } })
+    } else {
+      router.push({ name: 'communitySettings' })
+    }
+  } else if (name === 'communitySettingsScoped') {
+    router.push({ name, params: { communitySlug: slug, tab: id } })
   } else {
     router.push({ name: 'communitySettings', params: { tab: id } })
   }
@@ -28,7 +45,13 @@ function setTab(id) {
 watch(
   () => route.params.tab,
   (t) => {
-    if (t != null && t !== 'leadership' && t !== 'settings') {
+    if (t == null || t === 'leadership' || t === 'settings') {
+      return
+    }
+    const slug = typeof route.params.communitySlug === 'string' ? route.params.communitySlug.trim() : ''
+    if (slug !== '') {
+      router.replace({ name: 'communitySettingsScoped', params: { communitySlug: slug } })
+    } else {
       router.replace({ name: 'communitySettings' })
     }
   },

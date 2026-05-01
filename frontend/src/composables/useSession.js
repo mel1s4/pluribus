@@ -23,24 +23,6 @@ function bumpSessionResolutionEpoch() {
   sessionResolutionEpoch += 1
 }
 
-function debugLog(location, message, data, hypothesisId, runId = 'login-hang-v1') {
-  // #region agent log
-  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-    body: JSON.stringify({
-      sessionId: '808933',
-      runId,
-      hypothesisId,
-      location,
-      message,
-      data,
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
-}
-
 function withTimeout(promise, timeoutMs, label) {
   let timeoutId
   const timeoutPromise = new Promise((_, reject) => {
@@ -79,86 +61,42 @@ export function hadAuthenticatedSessionMarker() {
 
 export async function resolveSession() {
   if (pendingSessionResolution) {
-    // #region agent log
-    debugLog('useSession.js:resolveSession:dedupe', 'resolveSession reusing in-flight request', {
-      currentStatus: sessionStatus.value,
-    }, 'H10')
-    // #endregion
     return pendingSessionResolution
   }
-  const startedAt = Date.now()
   const epochAtStart = sessionResolutionEpoch
-  // #region agent log
-  debugLog('useSession.js:resolveSession:entry', 'resolveSession start', {
-    currentStatus: sessionStatus.value,
-    epochAtStart,
-  }, 'H2')
-  // #endregion
   const run = (async () => {
     try {
-    const { ok, status, data } = await withTimeout(
-      apiJson('GET', '/api/user'),
-      SESSION_RESOLVE_TIMEOUT_MS,
-      'resolveSession',
-    )
-    // #region agent log
-    debugLog('useSession.js:resolveSession:latency', 'resolveSession latency measured', {
-      elapsedMs: Date.now() - startedAt,
-      status,
-      ok,
-    }, 'H10')
-    // #endregion
-    if (epochAtStart !== sessionResolutionEpoch) {
-      // #region agent log
-      debugLog('useSession.js:resolveSession:stale', 'resolveSession discarding stale result', {
-        epochAtStart,
-        currentEpoch: sessionResolutionEpoch,
-      }, 'H9')
-      // #endregion
-      return
-    }
-    // #region agent log
-    debugLog('useSession.js:resolveSession:response', 'resolveSession response', {
-      ok,
-      status,
-      hasUser: Boolean(data && typeof data === 'object' && 'user' in data && data.user),
-    }, 'H2')
-    // #endregion
-    if (status === 401) {
+      const { ok, status, data } = await withTimeout(
+        apiJson('GET', '/api/user'),
+        SESSION_RESOLVE_TIMEOUT_MS,
+        'resolveSession',
+      )
+      if (epochAtStart !== sessionResolutionEpoch) {
+        return
+      }
+      if (status === 401) {
+        sessionUser.value = null
+        sessionPersonification.value = { active: false }
+        sessionStatus.value = 'guest'
+        return
+      }
+      if (ok && data && typeof data === 'object' && 'user' in data && data.user) {
+        sessionUser.value = data.user
+        sessionPersonification.value =
+          data.personification && typeof data.personification === 'object'
+            ? data.personification
+            : { active: false }
+        sessionStatus.value = 'authenticated'
+        markHadAuthenticatedSession()
+        return
+      }
       sessionUser.value = null
       sessionPersonification.value = { active: false }
       sessionStatus.value = 'guest'
-      return
-    }
-    if (ok && data && typeof data === 'object' && 'user' in data && data.user) {
-      sessionUser.value = data.user
-      sessionPersonification.value =
-        data.personification && typeof data.personification === 'object'
-          ? data.personification
-          : { active: false }
-      sessionStatus.value = 'authenticated'
-      markHadAuthenticatedSession()
-      return
-    }
-    sessionUser.value = null
-    sessionPersonification.value = { active: false }
-    sessionStatus.value = 'guest'
     } catch {
-    if (epochAtStart !== sessionResolutionEpoch) {
-      // #region agent log
-      debugLog('useSession.js:resolveSession:staleCatch', 'resolveSession stale catch ignored', {
-        epochAtStart,
-        currentEpoch: sessionResolutionEpoch,
-      }, 'H9')
-      // #endregion
+      if (epochAtStart !== sessionResolutionEpoch) {
         return
       }
-      // #region agent log
-      debugLog('useSession.js:resolveSession:catch', 'resolveSession threw error', {
-        previousStatus: sessionStatus.value,
-        elapsedMs: Date.now() - startedAt,
-      }, 'H4')
-      // #endregion
       // Fail open for public pages: never leave the app in "unknown" forever.
       sessionUser.value = null
       sessionPersonification.value = { active: false }
@@ -175,28 +113,12 @@ export async function resolveSession() {
  * @param {{ email: string, password: string, remember?: boolean }} payload
  */
 export async function loginRequest(payload) {
-  // #region agent log
-  debugLog('useSession.js:loginRequest:entry', 'loginRequest start', {
-    hasEmail: Boolean(payload && payload.email),
-    remember: Boolean(payload && payload.remember),
-  }, 'H6')
-  // #endregion
   await ensureCsrfCookie()
-  // #region agent log
-  debugLog('useSession.js:loginRequest:afterCsrf', 'loginRequest after csrf cookie', {}, 'H6')
-  // #endregion
   const result = await apiJson('POST', '/api/login', {
     email: payload.email,
     password: payload.password,
     remember: Boolean(payload.remember),
   })
-  // #region agent log
-  debugLog('useSession.js:loginRequest:response', 'loginRequest apiJson resolved', {
-    ok: result.ok,
-    status: result.status,
-    hasUser: Boolean(result.data && typeof result.data === 'object' && result.data.user),
-  }, 'H6')
-  // #endregion
   return result
 }
 
@@ -270,13 +192,6 @@ export async function logoutRequest() {
  */
 export function setSessionFromLoginUser(user, personification) {
   bumpSessionResolutionEpoch()
-  // #region agent log
-  debugLog('useSession.js:setSessionFromLoginUser', 'session set from login user', {
-    hasUserId: Boolean(user && user.id),
-    personificationActive: Boolean(personification && personification.active),
-    currentEpoch: sessionResolutionEpoch,
-  }, 'H1')
-  // #endregion
   sessionUser.value = user
   sessionPersonification.value =
     personification && typeof personification === 'object' ? personification : { active: false }
@@ -290,13 +205,6 @@ export function setSessionFromLoginUser(user, personification) {
  * Skips /api/user (handled by resolveSession + router) and failed /api/login attempts.
  */
 export async function applyUnauthorizedFromApi(path, method) {
-  // #region agent log
-  debugLog('useSession.js:applyUnauthorizedFromApi:entry', 'applyUnauthorizedFromApi called', {
-    path,
-    method,
-    currentStatus: sessionStatus.value,
-  }, 'H3')
-  // #endregion
   if (
     (method === 'GET' && path === '/api/user')
     || (method === 'POST' && path === '/api/login')

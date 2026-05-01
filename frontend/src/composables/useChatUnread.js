@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import { useSession } from './useSession.js'
 import { fetchChats, markChatRead } from '../services/chatApi.js'
-import { registerChatSseListener } from './useChatSse.js'
+import { registerChatPollListener } from './useChatSse.js'
 import { useMessageNotifications } from './useMessageNotifications.js'
 
 const unreadByChatId = ref({})
@@ -88,7 +88,7 @@ function ensureRealtimeSubscriptions(chatIds) {
 
   for (const id of next) {
     if (subscribedChatIds.has(id)) continue
-    const unreg = registerChatSseListener(id, (payload) => {
+    const unreg = registerChatPollListener(id, (payload) => {
       handleIncomingEvent(id, payload)
     })
     chatSseUnsubById.set(id, unreg)

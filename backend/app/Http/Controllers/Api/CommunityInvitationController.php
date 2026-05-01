@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Mail\CommunityInvitationMail;
 use App\Models\Community;
 use App\Models\CommunityInvitation;
+use App\Models\User;
+use App\Support\CommunityPivotAdmin;
 use App\Support\LocaleOptions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +20,8 @@ class CommunityInvitationController extends Controller
     {
         $this->authorize('invitations.manage');
 
-        $community = Community::current();
+        $community = $this->activeCommunity($request);
+        CommunityPivotAdmin::assertRootOrPivotAdmin($request->user(), $community);
         $rows = CommunityInvitation::query()
             ->where('community_id', $community->id)
             ->orderByDesc('id')
@@ -33,7 +36,10 @@ class CommunityInvitationController extends Controller
     {
         $this->authorize('invitations.manage');
 
-        if ((int) $invitation->community_id !== (int) Community::current()->id) {
+        $community = $this->activeCommunity($request);
+        CommunityPivotAdmin::assertRootOrPivotAdmin($request->user(), $community);
+
+        if ((int) $invitation->community_id !== (int) $community->id) {
             abort(404);
         }
 
@@ -45,6 +51,9 @@ class CommunityInvitationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $user = $request->user();
+        if (! $user instanceof User) {
+            abort(401);
+        }
         if (! $user->can('users.create') && ! $user->can('invitations.manage')) {
             $this->authorize('users.create');
         }
@@ -71,7 +80,8 @@ class CommunityInvitationController extends Controller
                 : null;
         }
 
-        $community = Community::current();
+        $community = $this->activeCommunity($request);
+        CommunityPivotAdmin::assertRootOrPivotAdmin($user, $community);
         $plainToken = Str::random(48);
         $tokenHash = CommunityInvitation::hashPlainToken($plainToken);
 
@@ -143,5 +153,15 @@ class CommunityInvitationController extends Controller
             'is_usable' => $invitation->isUsable(),
             'failure_reason' => $invitation->failureReason(),
         ];
+    }
+
+    private function activeCommunity(Request $request): Community
+    {
+        $active = $request->attributes->get('active_community');
+        if ($active instanceof Community) {
+            return $active;
+        }
+
+        return Community::current();
     }
 }

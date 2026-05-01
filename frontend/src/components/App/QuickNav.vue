@@ -3,6 +3,11 @@ import { computed, onMounted } from 'vue'
 import Icon from '../../atoms/Icon.vue'
 import { useFavorites } from '../../composables/useFavorites'
 import { useChatUnread } from '../../composables/useChatUnread.js'
+import {
+  inAppNotificationsUnread,
+  refreshInAppNotificationsUnread,
+  startInAppNotificationsPolling,
+} from '../../composables/useInAppNotificationsUnread.js'
 import { t } from '../../i18n/i18n'
 
 defineProps({
@@ -31,17 +36,29 @@ const items = computed(() => {
       to: item.to,
       icon: item.icon,
       label: item.label,
-      unread: item.to === '/chats' || item.to === '/notifications' ? totalUnread.value : 0,
+      unread:
+        item.to === '/chats'
+          ? totalUnread.value
+          : item.to === '/notifications'
+            ? inAppNotificationsUnread.value
+            : 0,
     }))
   }
   return defaultItems.value.map((item) => ({
     ...item,
-    unread: item.to === '/chats' || item.to === '/notifications' ? totalUnread.value : 0,
+    unread:
+      item.to === '/chats'
+        ? totalUnread.value
+        : item.to === '/notifications'
+          ? inAppNotificationsUnread.value
+          : 0,
   }))
 })
 
 onMounted(() => {
   void initializeChatUnread()
+  void refreshInAppNotificationsUnread()
+  startInAppNotificationsPolling()
 })
 </script>
 

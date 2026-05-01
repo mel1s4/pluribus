@@ -162,6 +162,18 @@
       }
     ]
   },
+  "communities": {
+    "module": "communities",
+    "capabilities": [
+      {
+        "id": "community.memberships.manage",
+        "name": "manage_memberships",
+        "category": "write",
+        "isDangerous": true,
+        "description": "List members, change community membership roles, and remove members from a community."
+      }
+    ]
+  },
   "users": {
     "module": "users",
     "capabilities": [
@@ -332,6 +344,46 @@
         "category": "write",
         "isDangerous": false,
         "description": "Create and manage private, community, and group calendars."
+      }
+    ]
+  },
+  "wallet": {
+    "module": "wallet",
+    "capabilities": [
+      {
+        "id": "wallet.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View your own community wallet balance and transaction history."
+      },
+      {
+        "id": "wallet.transfer",
+        "name": "transfer",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Send credits to another member in the same community."
+      },
+      {
+        "id": "wallet.grant",
+        "name": "grant",
+        "category": "write",
+        "isDangerous": true,
+        "description": "Mint credits into a member wallet (community grants)."
+      },
+      {
+        "id": "wallet.audit_ledger",
+        "name": "audit_ledger",
+        "category": "read",
+        "isDangerous": false,
+        "description": "Export pseudonymous wallet ledger rows without balances or identities."
+      },
+      {
+        "id": "wallet.audit_identity",
+        "name": "audit_identity",
+        "category": "read",
+        "isDangerous": true,
+        "description": "Resolve wallet transactions to internal user identifiers (break-glass)."
       }
     ]
   },

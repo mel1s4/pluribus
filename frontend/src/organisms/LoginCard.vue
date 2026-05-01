@@ -16,6 +16,14 @@ const emailError = ref('')
 const formError = ref('')
 const visitorLinkSent = ref('')
 
+function defaultPostLoginPath(user) {
+  const communityCount = Number(user?.community_count || 0)
+  if (communityCount <= 0) return '/my-communities'
+  const first = Array.isArray(user?.communities) ? user.communities[0] : null
+  if (first?.slug) return `/${first.slug}/dashboard`
+  return '/dashboard'
+}
+
 function pickEmailError(data) {
   if (!data || typeof data !== 'object') {
     return ''
@@ -33,23 +41,6 @@ function pickEmailError(data) {
 }
 
 async function onSubmit(payload) {
-  // #region agent log
-  fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-    body: JSON.stringify({
-      sessionId: '808933',
-      runId: 'login-hang-v1',
-      hypothesisId: 'H1',
-      location: 'LoginCard.vue:onSubmit:entry',
-      message: 'login submit start',
-      data: {
-        hasRedirectQuery: typeof route.query.redirect === 'string' && route.query.redirect.length > 0,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {})
-  // #endregion
   if (submitting.value) {
     return
   }
@@ -61,50 +52,13 @@ async function onSubmit(payload) {
 
   try {
     const { ok, status, data } = await loginRequest(payload)
-    // #region agent log
-    fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-      body: JSON.stringify({
-        sessionId: '808933',
-        runId: 'login-hang-v1',
-        hypothesisId: 'H1',
-        location: 'LoginCard.vue:onSubmit:response',
-        message: 'login response received',
-        data: {
-          ok,
-          status,
-          hasUser: Boolean(data && data.user),
-          hasPersonification: Boolean(data && data.personification),
-        },
-        timestamp: Date.now(),
-      }),
-    }).catch(() => {})
-    // #endregion
     if (ok && data?.user) {
       setSessionFromLoginUser(data.user, data.personification)
       const target =
         typeof route.query.redirect === 'string' && route.query.redirect
           ? route.query.redirect
-          : '/dashboard'
+          : defaultPostLoginPath(data.user)
       await router.replace(target)
-      // #region agent log
-      fetch('http://127.0.0.1:7800/ingest/b3c811d3-7ec8-4727-aae6-1a8e45b40a1e', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '808933' },
-        body: JSON.stringify({
-          sessionId: '808933',
-          runId: 'login-hang-v1',
-          hypothesisId: 'H5',
-          location: 'LoginCard.vue:onSubmit:postReplace',
-          message: 'router replace completed after login',
-          data: {
-            target,
-          },
-          timestamp: Date.now(),
-        }),
-      }).catch(() => {})
-      // #endregion
       return
     }
     if (status === 422) {

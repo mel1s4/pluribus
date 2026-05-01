@@ -2,12 +2,10 @@
 
 namespace App\Providers;
 
-use App\Events\MessageSent;
-use App\Listeners\PublishChatMessageToSse;
-use App\Models\Place;
-use App\Models\Chat;
 use App\Models\Calendar;
+use App\Models\Chat;
 use App\Models\Group;
+use App\Models\Place;
 use App\Models\Post;
 use App\Models\Task;
 use App\Models\User;
@@ -18,9 +16,10 @@ use App\Policies\PlacePolicy;
 use App\Policies\PostPolicy;
 use App\Policies\TaskPolicy;
 use App\Support\CapabilityResolver;
+use App\Support\WalletLedger\LedgerAppender;
+use App\Support\WalletLedger\LedgerSigner;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
@@ -33,7 +32,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(LedgerSigner::class, function () {
+            return new LedgerSigner;
+        });
+
+        $this->app->singleton(LedgerAppender::class, function ($app) {
+            return new LedgerAppender(
+                $app->make(LedgerSigner::class)
+            );
+        });
     }
 
     /**
@@ -41,8 +48,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Event::listen(MessageSent::class, PublishChatMessageToSse::class);
-
         Route::bind('place', function (string $value) {
             if (ctype_digit($value)) {
                 return Place::query()->where('id', (int) $value)->firstOrFail();

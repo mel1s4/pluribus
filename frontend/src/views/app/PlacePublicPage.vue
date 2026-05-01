@@ -13,6 +13,7 @@ import { sessionStatus } from '../../composables/useSession.js'
 import { pingTableSession } from '../../services/cartApi.js'
 import { fetchPublicPlaceBySlug } from '../../services/placesApi.js'
 import { placeApiErrorMessage } from '../../utils/placeForm.js'
+import { buildPlaceOfferSections } from '../../utils/placeOfferSections.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -139,6 +140,10 @@ const heroStyle = computed(() => {
   }
   return { background: 'linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%)' }
 })
+
+const offerSections = computed(() =>
+  buildPlaceOfferSections(place.value?.offers, t('places.storefrontOffersOtherCategory')),
+)
 
 async function load() {
   const s = slug.value
@@ -279,9 +284,23 @@ load()
         <h2 class="place-public-page__sectionTitle place-public-page__sectionTitle--em">
           {{ t('places.storefrontOffersHeading') }}
         </h2>
-        <div class="place-public-page__offersGrid">
-          <PlaceOffersPublicList :offers="place.offers || []" :place-id="place.id" />
-        </div>
+        <template v-if="offerSections.length === 1 && offerSections[0].key === 'all'">
+          <div class="place-public-page__offersGrid">
+            <PlaceOffersPublicList :offers="offerSections[0].offers" :place-id="place.id" />
+          </div>
+        </template>
+        <template v-else>
+          <div
+            v-for="sec in offerSections"
+            :key="sec.key"
+            class="place-public-page__offerCategoryBlock"
+          >
+            <h3 class="place-public-page__offerCategoryTitle">{{ sec.title }}</h3>
+            <div class="place-public-page__offersGrid">
+              <PlaceOffersPublicList :offers="sec.offers" :place-id="place.id" />
+            </div>
+          </div>
+        </template>
       </section>
 
       <section class="place-public-page__section">
@@ -502,6 +521,17 @@ load()
 .place-public-page__sectionTitle--em {
   font-size: 1.25rem;
   letter-spacing: -0.01em;
+}
+
+.place-public-page__offerCategoryBlock:not(:first-child) {
+  margin-top: 1.75rem;
+}
+
+.place-public-page__offerCategoryTitle {
+  margin: 0 0 0.65rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text, inherit);
 }
 
 .place-public-page__offers :deep(.place-offers-public__list) {

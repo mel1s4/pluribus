@@ -10,6 +10,7 @@ import PostComposerMoreTab from '../../organisms/PostComposerMoreTab.vue'
 import PostComposerScheduleTab from '../../organisms/PostComposerScheduleTab.vue'
 import { usePostComposerForm } from '../../composables/usePostComposerForm'
 import { t } from '../../i18n/i18n'
+import { sessionUser } from '../../composables/useSession'
 import {
   createPost,
   deletePost,
@@ -43,6 +44,8 @@ const loadingPost = ref(false)
 const discardDialogRef = ref(null)
 const deleteDialogRef = ref(null)
 const pendingRoute = ref(null)
+const memberships = computed(() => Array.isArray(sessionUser.value?.communities) ? sessionUser.value.communities : [])
+const showCommunityScope = computed(() => memberships.value.length > 1)
 
 function unwrapPost(data) {
   if (!data || typeof data !== 'object') return null
@@ -157,15 +160,22 @@ async function onSave() {
         pageError.value = t('posts.composerSaveError').replace('{status}', String(res.status))
         return
       }
-    } else {
-      const res = await createPost(built.payload)
-      if (!res.ok) {
-        pageError.value = t('posts.composerSaveError').replace('{status}', String(res.status))
-        return
-      }
+      markClean()
+      await router.push({ name: 'posts-detail', params: { id: String(postId.value) } })
+      return
+    }
+    const res = await createPost(built.payload)
+    if (!res.ok) {
+      pageError.value = t('posts.composerSaveError').replace('{status}', String(res.status))
+      return
     }
     markClean()
-    await router.push({ name: 'posts' })
+    const created =
+      res.data && typeof res.data === 'object' && res.data.post && res.data.post.id != null
+        ? res.data.post
+        : null
+    const newId = created?.id != null ? String(created.id) : ''
+    await router.push(newId ? { name: 'posts-detail', params: { id: newId } } : { name: 'posts' })
   } finally {
     saving.value = false
   }
@@ -195,6 +205,8 @@ watch(
 )
 
 onMounted(() => {
+  const active = Number(sessionUser.value?.active_community_id || 0)
+  if (!form.community_id && active > 0) form.community_id = String(active)
   window.addEventListener('beforeunload', onBeforeUnload)
   void loadCalendarsAndGroups()
   initFromRoute()
@@ -222,6 +234,12 @@ onUnmounted(() => {
 
     <template v-if="!loadError && !loadingPost">
       <div class="post-composer-page__card">
+        <label v-if="showCommunityScope" class="post-composer-page__scope">
+          <span>{{ t('communityScope.label') }}</span>
+          <select v-model="form.community_id">
+            <option v-for="c in memberships" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+          </select>
+        </label>
         <div class="post-composer-page__tabs" role="tablist" :aria-label="t('posts.composerTabsLabel')">
           <button
             type="button"
@@ -357,6 +375,12 @@ onUnmounted(() => {
   border-radius: 0.75rem;
   background: var(--bg, #fff);
   overflow: hidden;
+}
+
+.post-composer-page__scope {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem 1rem 0;
 }
 
 .post-composer-page__tabs {

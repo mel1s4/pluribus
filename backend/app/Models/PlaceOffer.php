@@ -26,6 +26,7 @@ class PlaceOffer extends Model
         'photo_path',
         'gallery_paths',
         'tags',
+        'category',
         'visibility_scope',
     ];
 

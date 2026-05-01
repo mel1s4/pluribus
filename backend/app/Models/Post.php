@@ -52,6 +52,7 @@ class Post extends Model
         'title',
         'description',
         'content_markdown',
+        'video_url',
         'tags',
         'start_at',
         'end_at',

@@ -88,12 +88,6 @@ export default defineConfig({
           if (norm.includes('/node_modules/leaflet-draw/')) {
             return 'vendor-leaflet-draw'
           }
-          if (
-            norm.includes('/node_modules/laravel-echo/') ||
-            norm.includes('/node_modules/pusher-js/')
-          ) {
-            return 'vendor-realtime'
-          }
         },
       },
     },

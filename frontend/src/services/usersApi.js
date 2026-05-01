@@ -38,9 +38,12 @@ export async function searchUsers(query, perPage = 10) {
   return cachedGet(`/api/users?search=${q}&per_page=${perPage}`)
 }
 
-export async function fetchInvitations() {
+/**
+ * @param {{ headers?: Record<string, string>, ttl?: number }} [options]
+ */
+export async function fetchInvitations(options = {}) {
   // Admin list must reflect creates/deletes immediately; do not use the default GET cache TTL.
-  return cachedGet('/api/invitations', { skipCache: true })
+  return cachedGet('/api/invitations', { skipCache: true, ...options })
 }
 
 /**

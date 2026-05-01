@@ -13,6 +13,23 @@ class PlaceLogoApiTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_user_can_create_place_without_slug(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+
+        $response = $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places', [
+                'name' => 'Slugless Corner',
+                'description' => 'No slug provided',
+                'tags' => ['retail'],
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('place.slug', null)
+            ->assertJsonPath('place.name', 'Slugless Corner');
+    }
+
     public function test_user_can_create_place_with_logo_multipart(): void
     {
         Storage::fake('public');

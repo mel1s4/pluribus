@@ -28,6 +28,8 @@
       "users.delete",
       "users.assign_types",
       "users.personify",
+      "communities.view",
+      "communities.manage",
       "invitations.manage",
       "notifications.view",
       "notifications.manage",
@@ -43,18 +45,25 @@
       "calendars.view",
       "calendars.manage",
       "system.config",
-      "system.view_logs"
+      "system.view_logs",
+      "wallet.view",
+      "wallet.transfer",
+      "wallet.grant",
+      "wallet.audit_ledger",
+      "wallet.audit_identity",
+      "community.memberships.manage"
     ]
   },
   "admin": {
     "entity_type": null,
     "role": "admin",
-    "description": "Community administrator; moderation, member directory, and limited account edits without the root flag or privileged type assignment.",
+    "description": "Community administrator; moderation, membership management, and community operations without the root flag or global user-record edits.",
     "capabilities": [
       "profile.view",
       "profile.update",
-      "users.view",
-      "users.update",
+      "communities.view",
+      "communities.manage",
+      "community.memberships.manage",
       "chats.view",
       "chats.send",
       "chats.delete_own",
@@ -86,7 +95,11 @@
       "calendars.view",
       "calendars.manage",
       "system.config",
-      "system.view_logs"
+      "system.view_logs",
+      "wallet.view",
+      "wallet.transfer",
+      "wallet.grant",
+      "wallet.audit_ledger"
     ]
   },
   "member": {
@@ -112,7 +125,9 @@
       "posts.view",
       "posts.manage",
       "calendars.view",
-      "calendars.manage"
+      "calendars.manage",
+      "wallet.view",
+      "wallet.transfer"
     ]
   },
   "developer": {
@@ -139,7 +154,9 @@
       "posts.manage",
       "calendars.view",
       "calendars.manage",
-      "users.personify"
+      "users.personify",
+      "wallet.view",
+      "wallet.transfer"
     ]
   },
   "visitor": {
@@ -149,7 +166,8 @@
     "capabilities": [
       "stores.view",
       "offers.view",
-      "map.view"
+      "map.view",
+      "notifications.view"
     ]
   }
 }

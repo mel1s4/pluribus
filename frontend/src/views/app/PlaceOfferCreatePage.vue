@@ -122,6 +122,17 @@ watch(placeId, () => {
               :hint="t('myPlaces.offerTagsHint')"
               @update:model-value="form.tags = $event"
             />
+
+            <label class="offer-create__label">{{ t('myPlaces.offerCategory') }}</label>
+            <input
+              v-model="form.category"
+              class="offer-create__input"
+              type="text"
+              maxlength="128"
+              @input="clearFieldError('category')"
+            />
+            <p class="offer-create__meta">{{ t('myPlaces.offerCategoryHint') }}</p>
+            <p v-if="fieldErrors.category?.length" class="offer-create__error">{{ fieldErrors.category[0] }}</p>
           </template>
 
           <template v-else-if="currentStep === 2">

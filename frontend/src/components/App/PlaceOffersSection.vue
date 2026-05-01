@@ -30,7 +30,7 @@ const offers = ref([])
 const audiences = ref([])
 const error = ref('')
 const editing = ref(null)
-const form = ref({ title: '', description: '', price: '', tags: [], visibility_scope: 'public', audience_ids: [] })
+const form = ref({ title: '', description: '', price: '', tags: [], category: '', visibility_scope: 'public', audience_ids: [] })
 const removeGallery = ref([])
 const photoInput = ref(null)
 const galleryInput = ref(null)
@@ -73,6 +73,7 @@ function startEdit(o) {
     description: o.description || '',
     price: String(o.price),
     tags: Array.isArray(o.tags) ? [...o.tags] : [],
+    category: typeof o.category === 'string' ? o.category : '',
     visibility_scope: o.visibility_scope || 'public',
     audience_ids: Array.isArray(o.audience_ids) ? [...o.audience_ids] : [],
   }
@@ -92,6 +93,7 @@ async function saveEdit() {
   fd.append('description', form.value.description || '')
   fd.append('price', form.value.price)
   fd.append('tags', JSON.stringify(Array.isArray(form.value.tags) ? form.value.tags : []))
+  fd.append('category', typeof form.value.category === 'string' ? form.value.category.trim() : '')
   fd.append('visibility_scope', form.value.visibility_scope || 'public')
   fd.append('audience_ids', JSON.stringify(Array.isArray(form.value.audience_ids) ? form.value.audience_ids : []))
   if (photoInput.value?.files?.[0]) {
@@ -187,6 +189,7 @@ async function handleCsvSelected(event) {
       >
         <span class="place-offers__name">{{ o.title }}</span>
         <span class="place-offers__price">{{ formatPrice(o.price) }}</span>
+        <span v-if="o.category" class="place-offers__category">{{ o.category }}</span>
         <span v-if="o.tags?.length" class="place-offers__tags">{{ o.tags.join(', ') }}</span>
         <Button
           type="button"
@@ -241,6 +244,14 @@ async function handleCsvSelected(event) {
         :hint="t('myPlaces.offerTagsHint')"
         @update:model-value="form.tags = $event"
       />
+      <label class="place-offers__label">{{ t('myPlaces.offerCategory') }}</label>
+      <input
+        v-model="form.category"
+        class="place-offers__input"
+        type="text"
+        maxlength="128"
+      />
+      <p class="place-offers__hint">{{ t('myPlaces.offerCategoryHint') }}</p>
       <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
       <select v-model="form.visibility_scope" class="place-offers__input">
         <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
@@ -366,6 +377,15 @@ async function handleCsvSelected(event) {
   font-variant-numeric: tabular-nums;
 }
 
+.place-offers__category {
+  font-size: 0.8rem;
+  font-weight: 600;
+  max-width: 10rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .place-offers__tags {
   font-size: 0.8rem;
   opacity: 0.85;
@@ -373,6 +393,12 @@ async function handleCsvSelected(event) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.place-offers__hint {
+  margin: 0;
+  font-size: 0.8rem;
+  opacity: 0.85;
 }
 
 .place-offers__form {

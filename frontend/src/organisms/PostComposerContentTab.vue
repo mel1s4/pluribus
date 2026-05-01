@@ -102,6 +102,19 @@ const bodyMode = ref('write')
     </label>
 
     <label class="post-composer-content__block">
+      <span class="post-composer-content__label">{{ t('posts.composerVideoUrlLabel') }}</span>
+      <input
+        v-model="form.video_url"
+        class="post-composer-content__input"
+        type="url"
+        inputmode="url"
+        autocomplete="off"
+        :placeholder="t('posts.composerVideoUrlPlaceholder')"
+      />
+      <span class="post-composer-content__hint">{{ t('posts.composerVideoUrlHint') }}</span>
+    </label>
+
+    <label class="post-composer-content__block">
       <span class="post-composer-content__label">{{ t('posts.composerTagsLabel') }}</span>
       <input
         v-model="form.tagsInput"
@@ -227,5 +240,11 @@ const bodyMode = ref('write')
   color: var(--link-color, #2563eb);
   cursor: pointer;
   text-decoration: underline;
+}
+
+.post-composer-content__hint {
+  font-size: 0.78rem;
+  color: var(--text-muted, #6b7280);
+  line-height: 1.35;
 }
 </style>

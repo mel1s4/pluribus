@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
@@ -18,6 +18,9 @@ const deleteDialogRef = ref(null)
 const deleteTarget = ref(null)
 
 const currentUserId = computed(() => Number(sessionUser.value?.id || 0))
+const communityScope = ref('')
+const memberships = computed(() => Array.isArray(sessionUser.value?.communities) ? sessionUser.value.communities : [])
+const showCommunityScope = computed(() => memberships.value.length > 1)
 
 /** @type {Record<string, HTMLDetailsElement | null>} */
 const kebabRefs = {}
@@ -46,7 +49,9 @@ function unwrapList(payload) {
 async function load() {
   loading.value = true
   error.value = ''
-  const res = await fetchPosts()
+  const res = await fetchPosts({
+    community_id: communityScope.value || undefined,
+  })
   loading.value = false
   if (!res.ok) {
     error.value = `HTTP ${res.status}`
@@ -127,6 +132,13 @@ async function confirmDelete() {
 }
 
 onMounted(load)
+onMounted(() => {
+  const active = Number(sessionUser.value?.active_community_id || 0)
+  if (active > 0) communityScope.value = String(active)
+})
+watch(communityScope, () => {
+  load()
+})
 </script>
 
 <template>
@@ -142,13 +154,24 @@ onMounted(load)
     </header>
 
     <p v-if="loading" class="page__muted">{{ t('posts.loading') }}</p>
+    <label v-if="showCommunityScope" class="page__scope">
+      <span>{{ t('communityScope.label') }}</span>
+      <select v-model="communityScope">
+        <option v-for="c in memberships" :key="c.id" :value="String(c.id)">{{ c.name }}</option>
+      </select>
+    </label>
     <p v-if="error" class="page__error">{{ t('posts.error').replace('{status}', error.replace('HTTP ', '')) }}</p>
 
     <ul class="posts-list">
       <li v-for="post in posts" :key="post.id" class="posts-card">
         <div class="posts-card__header">
           <div class="posts-card__headline">
-            <strong class="posts-card__title">{{ post.title }}</strong>
+            <router-link
+              class="posts-card__titleLink"
+              :to="{ name: 'posts-detail', params: { id: String(post.id) } }"
+            >
+              <strong class="posts-card__title">{{ post.title }}</strong>
+            </router-link>
             <div class="posts-card__chips">
               <span class="posts-card__chip">{{ postTypeLabel(post.type) }}</span>
               <span class="posts-card__chip posts-card__chip--muted">{{ visibilityLabel(post.visibility_scope) }}</span>
@@ -252,6 +275,16 @@ onMounted(load)
   display: grid;
   gap: 0.35rem;
   min-width: 0;
+}
+
+.posts-card__titleLink {
+  color: inherit;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.posts-card__titleLink:hover .posts-card__title {
+  text-decoration: underline;
 }
 
 .posts-card__title {
@@ -420,5 +453,10 @@ html[data-theme='dark'] .posts-page__dialog::backdrop {
 .page__error {
   color: #b00020;
   margin: 0;
+}
+.page__scope {
+  display: grid;
+  gap: 0.35rem;
+  max-width: 20rem;
 }
 </style>

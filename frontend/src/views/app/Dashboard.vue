@@ -15,7 +15,12 @@
         v-if="showSetupPlaceWidget"
         @open-create-place="goCreatePlace"
       />
-      <p v-if="!showFinishProfileWidget && !showSetupPlaceWidget" class="page__muted">
+      <DashboardInboxWidget :items="lastUnreadChats" />
+      <DashboardMyPlacesWidget :items="lastPlaces" />
+      <p
+        v-if="!showFinishProfileWidget && !showSetupPlaceWidget && !lastUnreadChats.length && !lastPlaces.length"
+        class="page__muted"
+      >
         {{ t('dashboard.allCaughtUp') }}
       </p>
     </div>
@@ -31,7 +36,10 @@ import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import DashboardFinishProfileWidget from '../../components/App/DashboardFinishProfileWidget.vue'
 import DashboardSetupPlaceWidget from '../../components/App/DashboardSetupPlaceWidget.vue'
+import DashboardInboxWidget from '../../components/App/DashboardInboxWidget.vue'
+import DashboardMyPlacesWidget from '../../components/App/DashboardMyPlacesWidget.vue'
 import { useSession } from '../../composables/useSession.js'
+import { fetchChats } from '../../services/chatApi.js'
 import { fetchPlaces } from '../../services/placesApi.js'
 
 const router = useRouter()
@@ -39,6 +47,8 @@ const { setHeaderActions, clearHeaderActions } = useAppShell()
 const { user } = useSession()
 
 const hasAnyPlace = ref(false)
+const unreadChats = ref([])
+const recentPlaces = ref([])
 
 const sessionUser = computed(() => user.value ?? null)
 
@@ -57,6 +67,8 @@ const showFinishProfileWidget = computed(() => {
 })
 
 const showSetupPlaceWidget = computed(() => !hasAnyPlace.value)
+const lastUnreadChats = computed(() => unreadChats.value.slice(0, 5))
+const lastPlaces = computed(() => recentPlaces.value.slice(0, 5))
 
 function goProfile() {
   router.push('/profile')
@@ -70,10 +82,36 @@ async function loadPlacesPresence() {
   const { ok, data } = await fetchPlaces()
   if (!ok) {
     hasAnyPlace.value = false
+    recentPlaces.value = []
     return
   }
   const places = Array.isArray(data?.data) ? data.data : []
   hasAnyPlace.value = places.length > 0
+  recentPlaces.value = places
+    .slice()
+    .sort(
+      (a, b) =>
+        new Date(b.updated_at || b.created_at || 0).getTime() -
+        new Date(a.updated_at || a.created_at || 0).getTime(),
+    )
+    .slice(0, 5)
+}
+
+async function loadUnreadChats() {
+  const { ok, data } = await fetchChats()
+  if (!ok) {
+    unreadChats.value = []
+    return
+  }
+  const chats = Array.isArray(data?.data) ? data.data : []
+  unreadChats.value = chats
+    .filter((chat) => Number(chat?.unread_count || 0) > 0)
+    .sort(
+      (a, b) =>
+        new Date(b.last_message_at || b.updated_at || b.created_at || 0).getTime() -
+        new Date(a.last_message_at || a.updated_at || a.created_at || 0).getTime(),
+    )
+    .slice(0, 5)
 }
 
 onMounted(() => {
@@ -85,7 +123,7 @@ onMounted(() => {
       onClick: () => router.push('/settings'),
     },
   ])
-  loadPlacesPresence()
+  Promise.all([loadPlacesPresence(), loadUnreadChats()])
 })
 
 onUnmounted(() => {

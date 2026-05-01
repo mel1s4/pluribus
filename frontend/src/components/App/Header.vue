@@ -11,6 +11,11 @@ import { sessionStatus } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { fetchGlobalSearch } from '../../services/searchApi'
 import { useChatUnread } from '../../composables/useChatUnread.js'
+import {
+  inAppNotificationsUnread,
+  refreshInAppNotificationsUnread,
+  startInAppNotificationsPolling,
+} from '../../composables/useInAppNotificationsUnread.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -47,7 +52,12 @@ const sidebarKey = computed(() => {
 const quickItems = computed(() => [
   { to: '/chats', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
   { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
-  { to: '/notifications', icon: 'bell', label: t('quickNav.notifications'), unread: totalUnread.value },
+  {
+    to: '/notifications',
+    icon: 'bell',
+    label: t('quickNav.notifications'),
+    unread: inAppNotificationsUnread.value,
+  },
   { to: '/profile', icon: 'user', label: t('quickNav.profile') },
 ])
 
@@ -137,6 +147,8 @@ watch(() => route.fullPath, () => {
 onMounted(() => {
   window.addEventListener('mousedown', onOutsideClick)
   void initializeChatUnread()
+  void refreshInAppNotificationsUnread()
+  startInAppNotificationsPolling()
 })
 
 onBeforeUnmount(() => {

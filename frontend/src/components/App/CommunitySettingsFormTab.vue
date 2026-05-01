@@ -4,6 +4,7 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Input from '../../atoms/Input.vue'
 import CommunityMapCenterPicker from './CommunityMapCenterPicker.vue'
+import { useActiveCommunity } from '../../composables/useActiveCommunity'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { sessionUser } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
@@ -11,6 +12,13 @@ import { DEFAULT_LANGUAGE, SUPPORTED_LANGUAGES } from '../../i18n/locales'
 import { invalidateCache } from '../../services/cachedApi.js'
 import { fetchCommunity, patchCommunityCurrency } from '../../services/communityApi.js'
 import { apiForm, apiJson } from '../../services/api'
+
+const { activeCommunitySlug } = useActiveCommunity()
+
+function communityRequestOptions() {
+  const s = activeCommunitySlug.value
+  return s && s.trim() !== '' ? { headers: { 'X-Community-Slug': s.trim() } } : {}
+}
 
 const form = reactive({
   name: '',
@@ -104,7 +112,7 @@ function apiErrorMessage(data, status, fallback) {
 async function load() {
   loadError.value = ''
   loading.value = true
-  const { ok, status, data } = await fetchCommunity()
+  const { ok, status, data } = await fetchCommunity(communityRequestOptions())
   loading.value = false
   if (!ok) {
     loadError.value = apiErrorMessage(data, status, t('communitySettings.loadError'))
@@ -137,6 +145,10 @@ async function load() {
 
 load()
 
+watch(activeCommunitySlug, () => {
+  void load()
+})
+
 function normalizeCurrencyInput(raw) {
   const s = String(raw ?? '').trim()
   if (!s.length) return null
@@ -147,16 +159,19 @@ async function saveCurrencyOnly() {
   if (!canEditCurrency.value) return
   currencySaveError.value = ''
   currencySaving.value = true
-  const { ok, status, data } = await patchCommunityCurrency({
-    currency_code: normalizeCurrencyInput(form.currency_code),
-  })
+  const { ok, status, data } = await patchCommunityCurrency(
+    {
+      currency_code: normalizeCurrencyInput(form.currency_code),
+    },
+    communityRequestOptions(),
+  )
   currencySaving.value = false
   if (!ok) {
     currencySaveError.value = apiErrorMessage(data, status, t('communitySettings.currencySaveError'))
     return
   }
   await load()
-  await fetchCommunityBranding()
+  await fetchCommunityBranding(activeCommunitySlug.value || null)
 }
 
 function onLogoFile(ev) {
@@ -200,7 +215,7 @@ async function onSubmit() {
     if (removeLogoPending.value && !logoFile.value) {
       fd.append('remove_logo', '1')
     }
-    const res = await apiForm('PATCH', '/api/community', fd)
+    const res = await apiForm('PATCH', '/api/community', fd, communityRequestOptions())
     ok = res.ok
     status = res.status
     data = res.data
@@ -227,7 +242,7 @@ async function onSubmit() {
   invalidateCache(/^\/api\/community/)
   invalidateCache('/api/community/branding')
   await load()
-  await fetchCommunityBranding()
+  await fetchCommunityBranding(activeCommunitySlug.value || null)
 }
 </script>
 

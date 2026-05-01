@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\PlaceOrdersChanged;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreOrderRequest;
 use App\Http\Requests\UpdateOrderItemTableRequest;
@@ -14,6 +13,9 @@ use App\Models\OrderItem;
 use App\Models\Place;
 use App\Models\PlaceOffer;
 use App\Models\Table;
+use App\Models\User;
+use App\Notifications\OrderStatusChangedForBuyerNotification;
+use App\Notifications\PlaceNewOrderNotification;
 use App\Support\PlaceMedia;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -108,7 +110,7 @@ class OrderController extends Controller
         });
 
         assert($order instanceof Order);
-        $this->notifyPlaceOrdersListenersForOrder($order);
+        $this->notifyPlacesAboutNewOrder($order);
 
         return response()->json([
             'order' => new OrderResource($order),
@@ -215,15 +217,28 @@ class OrderController extends Controller
         if (! $order->items()->where('place_id', $place->id)->exists()) {
             abort(404);
         }
-        $order->update(['status' => $request->validated('status')]);
+        $previousStatus = (string) $order->status;
+        $newStatus = (string) $request->validated('status');
+        $order->update(['status' => $newStatus]);
+        if ($previousStatus !== $newStatus) {
+            $order->refresh();
+            $buyer = $order->user;
+            if ($buyer instanceof User) {
+                $buyer->notify(new OrderStatusChangedForBuyerNotification(
+                    (int) $order->id,
+                    (string) $order->order_number,
+                    (string) $place->name,
+                    $previousStatus,
+                    $newStatus,
+                ));
+            }
+        }
         $order->load(['user:id,name', 'items' => fn ($q) => $q->where('place_id', $place->id)->with(['place', 'table'])]);
         $sub = '0.00';
         foreach ($order->items as $item) {
             $sub = $this->addMoney($sub, (string) $item->subtotal);
         }
         $order->setAttribute('place_subtotal', $sub);
-
-        $this->notifyPlaceOrdersListeners((int) $place->id);
 
         return response()->json([
             'order' => new OrderResource($order),
@@ -255,25 +270,9 @@ class OrderController extends Controller
         }
         $order->setAttribute('place_subtotal', $sub);
 
-        $this->notifyPlaceOrdersListeners((int) $place->id);
-
         return response()->json([
             'order' => new OrderResource($order),
         ]);
-    }
-
-    private function notifyPlaceOrdersListeners(int $placeId): void
-    {
-        broadcast(new PlaceOrdersChanged($placeId));
-    }
-
-    private function notifyPlaceOrdersListenersForOrder(Order $order): void
-    {
-        $order->loadMissing('items');
-        $ids = $order->items->pluck('place_id')->unique()->filter()->values();
-        foreach ($ids as $pid) {
-            $this->notifyPlaceOrdersListeners((int) $pid);
-        }
     }
 
     private function authorizeOfferForCheckout(Request $request, PlaceOffer $offer): void
@@ -320,6 +319,7 @@ class OrderController extends Controller
             'photo_path' => $offer->photo_path,
             'photo_url' => PlaceMedia::publicUrl($offer->photo_path),
             'tags' => $tags,
+            'category' => $offer->category,
         ];
     }
 
@@ -331,5 +331,37 @@ class OrderController extends Controller
     private function multiplyMoney(string $price, int $qty): string
     {
         return number_format((float) $price * $qty, 2, '.', '');
+    }
+
+    private function notifyPlacesAboutNewOrder(Order $order): void
+    {
+        $order->loadMissing(['user:id,name', 'items']);
+        $placeIds = $order->items->pluck('place_id')->unique()->filter();
+        foreach ($placeIds as $placeId) {
+            $place = Place::query()->with(['administrators:id'])->find((int) $placeId);
+            if ($place === null) {
+                continue;
+            }
+            $subtotal = '0.00';
+            foreach ($order->items->where('place_id', (int) $placeId) as $item) {
+                $subtotal = $this->addMoney($subtotal, (string) $item->subtotal);
+            }
+            $customerName = (string) ($order->user?->name ?? __('Someone'));
+            $recipientIds = collect([(int) $place->user_id])
+                ->merge($place->administrators->pluck('id')->map(fn ($id): int => (int) $id))
+                ->unique()
+                ->reject(fn (int $id): bool => $id === (int) $order->user_id)
+                ->values();
+            foreach ($recipientIds as $uid) {
+                User::query()->find($uid)?->notify(new PlaceNewOrderNotification(
+                    (int) $place->id,
+                    (string) $place->name,
+                    (int) $order->id,
+                    (string) $order->order_number,
+                    $subtotal,
+                    $customerName,
+                ));
+            }
+        }
     }
 }

@@ -114,13 +114,23 @@ const sections = computed(() => {
 
 async function load() {
   loading.value = true
-  const [chatRes, folderRes] = await Promise.all([fetchChats(), fetchFolders()])
-  if (chatRes.ok) {
-    chats.value = unwrapList(chatRes.data)
-    hydrateFromChats(chats.value)
+  try {
+    const [chatOutcome, folderOutcome] = await Promise.allSettled([fetchChats(), fetchFolders()])
+
+    if (chatOutcome.status === 'fulfilled' && chatOutcome.value.ok) {
+      chats.value = unwrapList(chatOutcome.value.data)
+      hydrateFromChats(chats.value)
+    }
+
+    if (folderOutcome.status === 'fulfilled' && folderOutcome.value.ok) {
+      folders.value = unwrapList(folderOutcome.value.data)
+    }
+  } catch (error) {
+    // Keep page interactive even if one of the initial requests fails.
+    console.warn('ChatsPage load failed:', error)
+  } finally {
+    loading.value = false
   }
-  if (folderRes.ok) folders.value = unwrapList(folderRes.data)
-  loading.value = false
 }
 
 function resetChatForm() {
@@ -262,6 +272,16 @@ function openChat(chat) {
 
 function openFolder(folderId) {
   router.push({ name: 'chatFolder', params: { folderId } })
+}
+
+function chatMembersSummary(chat) {
+  const members = Array.isArray(chat?.members) ? chat.members : []
+  const names = members
+    .map((member) => String(member?.name || '').trim())
+    .filter((name) => name.length > 0)
+  if (names.length === 0) return ''
+  if (names.length <= 3) return names.join(', ')
+  return `${names.slice(0, 3).join(', ')} +${names.length - 3}`
 }
 
 onMounted(load)
@@ -517,7 +537,12 @@ onMounted(load)
             <span class="chats-page__icon" :style="{ backgroundColor: chat.icon_bg_color || '#2563eb' }">
               {{ chat.icon_emoji || '💬' }}
             </span>
-            <span>{{ chat.title || t('chats.defaultConversation') }}</span>
+            <span class="chats-page__chatText">
+              <span class="chats-page__chatTitle">{{ chat.title || t('chats.defaultConversation') }}</span>
+              <span v-if="chatMembersSummary(chat)" class="chats-page__chatMembers">
+                {{ chatMembersSummary(chat) }}
+              </span>
+            </span>
             <span v-if="getChatUnread(chat.id) > 0" class="chats-page__unreadBadge">
               {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
             </span>
@@ -582,6 +607,9 @@ onMounted(load)
 .chats-page__list { list-style: none; margin: 0; padding: 0.5rem; display: grid; gap: 0.5rem; }
 .chats-page__item { display: flex; align-items: center; gap: 0.5rem; }
 .chats-page__chatOpen { border: none; background: transparent; display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; text-align: left; cursor: pointer; }
+.chats-page__chatText { min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
+.chats-page__chatTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chats-page__chatMembers { font-size: 0.74rem; opacity: 0.72; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .chats-page__kebab {
   position: relative;

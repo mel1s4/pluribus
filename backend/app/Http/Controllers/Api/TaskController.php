@@ -16,8 +16,10 @@ class TaskController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $communityId = $this->resolveCommunityId($request);
         $query = Task::query()
             ->visibleToUser((int) $request->user()->id)
+            ->where('community_id', $communityId)
             ->with(['folder', 'assignee'])
             ->orderBy('position')
             ->orderByDesc('id');
@@ -38,9 +40,10 @@ class TaskController extends Controller
     public function store(StoreTaskRequest $request): JsonResponse
     {
         $validated = $request->validated();
+        $communityId = $this->requestedOrActiveCommunityId($request);
         $task = Task::query()->create([
             ...$validated,
-            'community_id' => Community::current()->id,
+            'community_id' => $communityId,
             'author_id' => $request->user()->id,
             'visibility_scope' => (string) ($validated['visibility_scope'] ?? Task::VISIBILITY_PRIVATE),
         ]);
@@ -71,6 +74,30 @@ class TaskController extends Controller
         $task->delete();
 
         return response()->json(['ok' => true]);
+    }
+
+    private function resolveCommunityId(Request $request): int
+    {
+        $requested = (int) $request->query('community_id', 0);
+        if ($requested > 0) {
+            return $requested;
+        }
+        $active = $request->attributes->get('active_community');
+        if ($active instanceof Community) {
+            return (int) $active->id;
+        }
+
+        return Community::current()->id;
+    }
+
+    private function requestedOrActiveCommunityId(Request $request): int
+    {
+        $requested = (int) $request->input('community_id', 0);
+        if ($requested > 0) {
+            return $requested;
+        }
+
+        return $this->resolveCommunityId($request);
     }
 }
 

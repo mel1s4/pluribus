@@ -19,6 +19,7 @@ class StoreTaskRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'community_id' => ['nullable', 'integer', 'exists:communities,id'],
             'folder_id' => ['nullable', 'integer', 'exists:folders,id'],
             'assignee_id' => ['nullable', 'integer', 'exists:users,id'],
             'position' => ['nullable', 'integer', 'min:0'],

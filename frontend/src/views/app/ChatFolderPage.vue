@@ -128,6 +128,16 @@ function openChat(chat) {
   router.push({ name: 'chatThread', params: { chatId: chat.id } })
 }
 
+function chatMembersSummary(chat) {
+  const members = Array.isArray(chat?.members) ? chat.members : []
+  const names = members
+    .map((member) => String(member?.name || '').trim())
+    .filter((name) => name.length > 0)
+  if (names.length === 0) return ''
+  if (names.length <= 3) return names.join(', ')
+  return `${names.slice(0, 3).join(', ')} +${names.length - 3}`
+}
+
 onMounted(load)
 </script>
 
@@ -204,7 +214,12 @@ onMounted(load)
           <span class="chat-folder-page__icon" :style="{ backgroundColor: chat.icon_bg_color || '#2563eb' }">
             {{ chat.icon_emoji || '💬' }}
           </span>
-          <span class="chat-folder-page__title">{{ chat.title || t('chats.defaultConversation') }}</span>
+          <span class="chat-folder-page__chatText">
+            <span class="chat-folder-page__title">{{ chat.title || t('chats.defaultConversation') }}</span>
+            <span v-if="chatMembersSummary(chat)" class="chat-folder-page__members">
+              {{ chatMembersSummary(chat) }}
+            </span>
+          </span>
           <span v-if="getChatUnread(chat.id) > 0" class="chat-folder-page__unreadBadge">
             {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
           </span>
@@ -282,7 +297,9 @@ onMounted(load)
   color: inherit;
   font: inherit;
 }
-.chat-folder-page__title { min-width: 0; }
+.chat-folder-page__chatText { min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; flex: 1; }
+.chat-folder-page__title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-folder-page__members { font-size: 0.74rem; opacity: 0.72; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-folder-page__unreadBadge {
   margin-left: auto;
   min-width: 1.2rem;

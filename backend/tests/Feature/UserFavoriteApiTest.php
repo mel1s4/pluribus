@@ -95,9 +95,9 @@ class UserFavoriteApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_community_admin_can_add_users_favorite(): void
+    public function test_root_can_add_users_favorite(): void
     {
-        $user = User::factory()->admin()->create();
+        $user = User::factory()->root()->create();
 
         $this->actingAs($user)
             ->withoutMiddleware(ValidateCsrfToken::class)

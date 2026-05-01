@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -37,11 +38,11 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    /** Stored on users who are not root; root accounts use {@see $is_root}. */
-    public const USER_TYPES = ['root', 'admin', 'member', 'developer', 'visitor'];
+    /** Stored on users as system-wide role only. */
+    public const USER_TYPES = ['root', 'admin'];
 
     /** Values root may assign via {@see users.assign_types} (excludes root). */
-    public const ASSIGNABLE_USER_TYPES = ['admin', 'member', 'developer', 'visitor'];
+    public const ASSIGNABLE_USER_TYPES = ['admin'];
 
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
@@ -116,6 +117,27 @@ class User extends Authenticatable
     }
 
     /**
+     * @return BelongsToMany<Community, $this, CommunityMembership>
+     */
+    public function communities(): BelongsToMany
+    {
+        return $this->belongsToMany(Community::class, 'community_user')
+            ->using(CommunityMembership::class)
+            ->withPivot(['role'])
+            ->withTimestamps();
+    }
+
+    public function membershipForCommunity(int $communityId): ?CommunityMembership
+    {
+        /** @var CommunityMembership|null $membership */
+        $membership = $this->communities()
+            ->where('communities.id', $communityId)
+            ->first()?->pivot;
+
+        return $membership;
+    }
+
+    /**
      * @return HasMany<Place, $this>
      */
     public function places(): HasMany
@@ -164,6 +186,15 @@ class User extends Authenticatable
     }
 
     /**
+     * @return BelongsToMany<User, $this>
+     */
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'user_contacts', 'user_id', 'contact_user_id')
+            ->withTimestamps();
+    }
+
+    /**
      * @return HasMany<CartItem, $this>
      */
     public function cartItems(): HasMany
@@ -193,5 +224,13 @@ class User extends Authenticatable
     public function votingIdAudits(): HasMany
     {
         return $this->hasMany(UserVotingIdAudit::class)->orderByDesc('id');
+    }
+
+    /**
+     * @return HasMany<Wallet, $this>
+     */
+    public function wallets(): HasMany
+    {
+        return $this->hasMany(Wallet::class);
     }
 }

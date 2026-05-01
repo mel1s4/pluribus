@@ -22,11 +22,32 @@ class CommunityInvitationManageApiTest extends TestCase
         return ['Origin' => 'http://localhost:9123'];
     }
 
-    private function statefulJson(string $method, string $uri, array $data = []): TestResponse
+    /**
+     * @param  array<string, string>  $extraHeaders
+     */
+    private function statefulJson(string $method, string $uri, array $data = [], array $extraHeaders = []): TestResponse
     {
-        return $this->withHeaders($this->statefulHeaders())
+        return $this->withHeaders(array_merge($this->statefulHeaders(), $extraHeaders))
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->json($method, $uri, $data);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function slugHeaders(Community $community): array
+    {
+        $slug = (string) $community->slug;
+        if ($slug === '') {
+            $community->refresh();
+            $slug = (string) $community->slug;
+        }
+        if ($slug === '') {
+            $slug = 'community';
+            $community->forceFill(['slug' => $slug])->save();
+        }
+
+        return ['X-Community-Slug' => $slug];
     }
 
     public function test_member_cannot_list_invitations(): void
@@ -42,6 +63,7 @@ class CommunityInvitationManageApiTest extends TestCase
     {
         $community = Community::current();
         $admin = User::factory()->admin()->create();
+        $admin->communities()->syncWithoutDetaching([$community->id => ['role' => 'admin']]);
         $plain = str_repeat('c', 48);
         $invitation = CommunityInvitation::query()->create([
             'community_id' => $community->id,
@@ -56,7 +78,7 @@ class CommunityInvitationManageApiTest extends TestCase
 
         $this->actingAs($admin);
 
-        $this->statefulJson('GET', '/api/invitations')
+        $this->statefulJson('GET', '/api/invitations', [], $this->slugHeaders($community))
             ->assertOk()
             ->assertJsonPath('data.0.id', $invitation->id)
             ->assertJsonPath('data.0.kind', 'email')
@@ -69,6 +91,7 @@ class CommunityInvitationManageApiTest extends TestCase
     {
         $community = Community::current();
         $admin = User::factory()->admin()->create();
+        $admin->communities()->syncWithoutDetaching([$community->id => ['role' => 'admin']]);
         $plain = str_repeat('d', 48);
         $invitation = CommunityInvitation::query()->create([
             'community_id' => $community->id,
@@ -83,7 +106,7 @@ class CommunityInvitationManageApiTest extends TestCase
 
         $this->actingAs($admin);
 
-        $this->statefulJson('DELETE', '/api/invitations/'.$invitation->id)
+        $this->statefulJson('DELETE', '/api/invitations/'.$invitation->id, [], $this->slugHeaders($community))
             ->assertNoContent();
 
         $this->assertDatabaseMissing('community_invitations', ['id' => $invitation->id]);
@@ -124,6 +147,7 @@ class CommunityInvitationManageApiTest extends TestCase
         ]);
 
         $admin = User::factory()->admin()->create();
+        $admin->communities()->syncWithoutDetaching([$home->id => ['role' => 'admin']]);
         $plain = str_repeat('f', 48);
         $invitation = CommunityInvitation::query()->create([
             'community_id' => $other->id,
@@ -140,7 +164,19 @@ class CommunityInvitationManageApiTest extends TestCase
 
         $this->actingAs($admin);
 
-        $this->statefulJson('DELETE', '/api/invitations/'.$invitation->id)
+        $this->statefulJson('DELETE', '/api/invitations/'.$invitation->id, [], $this->slugHeaders($home))
             ->assertNotFound();
+    }
+
+    public function test_admin_without_pivot_admin_role_cannot_list_invitations(): void
+    {
+        $community = Community::current();
+        $admin = User::factory()->admin()->create();
+        $admin->communities()->syncWithoutDetaching([$community->id => ['role' => 'member']]);
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('GET', '/api/invitations', [], $this->slugHeaders($community))
+            ->assertForbidden();
     }
 }

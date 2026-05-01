@@ -1,8 +1,16 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import Card from '../../atoms/Card.vue'
+import { useActiveCommunity } from '../../composables/useActiveCommunity'
 import { t } from '../../i18n/i18n'
 import { fetchCommunityLeadership } from '../../services/communityApi.js'
+
+const { activeCommunitySlug } = useActiveCommunity()
+
+function communityRequestOptions() {
+  const s = activeCommunitySlug.value
+  return s && s.trim() !== '' ? { headers: { 'X-Community-Slug': s.trim() } } : {}
+}
 
 const loadError = ref('')
 const loading = ref(true)
@@ -47,7 +55,7 @@ const empty = computed(() => !loading.value && !loadError.value && leaders.value
 async function load() {
   loadError.value = ''
   loading.value = true
-  const { ok, status, data } = await fetchCommunityLeadership()
+  const { ok, status, data } = await fetchCommunityLeadership(communityRequestOptions())
   loading.value = false
   if (!ok) {
     loadError.value = apiErrorMessage(data, status, t('communitySettings.leadershipLoadError'))
@@ -59,6 +67,10 @@ async function load() {
 }
 
 load()
+
+watch(activeCommunitySlug, () => {
+  void load()
+})
 </script>
 
 <template>

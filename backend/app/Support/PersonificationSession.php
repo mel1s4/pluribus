@@ -31,6 +31,10 @@ final class PersonificationSession
      */
     public static function payload(Request $request): ?array
     {
+        if (! $request->hasSession()) {
+            return null;
+        }
+
         $raw = $request->session()->get(self::SESSION_KEY);
 
         return is_array($raw) ? $raw : null;
@@ -38,6 +42,10 @@ final class PersonificationSession
 
     public static function forget(Request $request): void
     {
+        if (! $request->hasSession()) {
+            return;
+        }
+
         $request->session()->forget(self::SESSION_KEY);
     }
 

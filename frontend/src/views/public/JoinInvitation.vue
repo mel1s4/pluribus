@@ -71,6 +71,14 @@ const showRegisterCard = computed(
   () => preview.value?.valid === true && isVerifyStep.value === true,
 )
 
+function defaultPostLoginPath(user) {
+  const communityCount = Number(user?.community_count || 0)
+  if (communityCount <= 0) return '/my-communities'
+  const first = Array.isArray(user?.communities) ? user.communities[0] : null
+  if (first?.slug) return `/${first.slug}/dashboard`
+  return '/dashboard'
+}
+
 const loadingMessage = computed(() =>
   isVerifyStep.value ? t('joinInvitation.verifyLoading') : t('joinInvitation.loading'),
 )
@@ -182,7 +190,7 @@ async function onRegister() {
   registerLoading.value = false
   if (ok && data?.user) {
     setSessionFromLoginUser(data.user, data.personification)
-    await router.replace('/dashboard')
+    await router.replace(defaultPostLoginPath(data.user))
     return
   }
   registerError.value = userApiErrorMessage(

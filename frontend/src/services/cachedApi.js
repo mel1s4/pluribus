@@ -36,14 +36,20 @@ function snapshotResponse(res) {
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
 export async function cachedGet(path, options = {}) {
-  const { ttl = DEFAULT_TTL_MS, skipCache = false } = options
+  const { ttl = DEFAULT_TTL_MS, skipCache = false, headers = {} } = options
+  const headerKey =
+    headers && typeof headers === 'object' && Object.keys(headers).length
+      ? `\0${JSON.stringify(headers)}`
+      : ''
+  const requestOpts =
+    headers && typeof headers === 'object' && Object.keys(headers).length ? { headers } : undefined
 
   if (skipCache) {
-    const fresh = await apiJson('GET', path)
+    const fresh = await apiJson('GET', path, undefined, requestOpts)
     return snapshotResponse(fresh)
   }
 
-  const cacheKey = path.startsWith('/') ? path : `/${path}`
+  const cacheKey = (path.startsWith('/') ? path : `/${path}`) + headerKey
   const now = Date.now()
 
   const hit = cache.get(cacheKey)
@@ -56,7 +62,7 @@ export async function cachedGet(path, options = {}) {
     return snapshotResponse(shared)
   }
 
-  const promise = apiJson('GET', path).then((response) => {
+  const promise = apiJson('GET', path, undefined, requestOpts).then((response) => {
     pending.delete(cacheKey)
     if (response.ok) {
       cache.set(cacheKey, {

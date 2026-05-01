@@ -3,11 +3,19 @@
 namespace App\Http\Requests;
 
 use App\Models\Post;
+use App\Support\PostVideoUrl;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class StorePostRequest extends FormRequest
 {
+    protected function prepareForValidation(): void
+    {
+        if ($this->input('video_url') === '') {
+            $this->merge(['video_url' => null]);
+        }
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -19,6 +27,7 @@ class StorePostRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'community_id' => ['nullable', 'integer', 'exists:communities,id'],
             'shared_group_id' => ['nullable', 'integer', 'exists:groups,id'],
             'calendar_id' => ['nullable', 'integer', 'exists:calendars,id'],
             'place_id' => ['nullable', 'integer', 'exists:places,id'],
@@ -26,6 +35,14 @@ class StorePostRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'content_markdown' => ['nullable', 'string'],
+            'video_url' => [
+                'nullable',
+                'string',
+                'max:2048',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    PostVideoUrl::validate($value, $fail);
+                },
+            ],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:64'],
             'start_at' => ['nullable', 'date'],

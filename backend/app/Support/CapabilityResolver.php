@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\User;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 
 class CapabilityResolver
@@ -19,13 +20,29 @@ class CapabilityResolver
     public function forUser(User $user): array
     {
         $byType = $this->loadByType();
+        $capabilities = [];
+
         if ($user->isRoot()) {
             return $this->capabilitiesForRoleKey('root', $byType);
         }
 
-        $role = $user->user_type ?: 'member';
+        if ($user->user_type === 'admin') {
+            $capabilities = array_merge($capabilities, $this->capabilitiesForRoleKey('admin', $byType));
+        }
 
-        return $this->capabilitiesForRoleKey($role, $byType);
+        $membershipRole = $this->resolveMembershipRole($user);
+        if ($membershipRole !== null) {
+            $capabilities = array_merge($capabilities, $this->capabilitiesForRoleKey($membershipRole, $byType));
+        }
+
+        $capabilities = array_values(array_unique($capabilities));
+
+        // Platform admins (user_type) need global user list access; do not grant via membership `admin` bundle.
+        if (! $user->isRoot() && $user->user_type === 'admin' && ! in_array('users.view', $capabilities, true)) {
+            $capabilities[] = 'users.view';
+        }
+
+        return $capabilities;
     }
 
     public function userHasCapability(User $user, string $capabilityId): bool
@@ -85,5 +102,31 @@ class CapabilityResolver
         self::$byType = json_decode(File::get($path), true, flags: JSON_THROW_ON_ERROR);
 
         return self::$byType;
+    }
+
+    private function resolveMembershipRole(User $user): ?string
+    {
+        /** @var Request|null $request */
+        $request = app()->bound('request') ? app('request') : null;
+        $communityId = null;
+        if ($request !== null) {
+            $active = $request->attributes->get('active_community');
+            if ($active instanceof \App\Models\Community) {
+                $communityId = (int) $active->id;
+            }
+        }
+
+        if ($communityId === null) {
+            $communityId = (int) $user->communities()->orderBy('communities.id')->value('communities.id');
+        }
+        if ($communityId <= 0) {
+            return null;
+        }
+
+        $role = $user->communities()
+            ->where('communities.id', $communityId)
+            ->value('community_user.role');
+
+        return is_string($role) && $role !== '' ? $role : null;
     }
 }

@@ -41,7 +41,16 @@ async function prepareDevServiceWorker() {
 
 prepareDevServiceWorker().then(() => {
   if (import.meta.env.PROD) {
-    registerSW({ immediate: true })
+    const updateSW = registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        // Activate the new service worker immediately and then reload.
+        void updateSW(true)
+      },
+      onOfflineReady() {
+        console.info('[PWA] App is ready for offline usage.')
+      },
+    })
   }
 
   createApp(App).use(router).mount('#app')

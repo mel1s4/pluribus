@@ -18,7 +18,7 @@ class CommunitySettingsController extends Controller
 {
     public function show(Request $request): JsonResponse
     {
-        $community = Community::current();
+        $community = $this->resolveTargetCommunity($request);
 
         return response()->json([
             'community' => new CommunityResource($community),
@@ -30,7 +30,7 @@ class CommunitySettingsController extends Controller
      */
     public function branding(Request $request): JsonResponse
     {
-        $community = Community::current();
+        $community = $this->resolveTargetCommunity($request);
         $payload = (new CommunityResource($community))->toArray($request);
 
         return response()->json([
@@ -67,7 +67,7 @@ class CommunitySettingsController extends Controller
             abort(403, 'Only root can update community settings.');
         }
 
-        $community = Community::current();
+        $community = $this->resolveTargetCommunity($request);
         $validated = $request->validated();
         $previousLogo = $community->logo;
         $nextLogo = $previousLogo;
@@ -125,7 +125,7 @@ class CommunitySettingsController extends Controller
             abort(403, 'Only root or community admins can update currency.');
         }
 
-        $community = Community::current();
+        $community = $this->resolveTargetCommunity($request);
         $validated = $request->validated();
         $community->currency_code = $validated['currency_code'] ?? null;
         $community->save();
@@ -133,6 +133,13 @@ class CommunitySettingsController extends Controller
         return response()->json([
             'community' => new CommunityResource($community->fresh()),
         ]);
+    }
+
+    private function resolveTargetCommunity(Request $request): Community
+    {
+        $active = $request->attributes->get('active_community');
+
+        return $active instanceof Community ? $active : Community::current();
     }
 
     private function deleteStoredCommunityLogo(?string $logo): void

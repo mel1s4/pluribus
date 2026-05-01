@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Community;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -53,6 +54,29 @@ class UserAdminApiTest extends TestCase
         $user = User::factory()->admin()->create();
 
         $this->actingAs($user);
+
+        $this->statefulJson('GET', '/api/users')
+            ->assertOk()
+            ->assertJsonStructure(['data', 'links', 'meta']);
+    }
+
+    public function test_community_admin_member_cannot_list_all_users_without_search(): void
+    {
+        $community = Community::current();
+        $communityAdmin = User::factory()->create(['user_type' => 'member']);
+        $communityAdmin->communities()->syncWithoutDetaching([$community->id => ['role' => 'admin']]);
+
+        $this->actingAs($communityAdmin);
+
+        $this->statefulJson('GET', '/api/users')
+            ->assertForbidden();
+    }
+
+    public function test_root_can_list_users(): void
+    {
+        $root = User::factory()->root()->create();
+
+        $this->actingAs($root);
 
         $this->statefulJson('GET', '/api/users')
             ->assertOk()
@@ -163,6 +187,19 @@ class UserAdminApiTest extends TestCase
             ->assertJsonPath('user.email', $target->email);
     }
 
+    public function test_root_can_show_user(): void
+    {
+        $root = User::factory()->root()->create();
+        $target = User::factory()->create();
+
+        $this->actingAs($root);
+
+        $this->statefulJson('GET', '/api/users/'.$target->id)
+            ->assertOk()
+            ->assertJsonPath('user.id', $target->id)
+            ->assertJsonPath('user.email', $target->email);
+    }
+
     public function test_member_cannot_update_user(): void
     {
         $member = User::factory()->create(['user_type' => 'member']);
@@ -176,12 +213,34 @@ class UserAdminApiTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_admin_can_update_non_root_user(): void
+    public function test_admin_cannot_update_user_without_users_update(): void
     {
         $admin = User::factory()->admin()->create();
         $target = User::factory()->create(['name' => 'Old Name']);
 
         $this->actingAs($admin);
+
+        $newEmail = 'patched-'.uniqid('', true).'@example.com';
+
+        $this->statefulJson('PATCH', '/api/users/'.$target->id, [
+            'name' => 'New Display',
+            'email' => $newEmail,
+            'username' => null,
+        ])
+            ->assertForbidden();
+
+        $this->assertDatabaseHas('users', [
+            'id' => $target->id,
+            'name' => 'Old Name',
+        ]);
+    }
+
+    public function test_root_can_update_non_root_user(): void
+    {
+        $root = User::factory()->root()->create();
+        $target = User::factory()->create(['name' => 'Old Name']);
+
+        $this->actingAs($root);
 
         $newEmail = 'patched-'.uniqid('', true).'@example.com';
 

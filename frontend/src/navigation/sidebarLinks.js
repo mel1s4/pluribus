@@ -2,7 +2,7 @@ import { hasCapability, isVisitorUser } from '../composables/useCapabilities'
 
 /**
  * Single source for authenticated app sidebar destinations (keys match backend UserFavoriteController).
- * @type {Array<{ key: string, to: string, labelKey: string, icon: string, capability: string | null }>}
+ * @type {Array<{ key: string, to: string, labelKey: string, icon: string, capability: string | null, hideInPrimaryNav?: boolean }>}
  */
 export const SIDEBAR_LINK_DEFS = [
   { key: 'dashboard', to: '/dashboard', labelKey: 'nav.dashboard', icon: 'gauge-high', capability: null },
@@ -14,14 +14,37 @@ export const SIDEBAR_LINK_DEFS = [
     capability: 'users.view',
   },
   {
+    key: 'communities',
+    to: '/communities',
+    labelKey: 'nav.communities',
+    icon: 'people-roof',
+    capability: 'communities.view',
+  },
+  {
+    key: 'my-communities',
+    to: '/my-communities',
+    labelKey: 'nav.myCommunities',
+    icon: 'people-group',
+    capability: null,
+    hideInPrimaryNav: true,
+  },
+  {
+    key: 'community-settings',
+    to: '/community-settings',
+    labelKey: 'nav.community',
+    icon: 'people-roof',
+    capability: null,
+    hideInPrimaryNav: true,
+  },
+  {
     key: 'support-personification',
     to: '/support/personification',
     labelKey: 'nav.supportPersonification',
     icon: 'eye',
     capability: 'users.personify',
   },
-  { key: 'community-settings', to: '/community', labelKey: 'nav.community', icon: 'people-roof', capability: null },
   { key: 'chats', to: '/chats', labelKey: 'quickNav.chats', icon: 'comments', capability: null },
+  { key: 'my-contacts', to: '/my-contacts', labelKey: 'contacts.title', icon: 'address-book', capability: null },
   { key: 'folders', to: '/folders', labelKey: 'folders.title', icon: 'folder-open', capability: null },
   { key: 'tasks', to: '/tasks', labelKey: 'tasks.title', icon: 'list-check', capability: null },
   { key: 'calendar', to: '/calendar', labelKey: 'calendar.title', icon: 'calendar-days', capability: null },
@@ -29,9 +52,22 @@ export const SIDEBAR_LINK_DEFS = [
   { key: 'my-groups', to: '/my-groups', labelKey: 'groups.title', icon: 'people-group', capability: null },
   { key: 'orders', to: '/orders', labelKey: 'nav.orders', icon: 'file-lines', capability: null },
   { key: 'my-cart', to: '/cart', labelKey: 'nav.myCart', icon: 'cart-shopping', capability: null },
+  {
+    key: 'my-wallet',
+    to: '/wallet',
+    labelKey: 'nav.myWallet',
+    icon: 'arrow-right-arrow-left',
+    capability: 'wallet.view',
+  },
   { key: 'my-places', to: '/my-places', labelKey: 'nav.myPlaces', icon: 'store', capability: null },
   { key: 'map', to: '/map', labelKey: 'quickNav.map', icon: 'map-location-dot', capability: null },
-  { key: 'notifications', to: '/notifications', labelKey: 'quickNav.notifications', icon: 'bell', capability: null },
+  {
+    key: 'notifications',
+    to: '/notifications',
+    labelKey: 'quickNav.notifications',
+    icon: 'bell',
+    capability: 'notifications.view',
+  },
   { key: 'profile', to: '/profile', labelKey: 'quickNav.profile', icon: 'user', capability: null },
   { key: 'settings', to: '/settings', labelKey: 'nav.settings', icon: 'gear', capability: null },
 ]
@@ -58,7 +94,7 @@ export function sidebarDefByKey(key) {
 export function isSidebarLinkDefAccessible(def) {
   if (
     isVisitorUser()
-    && !['map', 'orders', 'my-cart', 'profile', 'settings'].includes(def.key)
+    && !['map', 'orders', 'my-cart', 'profile', 'settings', 'notifications'].includes(def.key)
   ) {
     return false
   }

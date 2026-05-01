@@ -1,7 +1,8 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 
 const CHECK_INTERVAL = 5 * 60 * 1000 // Check every 5 minutes
-const STORAGE_KEY = 'app_build_timestamp'
+const STORAGE_KEY = 'app_build_version'
+const RELOAD_GUARD_KEY = 'app_build_reload_guard'
 
 let currentVersion = null
 let checkTimer = null
@@ -40,7 +41,7 @@ export function useVersionCheck() {
       }
 
       const data = await response.json()
-      return data.timestamp
+      return data.version || data.buildTime || data.timestamp
     } catch (error) {
       console.warn('[Version Check] Failed to fetch version:', error.message)
       return null
@@ -76,11 +77,12 @@ export function useVersionCheck() {
           current: currentVersion,
           new: newVersion,
         })
-        
-        // CRITICAL: Update local storage so we don't infinitely reload!
+
+        // Update stored version before reload to avoid refresh loops.
         localStorage.setItem(STORAGE_KEY, String(newVersion))
         currentVersion = newVersion
-        
+        sessionStorage.setItem(RELOAD_GUARD_KEY, String(newVersion))
+
         hasNewVersion.value = true
 
         // Auto-reload after short delay unless in silent mode
@@ -101,21 +103,33 @@ export function useVersionCheck() {
 
   function startVersionChecking() {
     // Initial check after 10 seconds
-    setTimeout(() => checkVersion(true), 10000)
+    setTimeout(() => checkVersion(false), 10000)
 
     // Check periodically
-    checkTimer = setInterval(() => checkVersion(true), CHECK_INTERVAL)
+    checkTimer = setInterval(() => checkVersion(false), CHECK_INTERVAL)
 
     // Check on visibility change (user returns to tab)
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        checkVersion(true)
+        checkVersion(false)
       }
     }
     document.addEventListener('visibilitychange', handleVisibilityChange)
 
+    const handlePageShow = () => {
+      checkVersion(false)
+    }
+    window.addEventListener('pageshow', handlePageShow)
+
+    const handleOnline = () => {
+      checkVersion(false)
+    }
+    window.addEventListener('online', handleOnline)
+
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pageshow', handlePageShow)
+      window.removeEventListener('online', handleOnline)
     }
   }
 
@@ -134,7 +148,12 @@ export function useVersionCheck() {
     // Initialize current version from storage
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored) {
-      currentVersion = parseInt(stored, 10)
+      currentVersion = stored
+    }
+
+    const guardedVersion = sessionStorage.getItem(RELOAD_GUARD_KEY)
+    if (guardedVersion && guardedVersion === currentVersion) {
+      sessionStorage.removeItem(RELOAD_GUARD_KEY)
     }
 
     const cleanup = startVersionChecking()

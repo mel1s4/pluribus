@@ -6,11 +6,16 @@ use App\Http\Controllers\Api\CalendarEventController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\ChatBackupController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatMemberController;
 use App\Http\Controllers\Api\ChatMessageController;
-use App\Http\Controllers\Api\ChatSseController;
 use App\Http\Controllers\Api\CommunityInvitationController;
+use App\Http\Controllers\Api\CommunityMembershipController;
+use App\Http\Controllers\Api\CommunityCreditsController;
+use App\Http\Controllers\Api\CommunityMicrositeController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
+use App\Http\Controllers\Api\CommunityAdminController;
 use App\Http\Controllers\Api\CommunitySettingsController;
+use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DiscoveryController;
 use App\Http\Controllers\Api\FolderController;
 use App\Http\Controllers\Api\GlobalSearchController;
@@ -31,11 +36,15 @@ use App\Http\Controllers\Api\PlaceRequirementController;
 use App\Http\Controllers\Api\PlaceRequirementResponseController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\TaskController;
 use App\Http\Controllers\Api\TableAccessLinkController;
 use App\Http\Controllers\Api\UserAdminController;
 use App\Http\Controllers\Api\UserVotingIdAuditController;
 use App\Http\Controllers\Api\UserFavoriteController;
+use App\Http\Controllers\Api\WalletController;
+use App\Http\Controllers\Api\MyCommunitiesController;
+use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\VisitorAuthController;
 use App\Http\Controllers\Api\PlaceTableController;
 use App\Http\Controllers\Api\TableSessionController;
@@ -53,7 +62,12 @@ Route::get('/community/branding', [CommunitySettingsController::class, 'branding
 
 Route::get('/places/{place}/public', [PlaceController::class, 'showPublic']);
 
+Route::get('/communities/{slug}/microsite', [CommunityMicrositeController::class, 'show']);
+Route::get('/communities/{slug}/credits', [CommunityCreditsController::class, 'show']);
+
 Route::post('/login', [AuthController::class, 'login'])
+    ->middleware('throttle:login');
+Route::post('/register', [RegisterController::class, 'store'])
     ->middleware('throttle:login');
 Route::post('/password/forgot', [PasswordResetController::class, 'request'])
     ->middleware('throttle:password-forgot');
@@ -93,6 +107,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/profile/avatar', [ProfileController::class, 'uploadAvatar']);
         Route::delete('/profile/avatar', [ProfileController::class, 'destroyAvatar']);
 
+        Route::get('/contacts', [ContactController::class, 'index']);
+        Route::post('/contacts/search', [ContactController::class, 'search']);
+        Route::post('/contacts', [ContactController::class, 'store']);
+
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::post('/notifications/read', [NotificationController::class, 'markRead']);
+        Route::post('/notifications/read-all', [NotificationController::class, 'markAllRead']);
+
         Route::get('/user-favorites', [UserFavoriteController::class, 'index']);
         Route::post('/user-favorites', [UserFavoriteController::class, 'store']);
         Route::put('/user-favorites/reorder', [UserFavoriteController::class, 'reorder']);
@@ -101,10 +123,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/members/{user}', [MemberProfileController::class, 'show']);
 
+        Route::get('/communities/{slug}/credits/ledger-export', [CommunityCreditsController::class, 'exportLedger']);
+
         Route::get('/users', [UserAdminController::class, 'index']);
+        Route::get('/my-communities', [MyCommunitiesController::class, 'index']);
+        Route::post('/my-communities/join/{token}', [MyCommunitiesController::class, 'joinByInvitation'])
+            ->middleware('throttle:join-invitation-show');
+        Route::get('/communities', [CommunityAdminController::class, 'index']);
+        Route::post('/communities', [CommunityAdminController::class, 'store']);
+        Route::get('/communities/{community}', [CommunityAdminController::class, 'show']);
+        Route::patch('/communities/{community}', [CommunityAdminController::class, 'update']);
         Route::get('/invitations', [CommunityInvitationController::class, 'index']);
         Route::post('/invitations', [CommunityInvitationController::class, 'store']);
         Route::delete('/invitations/{invitation}', [CommunityInvitationController::class, 'destroy']);
+        Route::get('/community/memberships', [CommunityMembershipController::class, 'index']);
+        Route::post('/community/memberships', [CommunityMembershipController::class, 'store']);
+        Route::patch('/community/memberships/{user}', [CommunityMembershipController::class, 'update'])->scopeBindings();
+        Route::delete('/community/memberships/{user}', [CommunityMembershipController::class, 'destroy'])->scopeBindings();
         Route::post('/users', [UserAdminController::class, 'store']);
         Route::get('/users/{user}', [UserAdminController::class, 'show']);
         Route::get('/users/{user}/voting-id-audits', [UserVotingIdAuditController::class, 'index']);
@@ -150,11 +185,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
         Route::get('/chats', [ChatController::class, 'index']);
         Route::post('/chats', [ChatController::class, 'store']);
-        Route::get('/chats/stream', [ChatSseController::class, 'stream']);
+        Route::get('/chats/updates', [ChatMessageController::class, 'updates']);
         Route::get('/chats/{chat}', [ChatController::class, 'show']);
         Route::patch('/chats/{chat}', [ChatController::class, 'update']);
         Route::delete('/chats/{chat}', [ChatController::class, 'destroy']);
         Route::post('/chats/{chat}/read', [ChatController::class, 'markRead'])->scopeBindings();
+        Route::post('/chats/{chat}/members', [ChatMemberController::class, 'store'])->scopeBindings();
+        Route::delete('/chats/{chat}/members/{user}', [ChatMemberController::class, 'destroy'])->scopeBindings();
         Route::get('/chats/{chat}/messages', [ChatMessageController::class, 'index'])->scopeBindings();
         Route::post('/chats/{chat}/messages', [ChatMessageController::class, 'store'])->scopeBindings();
         Route::get('/folders/search', [FolderController::class, 'search']);
@@ -230,5 +267,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/places/{place}/orders/{order}', [OrderController::class, 'placeShow']);
         Route::patch('/places/{place}/orders/{order}', [OrderController::class, 'updatePlaceOrder']);
         Route::patch('/places/{place}/orders/{order}/items/{item}/table', [OrderController::class, 'reassignTable']);
+
+        Route::get('/wallet/audit-ledger', [WalletController::class, 'auditLedger']);
+        Route::get('/wallet/ledger/public-key', [WalletController::class, 'ledgerPublicKey']);
+        Route::get('/wallet/ledger/tip', [WalletController::class, 'ledgerTip']);
+        Route::get('/wallet/community-stats', [WalletController::class, 'communityStats']);
+        Route::get('/wallet/audit-identity/{transaction}', [WalletController::class, 'auditIdentity'])
+            ->scopeBindings();
+        Route::get('/wallet/transactions/{transaction}', [WalletController::class, 'showTransaction'])
+            ->scopeBindings();
+        Route::get('/wallet', [WalletController::class, 'index']);
+        Route::post('/wallet/transfer', [WalletController::class, 'transfer']);
+        Route::post('/wallet/grants', [WalletController::class, 'grant']);
     });
 });

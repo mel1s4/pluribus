@@ -56,7 +56,7 @@ onUnmounted(() => {
 .mobile-nav__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1100;
+  z-index: 3000;
   background: rgba(15, 23, 42, 0.45);
   opacity: 0;
   pointer-events: none;
@@ -73,7 +73,7 @@ onUnmounted(() => {
   top: 0;
   left: 0;
   bottom: 0;
-  z-index: 1110;
+  z-index: 3010;
   width: min(88vw, 320px);
   max-width: 100%;
   transform: translateX(-100%);
