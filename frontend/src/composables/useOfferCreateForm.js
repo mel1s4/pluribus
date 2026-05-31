@@ -1,5 +1,6 @@
 import { computed, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRouter } from 'vue-router'
+import { communityLocalCurrencyCode } from './useCommunity'
 import { t } from '../i18n/i18n'
 import { createOffer } from '../services/placesApi.js'
 
@@ -11,6 +12,7 @@ function emptyOfferForm() {
     title: '',
     description: '',
     price: '',
+    local_price: '',
     tags: [],
     category: '',
     visibility_scope: 'public',
@@ -29,7 +31,14 @@ function normalizeAudienceIds(ids) {
 }
 
 function stepForField(field) {
-  if (field === 'title' || field === 'price' || field === 'description' || field === 'tags' || field === 'category') {
+  if (
+    field === 'title'
+    || field === 'price'
+    || field === 'local_price'
+    || field === 'description'
+    || field === 'tags'
+    || field === 'category'
+  ) {
     return 1
   }
   if (field === 'photo' || field === 'gallery') {
@@ -59,6 +68,16 @@ function parseErrors(data) {
   }, {})
 }
 
+function validateOptionalPrice(value, fieldErrors, fieldKey) {
+  if (value === '') return true
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < 0) {
+    fieldErrors[fieldKey] = [t('myPlaces.offerPriceInvalid')]
+    return false
+  }
+  return true
+}
+
 export function useOfferCreateForm(placeIdRef) {
   const router = useRouter()
   const currentStep = ref(1)
@@ -72,6 +91,10 @@ export function useOfferCreateForm(placeIdRef) {
   const hasAttemptedSubmit = ref(false)
   const initialized = ref(false)
   const initialSnapshot = ref(JSON.stringify(emptyOfferForm()))
+
+  const localCurrencyConfigured = computed(
+    () => typeof communityLocalCurrencyCode.value === 'string' && communityLocalCurrencyCode.value.trim() !== '',
+  )
 
   const isDirty = computed(() => {
     return (
@@ -165,16 +188,19 @@ export function useOfferCreateForm(placeIdRef) {
     const next = { ...fieldErrors.value }
     delete next.title
     delete next.price
+    delete next.local_price
     const trimmedTitle = form.value.title.trim()
-    const numericPrice = Number(form.value.price)
     if (!trimmedTitle) {
       next.title = [t('myPlaces.offerTitleRequired')]
     }
-    if (form.value.price === '' || !Number.isFinite(numericPrice) || numericPrice < 0) {
-      next.price = [t('myPlaces.offerPriceInvalid')]
+    const priceOk = validateOptionalPrice(form.value.price, next, 'price')
+    const localOk = validateOptionalPrice(form.value.local_price, next, 'local_price')
+    if (localOk && form.value.local_price !== '' && !localCurrencyConfigured.value) {
+      next.local_price = [t('myPlaces.offerLocalCurrencyNotConfigured')]
     }
+
     fieldErrors.value = next
-    return !next.title && !next.price
+    return !next.title && priceOk && localOk && !next.local_price
   }
 
   function validateMedia() {
@@ -223,7 +249,8 @@ export function useOfferCreateForm(placeIdRef) {
     const fd = new FormData()
     fd.append('title', form.value.title.trim())
     fd.append('description', form.value.description?.trim() || '')
-    fd.append('price', String(form.value.price))
+    if (form.value.price !== '') fd.append('price', String(form.value.price))
+    if (form.value.local_price !== '') fd.append('local_price', String(form.value.local_price))
     fd.append('tags', JSON.stringify(Array.isArray(form.value.tags) ? form.value.tags : []))
     fd.append('category', typeof form.value.category === 'string' ? form.value.category.trim() : '')
     fd.append('visibility_scope', form.value.visibility_scope || 'public')
@@ -240,7 +267,8 @@ export function useOfferCreateForm(placeIdRef) {
     return {
       title: form.value.title.trim(),
       description: form.value.description?.trim() || null,
-      price: Number(form.value.price),
+      price: form.value.price !== '' ? Number(form.value.price) : null,
+      local_price: form.value.local_price !== '' ? Number(form.value.local_price) : null,
       tags: Array.isArray(form.value.tags) ? form.value.tags : [],
       category: cat === '' ? null : cat,
       visibility_scope: form.value.visibility_scope || 'public',
@@ -344,6 +372,7 @@ export function useOfferCreateForm(placeIdRef) {
     hasAttemptedSubmit,
     isDirty,
     isSubmitting,
+    localCurrencyConfigured,
     photoFile,
     saveState,
     stepErrors,

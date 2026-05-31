@@ -1,17 +1,21 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Icon from '../../atoms/Icon.vue'
 import Title from '../../atoms/Title.vue'
 import { useCart } from '../../composables/useCart'
+import { hasCapability } from '../../composables/useCapabilities.js'
 import { useCommunity } from '../../composables/useCommunity'
+import { useWalletCommunityScope } from '../../composables/useWalletCommunityScope.js'
 import { t } from '../../i18n/i18n'
+import { fetchWallet } from '../../services/walletApi.js'
 import { formatOfferPrice } from '../../utils/formatPrice'
 
 const router = useRouter()
 const { communityCurrencyCode } = useCommunity()
+const { communityIdNum } = useWalletCommunityScope()
 
 const {
   cartGroups,
@@ -29,6 +33,40 @@ const {
 const checkoutNotes = ref('')
 const checkoutBusy = ref(false)
 const checkoutErr = ref('')
+const walletBalanceStr = ref('')
+
+const canViewWallet = computed(() => hasCapability('wallet.view'))
+
+async function loadWalletBalance() {
+  if (!canViewWallet.value) {
+    walletBalanceStr.value = ''
+    return
+  }
+  const cid = communityIdNum.value
+  if (!cid) {
+    walletBalanceStr.value = ''
+    return
+  }
+  const res = await fetchWallet(cid, { page: 1, perPage: 1 })
+  if (!res.ok) {
+    walletBalanceStr.value = ''
+    return
+  }
+  const w = res.data?.wallet
+  walletBalanceStr.value = w && typeof w === 'object' ? String(w.balance ?? '') : ''
+}
+
+watch([communityIdNum, lineCount, cartTotal], () => {
+  void loadWalletBalance()
+}, { immediate: true })
+
+const insufficientBalance = computed(() => {
+  if (!canViewWallet.value || lineCount.value <= 0) return false
+  const total = parseFloat(cartTotal.value)
+  const bal = parseFloat(walletBalanceStr.value)
+  if (!Number.isFinite(total) || !Number.isFinite(bal)) return false
+  return total > bal + 1e-9
+})
 
 function formatPrice(amount) {
   return formatOfferPrice(amount, communityCurrencyCode.value)
@@ -123,12 +161,17 @@ async function onClear() {
 async function onCheckout() {
   checkoutErr.value = ''
   if (lineCount.value <= 0) return
+  if (insufficientBalance.value) {
+    checkoutErr.value = t('cart.insufficientFunds')
+    return
+  }
   checkoutBusy.value = true
   try {
     const order = await checkout(checkoutNotes.value)
     checkoutNotes.value = ''
     const id = order && typeof order === 'object' && 'id' in order ? order.id : null
     if (id != null) {
+      await loadWalletBalance()
       await router.push({ name: 'orderDetail', params: { orderId: String(id) } })
     }
   } catch (e) {
@@ -220,12 +263,23 @@ void refreshCart()
           <textarea v-model="checkoutNotes" class="cart-page__notes" rows="3" maxlength="2000" />
         </label>
         <p v-if="checkoutErr" class="cart-page__checkoutErr" role="alert">{{ checkoutErr }}</p>
+        <p v-if="canViewWallet && walletBalanceStr" class="cart-page__muted">
+          {{ t('cart.yourBalance') }}: <strong>{{ formatPrice(walletBalanceStr) }}</strong>
+        </p>
+        <p v-if="insufficientBalance" class="cart-page__checkoutErr" role="alert">
+          {{ t('cart.insufficientFunds') }}
+        </p>
         <p class="cart-page__total">
           {{ t('cart.total') }}: <strong>{{ formatPrice(cartTotal) }}</strong>
         </p>
         <div class="cart-page__actions">
           <Button type="button" variant="secondary" @click="onClear">{{ t('cart.clear') }}</Button>
-          <Button type="button" variant="primary" :disabled="checkoutBusy" @click="onCheckout">
+          <Button
+            type="button"
+            variant="primary"
+            :disabled="checkoutBusy || insufficientBalance"
+            @click="onCheckout"
+          >
             {{ checkoutBusy ? t('cart.placing') : t('cart.placeOrder') }}
           </Button>
         </div>

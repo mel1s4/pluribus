@@ -5,29 +5,39 @@ import Button from '../../atoms/Button.vue'
 import FolderBreadcrumb from '../../molecules/FolderBreadcrumb.vue'
 import FolderIconPicker from '../../molecules/FolderIconPicker.vue'
 import FolderMoveDialog from '../../molecules/FolderMoveDialog.vue'
+import FolderNoteCreateDialog from '../../molecules/FolderNoteCreateDialog.vue'
+import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
+import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
+import ChatEditDialogs from '../../molecules/ChatEditDialogs.vue'
 import Icon from '../../atoms/Icon.vue'
 import FolderBulkActions from '../../organisms/FolderBulkActions.vue'
 import ItemGridView from '../../organisms/ItemGridView.vue'
 import ItemListView from '../../organisms/ItemListView.vue'
+import TaskDetailSidebar from '../../components/Tasks/TaskDetailSidebar.vue'
 import { useBulkSelection } from '../../composables/useBulkSelection.js'
+import { useChatUnread } from '../../composables/useChatUnread.js'
 import { useDragDrop } from '../../composables/useDragDrop.js'
+import { buildMergedRows, filterExplorerRows, unwrapList } from '../../composables/useFolderExplorerContent.js'
 import { getFolderAncestors, useFolders } from '../../composables/useFolders.js'
 import { t } from '../../i18n/i18n'
 import { bulkMoveFolderItems, createChat, deleteChat, fetchChats, fetchFolderStats, updateFolder } from '../../services/chatApi.js'
-import { createTask, deleteTask, fetchTasks } from '../../services/contentApi.js'
+import { createTask, deleteTask, fetchCalendars, fetchGroups, fetchTasks, updateTask } from '../../services/contentApi.js'
+import { deleteNote, fetchNotes } from '../../services/notesApi.js'
 import { useChatMemberPicker } from '../../composables/useChatMemberPicker.js'
 
 const route = useRoute()
 const router = useRouter()
 const folderId = computed(() => Number(route.params.folderId))
+const { hydrateFromChats, getChatUnread } = useChatUnread()
 
 const { folders, load: loadFolders, folderById, deleteFolder } = useFolders()
 
 const chats = ref([])
 const tasks = ref([])
+const notes = ref([])
 const stats = ref(null)
 const viewMode = ref(/** @type {'list'|'grid'} */ ('list'))
-const filterKind = ref(/** @type {'all'|'chat'|'task'} */ ('all'))
+const filterKind = ref(/** @type {'all'|'chat'|'task'|'note'} */ ('all'))
 const taskFilter = ref(/** @type {'all'|'open'|'done'} */ ('all'))
 const textFilter = ref('')
 
@@ -47,6 +57,8 @@ const iconForm = reactive({
 const chatDialogRef = ref(null)
 const chatForm = reactive({
   title: '',
+  icon_emoji: '💬',
+  icon_bg_color: '#2563eb',
 })
 const {
   memberSearchQuery,
@@ -71,6 +83,14 @@ const taskForm = reactive({
   description: '',
 })
 
+const noteDialogRef = ref(null)
+
+const chatEditDialogsRef = ref(null)
+const calendars = ref([])
+const taskSidebarGroups = ref([])
+const detailOpen = ref(false)
+const detailTask = ref(null)
+
 const drag = useDragDrop()
 
 const orderedRowKeys = computed(() => filteredRows.value.map((r) => r.key))
@@ -78,13 +98,6 @@ const orderedRowKeys = computed(() => filteredRows.value.map((r) => r.key))
 const bulk = useBulkSelection({
   getOrderedIds: () => orderedRowKeys.value,
 })
-
-function unwrapList(payload) {
-  if (!payload || typeof payload !== 'object') return []
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload.data)) return payload.data
-  return []
-}
 
 const folder = computed(() => folderById(folderId.value))
 
@@ -94,73 +107,49 @@ const ancestors = computed(() => {
   return chain
 })
 
-const folderChats = computed(() =>
-  chats.value.filter((c) => Number(c.folder_id) === folderId.value),
+const mergedRows = computed(() =>
+  buildMergedRows(chats.value, tasks.value, notes.value, folderId.value),
 )
 
-const folderTasks = computed(() =>
-  tasks.value.filter((tk) => Number(tk.folder_id) === folderId.value),
+const filteredRows = computed(() =>
+  filterExplorerRows(mergedRows.value, {
+    filterKind: filterKind.value,
+    taskFilter: taskFilter.value,
+    textFilter: textFilter.value,
+  }),
 )
-
-const mergedRows = computed(() => {
-  const rows = []
-  for (const c of folderChats.value) {
-    rows.push({
-      key: `chat:${c.id}`,
-      kind: 'chat',
-      item: c,
-      sort: new Date(c.updated_at || c.created_at || 0).getTime(),
-    })
-  }
-  for (const tk of folderTasks.value) {
-    rows.push({
-      key: `task:${tk.id}`,
-      kind: 'task',
-      item: tk,
-      sort: new Date(tk.updated_at || tk.created_at || 0).getTime(),
-    })
-  }
-  rows.sort((a, b) => b.sort - a.sort)
-  return rows
-})
-
-const filteredRows = computed(() => {
-  let rows = mergedRows.value
-  if (filterKind.value === 'chat') rows = rows.filter((r) => r.kind === 'chat')
-  if (filterKind.value === 'task') rows = rows.filter((r) => r.kind === 'task')
-  if (filterKind.value === 'task' || filterKind.value === 'all') {
-    if (taskFilter.value === 'open') {
-      rows = rows.filter((r) => r.kind !== 'task' || !r.item.completed_at)
-    }
-    if (taskFilter.value === 'done') {
-      rows = rows.filter((r) => r.kind !== 'task' || r.item.completed_at)
-    }
-  }
-  const q = textFilter.value.trim().toLowerCase()
-  if (q) {
-    rows = rows.filter((r) => {
-      const title = (r.item.title || '').toLowerCase()
-      const desc = (r.item.description || '').toLowerCase()
-      return title.includes(q) || desc.includes(q)
-    })
-  }
-  return rows
-})
 
 async function load() {
   pageReady.value = false
   await loadFolders()
-  const [chRes, tkRes, stRes] = await Promise.all([
+  const [chRes, tkRes, ntRes, stRes, calsRes, groupsRes] = await Promise.all([
     fetchChats(),
     fetchTasks(),
+    fetchNotes(folderId.value),
     fetchFolderStats(folderId.value),
+    fetchCalendars(),
+    fetchGroups(),
   ])
-  if (chRes.ok) chats.value = unwrapList(chRes.data)
+  if (chRes.ok) {
+    chats.value = unwrapList(chRes.data)
+    hydrateFromChats(chats.value)
+  }
   if (tkRes.ok) tasks.value = unwrapList(tkRes.data)
+  if (ntRes.ok) notes.value = unwrapList(ntRes.data)
   if (stRes.ok && stRes.data && typeof stRes.data === 'object' && stRes.data.stats) {
     stats.value = stRes.data.stats
   } else {
     stats.value = null
+  }
+  if (calsRes.ok) calendars.value = unwrapList(calsRes.data)
+  if (groupsRes.ok) taskSidebarGroups.value = unwrapList(groupsRes.data)
+  if (detailTask.value && detailOpen.value) {
+    const u = tasks.value.find((x) => Number(x.id) === Number(detailTask.value.id))
+    if (u) detailTask.value = u
+    else {
+      detailTask.value = null
+      detailOpen.value = false
+    }
   }
   pageReady.value = true
 }
@@ -179,8 +168,65 @@ function openChat(c) {
   router.push({ name: 'chatThread', params: { chatId: c.id } })
 }
 
-function openTask() {
-  router.push({ name: 'tasks' })
+function openTask(tk) {
+  detailTask.value = tk
+  detailOpen.value = true
+}
+
+function onDetailOpen(v) {
+  detailOpen.value = v
+  if (!v) detailTask.value = null
+}
+
+async function onExplorerMenuAction({ action, kind, item }) {
+  if (action === 'open') {
+    if (kind === 'chat') openChat(item)
+    else if (kind === 'task') openTask(item)
+    else openNote(item)
+    return
+  }
+  if (action === 'rename' && kind === 'chat') {
+    chatEditDialogsRef.value?.openRenameDialog(item)
+    return
+  }
+  if (action === 'edit' && kind === 'chat') {
+    chatEditDialogsRef.value?.openEditDialog(item)
+    return
+  }
+  if (action === 'move') {
+    bulk.clear()
+    bulk.select(kind, item.id)
+    moveDialogOpen.value = true
+    return
+  }
+  if (action === 'delete') {
+    if (kind === 'chat') {
+      if (!window.confirm(t('chats.deleteChatConfirm'))) return
+      await deleteChat(item.id)
+    } else if (kind === 'task') {
+      if (!window.confirm(t('tasks.deleteConfirmInline'))) return
+      await deleteTask(item.id)
+    } else {
+      if (!window.confirm(t('notes.deleteConfirm'))) return
+      await deleteNote(item.id)
+    }
+    await load()
+    return
+  }
+  if (action === 'toggleComplete' && kind === 'task') {
+    const completed_at = item.completed_at ? null : new Date().toISOString()
+    const res = await updateTask(item.id, { completed_at })
+    if (res.ok) await load()
+    return
+  }
+  if (action === 'toggleStar' && kind === 'task') {
+    const res = await updateTask(item.id, { highlighted: !item.highlighted })
+    if (res.ok) await load()
+  }
+}
+
+function openNote(n) {
+  router.push({ name: 'noteDetail', params: { noteId: n.id } })
 }
 
 function onToggleSelect(type, id, checked) {
@@ -194,6 +240,10 @@ function startChatDrag(item, e) {
 
 function startTaskDrag(item, e) {
   drag.onDragStart(e, { type: 'task', id: item.id })
+}
+
+function startNoteDrag(item, e) {
+  drag.onDragStart(e, { type: 'note', id: item.id })
 }
 
 async function onDropCurrentFolder(e) {
@@ -229,7 +279,8 @@ async function onBulkDelete() {
   if (!window.confirm(t('folders.bulkDeleteConfirm'))) return
   for (const it of bulk.items.value) {
     if (it.type === 'chat') await deleteChat(it.id)
-    else await deleteTask(it.id)
+    else if (it.type === 'task') await deleteTask(it.id)
+    else await deleteNote(it.id)
   }
   bulk.clear()
   await load()
@@ -294,6 +345,8 @@ function onChatDialogBackdrop(e) {
 
 async function openNewChatDialog() {
   chatForm.title = ''
+  chatForm.icon_emoji = '💬'
+  chatForm.icon_bg_color = '#2563eb'
   resetMemberPicker()
   await loadGroups()
   chatDialogRef.value?.showModal()
@@ -311,10 +364,16 @@ async function submitCreateChat() {
     folder_id: folderId.value,
     member_ids: selectedMembers.value.map((member) => Number(member.id)).filter((id) => Number.isFinite(id)),
   }
+  if (chatForm.icon_emoji?.trim()) payload.icon_emoji = chatForm.icon_emoji.trim()
+  if (chatForm.icon_bg_color && /^#[0-9A-Fa-f]{6}$/.test(chatForm.icon_bg_color)) {
+    payload.icon_bg_color = chatForm.icon_bg_color
+  }
   const res = await createChat(payload)
   if (!res.ok) return
   chatDialogRef.value?.close()
   chatForm.title = ''
+  chatForm.icon_emoji = '💬'
+  chatForm.icon_bg_color = '#2563eb'
   resetMemberPicker()
   await load()
   const id = res.data?.chat?.id
@@ -335,6 +394,11 @@ async function submitCreateTask() {
   taskForm.title = ''
   taskForm.description = ''
   await load()
+}
+
+async function onNoteCreated(id) {
+  await load()
+  if (id != null) router.push({ name: 'noteDetail', params: { noteId: id } })
 }
 
 function onKeydown(e) {
@@ -394,7 +458,7 @@ onUnmounted(() => {
         <div class="folder-detail-page__meta">
           <h1 class="folder-detail-page__title">{{ folder.name || t('folders.unnamed') }}</h1>
           <p v-if="stats" class="folder-detail-page__stats">
-            {{ stats.chats_count }} {{ t('folders.stats.chatsShort') }} · {{ stats.tasks_count }} {{ t('folders.stats.tasksShort') }}
+            {{ stats.chats_count }} {{ t('folders.stats.chatsShort') }} · {{ stats.tasks_count }} {{ t('folders.stats.tasksShort') }} · {{ stats.notes_count ?? 0 }} {{ t('folders.stats.notesShort') }}
           </p>
         </div>
       </div>
@@ -402,6 +466,7 @@ onUnmounted(() => {
       <div class="folder-detail-page__actions">
         <Button size="sm" @click="openNewChatDialog">+ {{ t('folders.newChat') }}</Button>
         <Button size="sm" variant="secondary" @click="taskDialogRef.showModal()">+ {{ t('folders.newTask') }}</Button>
+        <Button size="sm" variant="secondary" @click="noteDialogRef.showModal()">+ {{ t('folders.newNote') }}</Button>
         <div class="folder-detail-page__more" @click.stop>
           <button
             type="button"
@@ -455,6 +520,14 @@ onUnmounted(() => {
           :aria-selected="filterKind === 'task'"
           @click="filterKind = 'task'"
         >{{ t('folders.filterTasks') }}</button>
+        <button
+          type="button"
+          role="tab"
+          class="folder-detail-page__tab"
+          :class="{ 'is-active': filterKind === 'note' }"
+          :aria-selected="filterKind === 'note'"
+          @click="filterKind = 'note'"
+        >{{ t('folders.filterNotes') }}</button>
       </div>
 
       <div class="folder-detail-page__toolbarRight">
@@ -514,26 +587,36 @@ onUnmounted(() => {
         :items="filteredRows"
         show-checkboxes
         :is-selected="bulk.isSelected"
+        :get-chat-unread="getChatUnread"
         @open-chat="openChat"
         @open-task="openTask"
+        @open-note="openNote"
         @toggle-select="onToggleSelect"
         @drag-start-chat="startChatDrag"
         @drag-end-chat="drag.onDragEnd"
         @drag-start-task="startTaskDrag"
         @drag-end-task="drag.onDragEnd"
+        @drag-start-note="startNoteDrag"
+        @drag-end-note="drag.onDragEnd"
+        @menu-action="onExplorerMenuAction"
       />
       <ItemGridView
         v-else
         :items="filteredRows"
         show-checkboxes
         :is-selected="bulk.isSelected"
+        :get-chat-unread="getChatUnread"
         @open-chat="openChat"
         @open-task="openTask"
+        @open-note="openNote"
         @toggle-select="onToggleSelect"
         @drag-start-chat="startChatDrag"
         @drag-end-chat="drag.onDragEnd"
         @drag-start-task="startTaskDrag"
         @drag-end-task="drag.onDragEnd"
+        @drag-start-note="startNoteDrag"
+        @drag-end-note="drag.onDragEnd"
+        @menu-action="onExplorerMenuAction"
       />
 
       <p v-if="!filteredRows.length" class="folder-detail-page__empty">{{ t('folders.detailEmpty') }}</p>
@@ -578,6 +661,14 @@ onUnmounted(() => {
           <span>{{ t('folders.chatTitle') }}</span>
           <input v-model="chatForm.title" :placeholder="t('folders.chatTitlePlaceholder')" maxlength="255">
         </label>
+        <div class="folder-detail-page__field">
+          <span class="folder-detail-page__fieldLabel">{{ t('chats.info.editIcon') }}</span>
+          <ChatIconPicker v-model="chatForm.icon_emoji" />
+        </div>
+        <div class="folder-detail-page__field">
+          <span class="folder-detail-page__fieldLabel">{{ t('chats.info.editColor') }}</span>
+          <ChatColorPicker v-model="chatForm.icon_bg_color" />
+        </div>
         <div class="folder-detail-page__field folder-detail-page__field--groups">
           <span id="folder-detail-chat-groups-label" class="folder-detail-page__fieldLabel">{{ t('chats.modal.groupsLabel') }}</span>
           <p class="folder-detail-page__groupHint">{{ t('chats.modal.groupsHint') }}</p>
@@ -683,6 +774,26 @@ onUnmounted(() => {
         </div>
       </form>
     </dialog>
+
+    <FolderNoteCreateDialog
+      ref="noteDialogRef"
+      :lock-folder="true"
+      :folder-id="folderId"
+      @created="onNoteCreated"
+    />
+
+    <ChatEditDialogs ref="chatEditDialogsRef" @saved="load" />
+
+    <TaskDetailSidebar
+      :open="detailOpen"
+      :task="detailTask"
+      :calendars="calendars"
+      :groups="taskSidebarGroups"
+      :folders="folders"
+      @update:open="onDetailOpen"
+      @saved="load"
+      @deleted="load"
+    />
   </section>
 
   <section v-else class="folder-detail-page folder-detail-page--missing">

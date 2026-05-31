@@ -9,6 +9,11 @@ defineProps({
     type: Object,
     default: () => ({}),
   },
+  /** Community slug for legal-document links on invitation URLs. */
+  communitySlug: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['invitations-changed'])
@@ -42,6 +47,7 @@ function openQrDialog() {
     <UsersInvitationModals
       ref="modalsRef"
       :request-options="requestOptions"
+      :community-slug="communitySlug"
       @invitations-changed="emit('invitations-changed')"
     />
   </div>

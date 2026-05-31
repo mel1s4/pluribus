@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateCommunityCurrencyRequest;
+use App\Http\Requests\UpdateCommunityLegalDocumentsRequest;
 use App\Http\Requests\UpdateSingletonCommunityRequest;
 use App\Http\Resources\CommunityLeaderResource;
 use App\Http\Resources\CommunityResource;
@@ -13,6 +14,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class CommunitySettingsController extends Controller
 {
@@ -34,7 +36,16 @@ class CommunitySettingsController extends Controller
         $payload = (new CommunityResource($community))->toArray($request);
 
         return response()->json([
-            'community' => Arr::only($payload, ['name', 'logo_url', 'default_language', 'currency_code']),
+            'community' => Arr::only($payload, [
+                'name',
+                'logo_url',
+                'default_language',
+                'currency_code',
+                'currency_name',
+                'local_currency_code',
+                'latitude',
+                'longitude',
+            ]),
         ]);
     }
 
@@ -107,6 +118,12 @@ class CommunitySettingsController extends Controller
         if (array_key_exists('currency_code', $validated)) {
             $fill['currency_code'] = $validated['currency_code'];
         }
+        if (array_key_exists('currency_name', $validated)) {
+            $fill['currency_name'] = $validated['currency_name'];
+        }
+        if (array_key_exists('local_currency_code', $validated)) {
+            $fill['local_currency_code'] = $validated['local_currency_code'];
+        }
         $community->fill($fill);
         $community->save();
 
@@ -127,7 +144,54 @@ class CommunitySettingsController extends Controller
 
         $community = $this->resolveTargetCommunity($request);
         $validated = $request->validated();
-        $community->currency_code = $validated['currency_code'] ?? null;
+        if (
+            ! array_key_exists('currency_code', $validated)
+            && ! array_key_exists('currency_name', $validated)
+            && ! array_key_exists('local_currency_code', $validated)
+        ) {
+            throw ValidationException::withMessages([
+                'currency_code' => [__('Provide currency_code, currency_name, and/or local_currency_code.')],
+            ]);
+        }
+        if (array_key_exists('currency_code', $validated)) {
+            $community->currency_code = $validated['currency_code'];
+        }
+        if (array_key_exists('currency_name', $validated)) {
+            $community->currency_name = $validated['currency_name'];
+        }
+        if (array_key_exists('local_currency_code', $validated)) {
+            $community->local_currency_code = $validated['local_currency_code'];
+        }
+        $community->save();
+
+        return response()->json([
+            'community' => new CommunityResource($community->fresh()),
+        ]);
+    }
+
+    public function updateLegalDocuments(UpdateCommunityLegalDocumentsRequest $request): JsonResponse
+    {
+        $actor = $request->user();
+        if ($actor === null) {
+            abort(401);
+        }
+        if (! $actor->isRoot() && $actor->user_type !== 'admin') {
+            abort(403, 'Only root or community admins can update legal documents.');
+        }
+
+        $community = $this->resolveTargetCommunity($request);
+        $validated = $request->validated();
+        if (! array_key_exists('terms_markdown', $validated) && ! array_key_exists('privacy_policy_markdown', $validated)) {
+            throw ValidationException::withMessages([
+                'terms_markdown' => [__('Provide terms_markdown and/or privacy_policy_markdown.')],
+            ]);
+        }
+        if (array_key_exists('terms_markdown', $validated)) {
+            $community->terms_markdown = $validated['terms_markdown'];
+        }
+        if (array_key_exists('privacy_policy_markdown', $validated)) {
+            $community->privacy_policy_markdown = $validated['privacy_policy_markdown'];
+        }
         $community->save();
 
         return response()->json([

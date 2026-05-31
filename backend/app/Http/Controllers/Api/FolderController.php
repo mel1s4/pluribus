@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ChatResource;
 use App\Http\Resources\FolderResource;
+use App\Http\Resources\NoteResource;
 use App\Http\Resources\TaskResource;
 use App\Models\Chat;
 use App\Models\Folder;
 use App\Models\Group;
+use App\Models\Note;
 use App\Models\Task;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -102,6 +104,7 @@ class FolderController extends Controller
     {
         abort_unless((int) $folder->user_id === (int) $request->user()->id, 404);
         Chat::query()->where('folder_id', $folder->id)->update(['folder_id' => null]);
+        Note::query()->where('folder_id', $folder->id)->update(['folder_id' => null]);
         $folder->delete();
 
         return response()->json([
@@ -123,6 +126,11 @@ class FolderController extends Controller
             ->where('folder_id', $folder->id)
             ->count();
 
+        $notesCount = Note::query()
+            ->visibleToUser((int) $request->user()->id)
+            ->where('folder_id', $folder->id)
+            ->count();
+
         $childrenCount = Folder::query()
             ->visibleToUser((int) $request->user()->id)
             ->where('parent_id', $folder->id)
@@ -138,7 +146,12 @@ class FolderController extends Controller
             ->where('folder_id', $folder->id)
             ->max('updated_at');
 
-        $lastActivity = collect([$lastChatAt, $lastTaskAt, $folder->updated_at])
+        $lastNoteAt = Note::query()
+            ->visibleToUser((int) $request->user()->id)
+            ->where('folder_id', $folder->id)
+            ->max('updated_at');
+
+        $lastActivity = collect([$lastChatAt, $lastTaskAt, $lastNoteAt, $folder->updated_at])
             ->filter()
             ->max();
 
@@ -146,6 +159,7 @@ class FolderController extends Controller
             'stats' => [
                 'chats_count' => $chatsCount,
                 'tasks_count' => $tasksCount,
+                'notes_count' => $notesCount,
                 'children_count' => $childrenCount,
                 'last_activity_at' => $lastActivity?->toIso8601String(),
             ],
@@ -156,7 +170,7 @@ class FolderController extends Controller
     {
         $validated = $request->validate([
             'q' => ['required', 'string', 'min:1', 'max:200'],
-            'type' => ['sometimes', 'nullable', Rule::in(['all', 'folder', 'chat', 'task'])],
+            'type' => ['sometimes', 'nullable', Rule::in(['all', 'folder', 'chat', 'task', 'note'])],
         ]);
 
         $userId = (int) $request->user()->id;
@@ -202,10 +216,27 @@ class FolderController extends Controller
                 ->get();
         }
 
+        $notes = collect();
+        if ($type === 'all' || $type === 'note') {
+            $notes = Note::query()
+                ->visibleToUser($userId)
+                ->with(['folder:id,name,icon_emoji,icon_bg_color,parent_id'])
+                ->where(function ($q) use ($term): void {
+                    $q->where('title', 'like', $term)
+                        ->orWhere('description', 'like', $term)
+                        ->orWhere('content_markdown', 'like', $term)
+                        ->orWhere('tags', 'like', $term);
+                })
+                ->orderByDesc('updated_at')
+                ->limit(50)
+                ->get();
+        }
+
         return response()->json([
             'folders' => FolderResource::collection($folders),
             'chats' => ChatResource::collection($chats),
             'tasks' => TaskResource::collection($tasks),
+            'notes' => NoteResource::collection($notes),
         ]);
     }
 
@@ -214,7 +245,7 @@ class FolderController extends Controller
         $validated = $request->validate([
             'target_folder_id' => ['nullable', 'integer', 'exists:folders,id'],
             'items' => ['required', 'array', 'min:1', 'max:200'],
-            'items.*.type' => ['required', Rule::in(['chat', 'task'])],
+            'items.*.type' => ['required', Rule::in(['chat', 'task', 'note'])],
             'items.*.id' => ['required', 'integer'],
         ]);
 
@@ -237,13 +268,20 @@ class FolderController extends Controller
                         ->firstOrFail();
                     Gate::forUser($request->user())->authorize('update', $chat);
                     $chat->update(['folder_id' => $targetFolderId]);
-                } else {
+                } elseif ($item['type'] === 'task') {
                     $task = Task::query()
                         ->visibleToUser($userId)
                         ->whereKey((int) $item['id'])
                         ->firstOrFail();
                     Gate::forUser($request->user())->authorize('update', $task);
                     $task->update(['folder_id' => $targetFolderId]);
+                } else {
+                    $note = Note::query()
+                        ->visibleToUser($userId)
+                        ->whereKey((int) $item['id'])
+                        ->firstOrFail();
+                    Gate::forUser($request->user())->authorize('update', $note);
+                    $note->update(['folder_id' => $targetFolderId]);
                 }
             }
         });

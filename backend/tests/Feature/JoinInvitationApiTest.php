@@ -7,6 +7,8 @@ use App\Models\Community;
 use App\Models\CommunityInvitation;
 use App\Models\CommunityInvitationEmailVerification;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletLedgerEntry;
 use App\Support\LocaleOptions;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -54,6 +56,8 @@ class JoinInvitationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('valid', true)
             ->assertJsonPath('community_name', 'Test Commons')
+            ->assertJsonPath('community_slug', $community->slug)
+            ->assertJsonPath('community_logo_url', null)
             ->assertJsonPath('uses_remaining', 3)
             ->assertJsonPath('default_language', LocaleOptions::default());
     }
@@ -118,7 +122,8 @@ class JoinInvitationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('valid', true)
             ->assertJsonPath('email_verified', true)
-            ->assertJsonPath('email', 'invited-one@example.com');
+            ->assertJsonPath('email', 'invited-one@example.com')
+            ->assertJsonPath('community_slug', $community->slug);
 
         $this->statefulJson('POST', '/api/join-invitations/'.$plain.'/verify/'.$verifyPlain.'/register', [
             'name' => 'Invited User',
@@ -265,5 +270,106 @@ class JoinInvitationApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('valid', false)
             ->assertJsonPath('reason', 'invalid_verification');
+    }
+
+    public function test_verified_register_mints_auto_grant_for_new_member_with_localized_note(): void
+    {
+        Mail::fake();
+
+        $community = Community::current();
+        $community->update(['default_language' => 'es']);
+        $admin = User::factory()->create(['user_type' => 'admin']);
+        $plain = str_repeat('k', 48);
+        CommunityInvitation::query()->create([
+            'community_id' => $community->id,
+            'created_by' => $admin->id,
+            'token_hash' => CommunityInvitation::hashPlainToken($plain),
+            'email' => null,
+            'max_uses' => 1,
+            'uses_count' => 0,
+            'grant_credits' => '9.50',
+            'grant_limit_uses' => null,
+            'grant_uses_count' => 0,
+            'expires_at' => now()->addDay(),
+            'revoked_at' => null,
+        ]);
+
+        $this->statefulJson('POST', '/api/join-invitations/'.$plain.'/verify-email', [
+            'email' => 'grant-flow@example.com',
+        ])->assertOk()->assertJsonPath('ok', true);
+
+        $verifyPlain = null;
+        Mail::assertSent(JoinInvitationEmailVerificationMail::class, function (JoinInvitationEmailVerificationMail $mail) use (&$verifyPlain): bool {
+            if (preg_match('#/verify/([A-Za-z0-9]+)$#', $mail->completionUrl, $m) !== 1) {
+                return false;
+            }
+            $verifyPlain = $m[1];
+
+            return true;
+        });
+        $this->assertNotNull($verifyPlain);
+
+        $this->statefulJson('POST', '/api/join-invitations/'.$plain.'/verify/'.$verifyPlain.'/register', [
+            'name' => 'Grant Flow',
+            'password' => 'password-ok-1',
+            'password_confirmation' => 'password-ok-1',
+        ])->assertCreated();
+
+        $member = User::query()->where('email', 'grant-flow@example.com')->firstOrFail();
+        $wallet = Wallet::query()
+            ->where('community_id', $community->id)
+            ->where('user_id', $member->id)
+            ->firstOrFail();
+        $this->assertSame('9.50', (string) $wallet->balance);
+
+        $tx = WalletLedgerEntry::query()->where('community_id', $community->id)->orderByDesc('id')->firstOrFail();
+        $this->assertSame('grant', $tx->type);
+        $this->assertSame($wallet->public_ref, $tx->to_public_ref);
+        $this->assertSame('Otorgado automaticamente al registrarse como miembro', (string) $tx->note);
+
+        $invitation = CommunityInvitation::query()->where('token_hash', CommunityInvitation::hashPlainToken($plain))->firstOrFail();
+        $this->assertSame(1, (int) $invitation->grant_uses_count);
+    }
+
+    public function test_unlimited_invitation_grant_cap_stops_minting_but_allows_join(): void
+    {
+        $community = Community::current();
+        $admin = User::factory()->create(['user_type' => 'admin']);
+        $plain = str_repeat('m', 48);
+        CommunityInvitation::query()->create([
+            'community_id' => $community->id,
+            'created_by' => $admin->id,
+            'token_hash' => CommunityInvitation::hashPlainToken($plain),
+            'email' => null,
+            'max_uses' => null,
+            'uses_count' => 0,
+            'grant_credits' => '4.00',
+            'grant_limit_uses' => 1,
+            'grant_uses_count' => 0,
+            'expires_at' => now()->addDay(),
+            'revoked_at' => null,
+        ]);
+
+        $first = User::factory()->create(['user_type' => 'member', 'email' => 'first-cap@example.com']);
+        $second = User::factory()->create(['user_type' => 'member', 'email' => 'second-cap@example.com']);
+
+        $this->actingAs($first)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/my-communities/join/'.$plain)
+            ->assertOk();
+
+        $this->actingAs($second)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/my-communities/join/'.$plain)
+            ->assertOk();
+
+        $w1 = Wallet::query()->where('community_id', $community->id)->where('user_id', $first->id)->firstOrFail();
+        $this->assertSame('4.00', (string) $w1->balance);
+        $w2 = Wallet::query()->where('community_id', $community->id)->where('user_id', $second->id)->first();
+        $this->assertTrue($w2 === null || (string) $w2->balance === '0.00');
+
+        $invitation = CommunityInvitation::query()->where('token_hash', CommunityInvitation::hashPlainToken($plain))->firstOrFail();
+        $this->assertSame(2, (int) $invitation->uses_count);
+        $this->assertSame(1, (int) $invitation->grant_uses_count);
     }
 }

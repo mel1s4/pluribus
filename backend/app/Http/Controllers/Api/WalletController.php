@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Api\Concerns\WalletLedgerOwnerFormatting;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreWalletGrantRequest;
 use App\Http\Requests\StoreWalletTransferRequest;
@@ -25,6 +26,8 @@ use Illuminate\Validation\ValidationException;
 
 class WalletController extends Controller
 {
+    use WalletLedgerOwnerFormatting;
+
     public function __construct(
         private LedgerAppender $ledgerAppender,
         private LedgerSigner $ledgerSigner,
@@ -65,7 +68,11 @@ class WalletController extends Controller
             return $this->formatOwnerTransaction($tx, $wallet, $byRef);
         })->values();
 
+        $community = Community::query()->whereKey($communityId)->first();
+        $currency = $this->currencyDisplayForCommunity($community);
+
         return response()->json([
+            'currency' => $currency,
             'wallet' => [
                 'public_ref' => $wallet->public_ref,
                 'balance' => (string) $wallet->balance,
@@ -109,7 +116,10 @@ class WalletController extends Controller
             $this->collectPublicRefsFromPage(collect([$transaction]))
         );
 
+        $community = Community::query()->whereKey($communityId)->first();
+
         return response()->json([
+            'currency' => $this->currencyDisplayForCommunity($community),
             'transaction' => $this->formatOwnerTransaction($transaction, $wallet, $byRef),
         ]);
     }
@@ -141,44 +151,65 @@ class WalletController extends Controller
         $this->assertMemberOfCommunity($recipient, $communityId);
 
         $createdTxId = null;
-        DB::transaction(function () use ($user, $recipient, $communityId, $amount, $request, &$createdTxId): void {
-            $senderStub = Wallet::firstOrCreateForMember($communityId, $user->id);
-            $receiverStub = Wallet::firstOrCreateForMember($communityId, $recipient->id);
+        try {
+            DB::transaction(function () use ($user, $recipient, $communityId, $amount, $request, &$createdTxId): void {
+                $senderStub = Wallet::firstOrCreateForMember($communityId, $user->id);
+                $receiverStub = Wallet::firstOrCreateForMember($communityId, $recipient->id);
 
-            $ids = [(int) $senderStub->id, (int) $receiverStub->id];
-            sort($ids);
-            Wallet::query()->whereKey($ids[0])->lockForUpdate()->firstOrFail();
-            Wallet::query()->whereKey($ids[1])->lockForUpdate()->firstOrFail();
+                $ids = [(int) $senderStub->id, (int) $receiverStub->id];
+                sort($ids);
+                Wallet::query()->whereKey($ids[0])->lockForUpdate()->firstOrFail();
+                Wallet::query()->whereKey($ids[1])->lockForUpdate()->firstOrFail();
 
-            $sender = Wallet::query()->whereKey($senderStub->id)->firstOrFail();
-            $receiver = Wallet::query()->whereKey($receiverStub->id)->firstOrFail();
+                $sender = Wallet::query()->whereKey($senderStub->id)->firstOrFail();
+                $receiver = Wallet::query()->whereKey($receiverStub->id)->firstOrFail();
 
-            if (WalletMoney::compare((string) $sender->balance, $amount) < 0) {
-                throw ValidationException::withMessages(['amount' => [__('Insufficient balance.')]]);
+                if (WalletMoney::compare((string) $sender->balance, $amount) < 0) {
+                    throw ValidationException::withMessages(['amount' => [__('Insufficient balance.')]]);
+                }
+
+                $sender->balance = WalletMoney::sub((string) $sender->balance, $amount);
+                $sender->save();
+
+                $receiver->balance = WalletMoney::add((string) $receiver->balance, $amount);
+                $receiver->save();
+
+                [$entry] = $this->ledgerAppender->append(
+                    $communityId,
+                    WalletLedgerEntry::TYPE_TRANSFER,
+                    $amount,
+                    $sender->public_ref,
+                    $receiver->public_ref,
+                    WalletLedgerEntry::ACTOR_MEMBER_TRANSFER,
+                    $request->validated('note'),
+                );
+
+                WalletPrivilegedAudit::query()->create([
+                    'wallet_ledger_entry_id' => $entry->id,
+                    'actor_user_id' => $user->id,
+                ]);
+                $createdTxId = (int) $entry->id;
+            });
+        } catch (\Throwable $e) {
+            // Re-throw ValidationException to allow standard validation response
+            if ($e instanceof ValidationException) {
+                throw $e;
             }
 
-            $sender->balance = WalletMoney::sub((string) $sender->balance, $amount);
-            $sender->save();
-
-            $receiver->balance = WalletMoney::add((string) $receiver->balance, $amount);
-            $receiver->save();
-
-            [$entry] = $this->ledgerAppender->append(
-                $communityId,
-                WalletLedgerEntry::TYPE_TRANSFER,
-                $amount,
-                $sender->public_ref,
-                $receiver->public_ref,
-                WalletLedgerEntry::ACTOR_MEMBER_TRANSFER,
-                $request->validated('note'),
-            );
-
-            WalletPrivilegedAudit::query()->create([
-                'wallet_ledger_entry_id' => $entry->id,
-                'actor_user_id' => $user->id,
+            \Illuminate\Support\Facades\Log::error('Wallet transfer failed', [
+                'community_id' => $communityId,
+                'actor_id' => $user->id,
+                'recipient_id' => $recipient->id,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
-            $createdTxId = (int) $entry->id;
-        });
+
+            return response()->json([
+                'message' => 'An internal error occurred while processing the transfer.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal Server Error',
+            ], 500);
+        }
 
         if ($createdTxId !== null) {
             $slug = $this->communitySlugForNotifications($communityId);
@@ -214,36 +245,52 @@ class WalletController extends Controller
         $this->assertMemberOfCommunity($recipient, $communityId);
 
         $createdTxId = null;
-        DB::transaction(function () use ($actor, $recipient, $communityId, $amount, $request, &$createdTxId): void {
-            $toWallet = Wallet::query()
-                ->where('community_id', $communityId)
-                ->where('user_id', $recipient->id)
-                ->lockForUpdate()
-                ->first();
-            if ($toWallet === null) {
-                $toWallet = Wallet::firstOrCreateForMember($communityId, $recipient->id);
-                $toWallet = Wallet::query()->whereKey($toWallet->id)->lockForUpdate()->firstOrFail();
-            }
+        try {
+            DB::transaction(function () use ($actor, $recipient, $communityId, $amount, $request, &$createdTxId): void {
+                $toWallet = Wallet::query()
+                    ->where('community_id', $communityId)
+                    ->where('user_id', $recipient->id)
+                    ->lockForUpdate()
+                    ->first();
+                if ($toWallet === null) {
+                    $toWallet = Wallet::firstOrCreateForMember($communityId, $recipient->id);
+                    $toWallet = Wallet::query()->whereKey($toWallet->id)->lockForUpdate()->firstOrFail();
+                }
 
-            $toWallet->balance = WalletMoney::add((string) $toWallet->balance, $amount);
-            $toWallet->save();
+                $toWallet->balance = WalletMoney::add((string) $toWallet->balance, $amount);
+                $toWallet->save();
 
-            [$entry] = $this->ledgerAppender->append(
-                $communityId,
-                WalletLedgerEntry::TYPE_GRANT,
-                $amount,
-                null,
-                $toWallet->public_ref,
-                WalletLedgerEntry::ACTOR_COMMUNITY_GRANT,
-                $request->validated('note'),
-            );
+                [$entry] = $this->ledgerAppender->append(
+                    $communityId,
+                    WalletLedgerEntry::TYPE_GRANT,
+                    $amount,
+                    null,
+                    $toWallet->public_ref,
+                    WalletLedgerEntry::ACTOR_COMMUNITY_GRANT,
+                    $request->validated('note'),
+                );
 
-            WalletPrivilegedAudit::query()->create([
-                'wallet_ledger_entry_id' => $entry->id,
-                'actor_user_id' => $actor->id,
+                WalletPrivilegedAudit::query()->create([
+                    'wallet_ledger_entry_id' => $entry->id,
+                    'actor_user_id' => $actor->id,
+                ]);
+                $createdTxId = (int) $entry->id;
+            });
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Wallet grant failed', [
+                'community_id' => $communityId,
+                'actor_id' => $actor->id,
+                'recipient_id' => $recipient->id,
+                'amount' => $amount,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
-            $createdTxId = (int) $entry->id;
-        });
+
+            return response()->json([
+                'message' => 'An internal error occurred while processing the grant.',
+                'error' => config('app.debug') ? $e->getMessage() : 'Internal Server Error',
+            ], 500);
+        }
 
         if ($createdTxId !== null) {
             $slug = $this->communitySlugForNotifications($communityId);
@@ -363,23 +410,36 @@ class WalletController extends Controller
             ->first();
 
         $fromUserId = null;
+        $fromPlaceId = null;
         if (is_string($transaction->from_public_ref) && $transaction->from_public_ref !== '') {
-            $fromUserId = Wallet::query()
+            $from = Wallet::query()
                 ->where('community_id', $communityId)
                 ->where('public_ref', $transaction->from_public_ref)
-                ->value('user_id');
+                ->first(['user_id', 'place_id']);
+            if ($from !== null) {
+                $fromUserId = $from->user_id;
+                $fromPlaceId = $from->place_id;
+            }
         }
 
-        $toUserId = Wallet::query()
+        $toUserId = null;
+        $toPlaceId = null;
+        $toWallet = Wallet::query()
             ->where('community_id', $communityId)
             ->where('public_ref', $transaction->to_public_ref)
-            ->value('user_id');
+            ->first(['user_id', 'place_id']);
+        if ($toWallet !== null) {
+            $toUserId = $toWallet->user_id;
+            $toPlaceId = $toWallet->place_id;
+        }
 
         return response()->json([
             'transaction_id' => $transaction->id,
             'actor_user_id' => $privileged?->actor_user_id,
             'from_user_id' => $fromUserId !== null ? (int) $fromUserId : null,
+            'from_place_id' => $fromPlaceId !== null ? (int) $fromPlaceId : null,
             'to_user_id' => $toUserId !== null ? (int) $toUserId : null,
+            'to_place_id' => $toPlaceId !== null ? (int) $toPlaceId : null,
         ]);
     }
 
@@ -414,85 +474,6 @@ class WalletController extends Controller
         return User::query()->where('email', $email)->firstOrFail();
     }
 
-    /**
-     * @param  Collection<int, WalletLedgerEntry>  $rows
-     * @return array<string, Wallet>
-     */
-    private function loadWalletsByPublicRefs(int $communityId, array $refs): array
-    {
-        if ($refs === []) {
-            return [];
-        }
-
-        $wallets = Wallet::query()
-            ->where('community_id', $communityId)
-            ->whereIn('public_ref', $refs)
-            ->with('user:id,name,email')
-            ->get();
-
-        $map = [];
-        foreach ($wallets as $w) {
-            $map[$w->public_ref] = $w;
-        }
-
-        return $map;
-    }
-
-    /**
-     * @param  Collection<int, WalletLedgerEntry>  $collection
-     * @return list<string>
-     */
-    private function collectPublicRefsFromPage($collection): array
-    {
-        $refs = [];
-        foreach ($collection as $tx) {
-            if (is_string($tx->from_public_ref) && $tx->from_public_ref !== '') {
-                $refs[$tx->from_public_ref] = true;
-            }
-            if (is_string($tx->to_public_ref) && $tx->to_public_ref !== '') {
-                $refs[$tx->to_public_ref] = true;
-            }
-        }
-
-        return array_keys($refs);
-    }
-
-    /**
-     * @param  array<string, Wallet>  $byRef
-     * @return array<string, mixed>
-     */
-    private function formatOwnerTransaction(WalletLedgerEntry $tx, Wallet $myWallet, array $byRef): array
-    {
-        $myRef = $myWallet->public_ref;
-        $incoming = $tx->to_public_ref === $myRef;
-        $counterpartyRef = $incoming ? $tx->from_public_ref : $tx->to_public_ref;
-        $counterpartyLabel = __('Community');
-        $counterpartyMaskedEmail = null;
-
-        if ($tx->type === WalletLedgerEntry::TYPE_TRANSFER && is_string($counterpartyRef) && $counterpartyRef !== '') {
-            $other = $byRef[$counterpartyRef] ?? null;
-            if ($other !== null && $other->user !== null) {
-                $counterpartyLabel = $other->user->name;
-                $counterpartyMaskedEmail = $this->maskEmail($other->user->email);
-            } else {
-                $counterpartyLabel = __('Member');
-            }
-        } elseif ($tx->type === WalletLedgerEntry::TYPE_GRANT) {
-            $counterpartyLabel = __('Community grant');
-        }
-
-        return [
-            'id' => $tx->id,
-            'type' => $tx->type,
-            'direction' => $incoming ? 'in' : 'out',
-            'amount' => (string) $tx->amount,
-            'counterparty_label' => $counterpartyLabel,
-            'counterparty_masked_email' => $counterpartyMaskedEmail,
-            'note' => $tx->note,
-            'created_at' => $tx->created_at?->toIso8601String(),
-        ];
-    }
-
     private function communitySlugForNotifications(int $communityId): string
     {
         $slug = Community::query()->whereKey($communityId)->value('slug');
@@ -500,19 +481,4 @@ class WalletController extends Controller
         return is_string($slug) && $slug !== '' ? $slug : 'community';
     }
 
-    private function maskEmail(?string $email): string
-    {
-        if ($email === null || $email === '') {
-            return '';
-        }
-        $parts = explode('@', $email, 2);
-        if (count($parts) !== 2) {
-            return '***';
-        }
-        $local = $parts[0];
-        $domain = $parts[1];
-        $first = $local !== '' ? mb_substr($local, 0, 1) : '?';
-
-        return $first.'***@'.$domain;
-    }
 }

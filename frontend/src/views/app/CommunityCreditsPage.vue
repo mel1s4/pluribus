@@ -11,6 +11,7 @@ import {
   downloadCommunityLedgerExport,
   fetchCommunityCredits,
 } from '../../services/communityApi'
+import { walletCurrencyDisplayLine } from '../../utils/walletCurrencyDisplay.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -38,10 +39,12 @@ const creditsTotal = computed(() => {
   return typeof raw === 'string' || typeof raw === 'number' ? String(raw) : '0'
 })
 
-const currencyLabel = computed(() => {
-  const code = community.value?.currency_code
-  return typeof code === 'string' && code.trim() ? code.trim().toUpperCase() : ''
-})
+const currencyLabel = computed(() =>
+  walletCurrencyDisplayLine(
+    typeof community.value?.currency_name === 'string' ? community.value.currency_name : '',
+    typeof community.value?.currency_code === 'string' ? community.value.currency_code : '',
+  ),
+)
 
 async function load() {
   if (!slug.value) return

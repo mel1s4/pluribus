@@ -68,7 +68,6 @@ class PasswordResetApiTest extends TestCase
         $response->assertOk()->assertJson(['ok' => true]);
 
         $this->assertSame(0, PasswordResetToken::query()->count());
-        Mail::assertNothingQueued();
         Mail::assertNothingSent();
     }
 
@@ -82,7 +81,7 @@ class PasswordResetApiTest extends TestCase
         ])->assertOk();
 
         $this->assertSame(1, PasswordResetToken::query()->where('user_id', $user->id)->count());
-        Mail::assertQueued(
+        Mail::assertSent(
             PasswordResetMail::class,
             fn (PasswordResetMail $mail) => $mail->hasTo($user->email)
         );
@@ -174,7 +173,7 @@ class PasswordResetApiTest extends TestCase
         $tokenRow = PasswordResetToken::query()->where('user_id', $user->id)->firstOrFail();
         $this->assertNotNull($tokenRow->consumed_at);
 
-        Mail::assertQueued(
+        Mail::assertSent(
             PasswordChangedMail::class,
             fn (PasswordChangedMail $mail) => $mail->hasTo($user->email)
         );

@@ -1,8 +1,9 @@
 <script setup>
-import { nextTick, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import QRCode from 'qrcode'
 import Button from '../../atoms/Button.vue'
 import Input from '../../atoms/Input.vue'
+import JoinInvitationLegalLinks from '../public/JoinInvitationLegalLinks.vue'
 import UsersInvitationMaxUsesFields from './UsersInvitationMaxUsesFields.vue'
 import { language, t } from '../../i18n/i18n'
 import { apiJson, ensureCsrfCookie } from '../../services/api'
@@ -34,6 +35,72 @@ function validateCustomUsage(usage) {
   return ''
 }
 
+function parseGrantCredits(value) {
+  const trimmed = String(value ?? '').trim()
+  if (!trimmed) {
+    return null
+  }
+  const n = Number(trimmed)
+  if (!Number.isFinite(n)) {
+    return null
+  }
+  return Math.max(0, n)
+}
+
+function validateGrantFields(grantCreditsInput, grantLimitInput, usage) {
+  const credits = parseGrantCredits(grantCreditsInput)
+  if (String(grantCreditsInput ?? '').trim() !== '' && (!Number.isFinite(credits) || credits < 0.01 || credits > 99999999.99)) {
+    return t('users.inviteGrantCreditsInvalid')
+  }
+  const wantsLimit = usage?.mode === 'unlimited' && credits !== null && credits > 0
+  if (wantsLimit && String(grantLimitInput ?? '').trim() !== '') {
+    const n = Math.floor(Number(grantLimitInput))
+    if (!Number.isFinite(n) || n < 1 || n > 100000) {
+      return t('users.inviteGrantLimitUsesInvalid')
+    }
+  }
+  return ''
+}
+
+function grantLimitForPayload(grantCreditsInput, grantLimitInput, usage) {
+  const credits = parseGrantCredits(grantCreditsInput)
+  if (!(usage?.mode === 'unlimited' && credits !== null && credits > 0)) {
+    return null
+  }
+  const trimmed = String(grantLimitInput ?? '').trim()
+  if (!trimmed) {
+    return null
+  }
+  const n = Math.floor(Number(trimmed))
+  if (!Number.isFinite(n) || n < 1) {
+    return null
+  }
+  return Math.min(100000, n)
+}
+
+function totalMintText(grantCreditsInput, usage, grantLimitInput) {
+  const credits = parseGrantCredits(grantCreditsInput)
+  if (credits === null || credits <= 0) {
+    return ''
+  }
+  let capUses = null
+  if (usage?.mode === 'once') {
+    capUses = 1
+  } else if (usage?.mode === 'custom') {
+    capUses = Math.floor(Number(usage.custom))
+  } else {
+    const cap = Math.floor(Number(grantLimitInput))
+    if (Number.isFinite(cap) && cap > 0) {
+      capUses = cap
+    }
+  }
+  if (!Number.isFinite(capUses) || capUses === null || capUses < 1) {
+    return t('users.inviteTotalMintUnlimited')
+  }
+  const amount = (credits * capUses).toFixed(2)
+  return t('users.inviteTotalMintValue').replace('{amount}', amount)
+}
+
 const sendDialog = ref(null)
 const linkDialog = ref(null)
 const qrDialog = ref(null)
@@ -44,18 +111,24 @@ const sendLoading = ref(false)
 const sendResultUrl = ref('')
 const sendEmailSent = ref(false)
 const sendResultMaxUses = ref(null)
+const sendGrantCredits = ref('')
+const sendGrantLimitUses = ref('')
 
 const linkUsage = ref(defaultUsage())
 const linkError = ref('')
 const linkLoading = ref(false)
 const linkResultUrl = ref('')
 const linkResultMaxUses = ref(null)
+const linkGrantCredits = ref('')
+const linkGrantLimitUses = ref('')
 
 const qrUsage = ref(defaultUsage())
 const qrError = ref('')
 const qrLoading = ref(false)
 const qrResultUrl = ref('')
 const qrResultMaxUses = ref(null)
+const qrGrantCredits = ref('')
+const qrGrantLimitUses = ref('')
 const qrDataUrl = ref('')
 
 const sendCopyHint = ref('')
@@ -68,9 +141,19 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  /** Shown with invitation join URLs so admins can point invitees to legal pages. */
+  communitySlug: {
+    type: String,
+    default: '',
+  },
 })
 
 const emit = defineEmits(['invitations-changed'])
+
+const communitySlugForLegal = computed(() => {
+  const s = props.communitySlug
+  return typeof s === 'string' && s.trim() !== '' ? s.trim() : null
+})
 
 function invitationRequestOpts() {
   const o = props.requestOptions
@@ -84,6 +167,8 @@ function resetSendState() {
   sendResultUrl.value = ''
   sendEmailSent.value = false
   sendResultMaxUses.value = null
+  sendGrantCredits.value = ''
+  sendGrantLimitUses.value = ''
   sendCopyHint.value = ''
 }
 
@@ -93,6 +178,8 @@ function resetLinkState() {
   linkLoading.value = false
   linkResultUrl.value = ''
   linkResultMaxUses.value = null
+  linkGrantCredits.value = ''
+  linkGrantLimitUses.value = ''
   linkCopyHint.value = ''
 }
 
@@ -102,6 +189,8 @@ function resetQrState() {
   qrLoading.value = false
   qrResultUrl.value = ''
   qrResultMaxUses.value = null
+  qrGrantCredits.value = ''
+  qrGrantLimitUses.value = ''
   qrDataUrl.value = ''
   qrCopyHint.value = ''
 }
@@ -168,6 +257,12 @@ async function submitSendInvitation() {
     return
   }
   sendLoading.value = true
+  const grantErr = validateGrantFields(sendGrantCredits.value, sendGrantLimitUses.value, { mode: 'once' })
+  if (grantErr) {
+    sendLoading.value = false
+    sendError.value = grantErr
+    return
+  }
   await ensureCsrfCookie()
   const { ok, status, data } = await apiJson(
     'POST',
@@ -175,6 +270,8 @@ async function submitSendInvitation() {
     {
       email,
       join_url_locale: language.value,
+      grant_credits: parseGrantCredits(sendGrantCredits.value),
+      grant_limit_uses: grantLimitForPayload(sendGrantCredits.value, sendGrantLimitUses.value, { mode: 'once' }),
     },
     invitationRequestOpts(),
   )
@@ -205,6 +302,11 @@ async function submitCreateLink() {
     linkError.value = usageErr
     return
   }
+  const grantErr = validateGrantFields(linkGrantCredits.value, linkGrantLimitUses.value, linkUsage.value)
+  if (grantErr) {
+    linkError.value = grantErr
+    return
+  }
   linkLoading.value = true
   await ensureCsrfCookie()
   const maxUses = inviteUsageToMaxUses(linkUsage.value)
@@ -214,6 +316,8 @@ async function submitCreateLink() {
     {
       max_uses: maxUses,
       join_url_locale: language.value,
+      grant_credits: parseGrantCredits(linkGrantCredits.value),
+      grant_limit_uses: grantLimitForPayload(linkGrantCredits.value, linkGrantLimitUses.value, linkUsage.value),
     },
     invitationRequestOpts(),
   )
@@ -244,6 +348,11 @@ async function submitCreateQr() {
     qrError.value = usageErr
     return
   }
+  const grantErr = validateGrantFields(qrGrantCredits.value, qrGrantLimitUses.value, qrUsage.value)
+  if (grantErr) {
+    qrError.value = grantErr
+    return
+  }
   qrLoading.value = true
   await ensureCsrfCookie()
   const maxUses = inviteUsageToMaxUses(qrUsage.value)
@@ -253,6 +362,8 @@ async function submitCreateQr() {
     {
       max_uses: maxUses,
       join_url_locale: language.value,
+      grant_credits: parseGrantCredits(qrGrantCredits.value),
+      grant_limit_uses: grantLimitForPayload(qrGrantCredits.value, qrGrantLimitUses.value, qrUsage.value),
     },
     invitationRequestOpts(),
   )
@@ -323,6 +434,19 @@ async function copyUrl(url, which) {
           autocomplete="email"
           :disabled="sendLoading || Boolean(sendResultUrl)"
         />
+        <Input
+          v-model="sendGrantCredits"
+          type="number"
+          step="0.01"
+          min="0"
+          name="invite-send-grant-credits"
+          :label="t('users.inviteGrantCreditsLabel')"
+          :hint="t('users.inviteGrantCreditsHint')"
+          :disabled="sendLoading || Boolean(sendResultUrl)"
+        />
+        <p v-if="totalMintText(sendGrantCredits, { mode: 'once' }, sendGrantLimitUses)" class="users-invitation-modals__hint">
+          {{ totalMintText(sendGrantCredits, { mode: 'once' }, sendGrantLimitUses) }}
+        </p>
         <p v-if="sendError" class="users-invitation-modals__error" role="alert">
           {{ sendError }}
         </p>
@@ -356,6 +480,7 @@ async function copyUrl(url, which) {
               t('users.inviteResultMaxUses').replace('{n}', String(sendResultMaxUses))
             }}
           </p>
+          <JoinInvitationLegalLinks :community-slug="communitySlugForLegal" />
         </div>
         <p v-if="sendCopyHint" class="users-invitation-modals__hint">{{ sendCopyHint }}</p>
         <div class="users-invitation-modals__actions">
@@ -387,6 +512,30 @@ async function copyUrl(url, which) {
           name-prefix="invite-link"
           :disabled="linkLoading || Boolean(linkResultUrl)"
         />
+        <Input
+          v-model="linkGrantCredits"
+          type="number"
+          step="0.01"
+          min="0"
+          name="invite-link-grant-credits"
+          :label="t('users.inviteGrantCreditsLabel')"
+          :hint="t('users.inviteGrantCreditsHint')"
+          :disabled="linkLoading || Boolean(linkResultUrl)"
+        />
+        <Input
+          v-if="linkUsage.mode === 'unlimited' && parseGrantCredits(linkGrantCredits) !== null && parseGrantCredits(linkGrantCredits) > 0"
+          v-model="linkGrantLimitUses"
+          type="number"
+          step="1"
+          min="1"
+          name="invite-link-grant-limit-uses"
+          :label="t('users.inviteGrantLimitUsesLabel')"
+          :hint="t('users.inviteGrantLimitUsesHint')"
+          :disabled="linkLoading || Boolean(linkResultUrl)"
+        />
+        <p v-if="totalMintText(linkGrantCredits, linkUsage, linkGrantLimitUses)" class="users-invitation-modals__hint">
+          {{ totalMintText(linkGrantCredits, linkUsage, linkGrantLimitUses) }}
+        </p>
         <p v-if="linkError" class="users-invitation-modals__error" role="alert">
           {{ linkError }}
         </p>
@@ -414,6 +563,7 @@ async function copyUrl(url, which) {
               t('users.inviteResultMaxUses').replace('{n}', String(linkResultMaxUses))
             }}
           </p>
+          <JoinInvitationLegalLinks :community-slug="communitySlugForLegal" />
         </div>
         <p v-if="linkCopyHint" class="users-invitation-modals__hint">{{ linkCopyHint }}</p>
         <div class="users-invitation-modals__actions">
@@ -446,6 +596,30 @@ async function copyUrl(url, which) {
           name-prefix="invite-qr"
           :disabled="qrLoading || Boolean(qrResultUrl)"
         />
+        <Input
+          v-model="qrGrantCredits"
+          type="number"
+          step="0.01"
+          min="0"
+          name="invite-qr-grant-credits"
+          :label="t('users.inviteGrantCreditsLabel')"
+          :hint="t('users.inviteGrantCreditsHint')"
+          :disabled="qrLoading || Boolean(qrResultUrl)"
+        />
+        <Input
+          v-if="qrUsage.mode === 'unlimited' && parseGrantCredits(qrGrantCredits) !== null && parseGrantCredits(qrGrantCredits) > 0"
+          v-model="qrGrantLimitUses"
+          type="number"
+          step="1"
+          min="1"
+          name="invite-qr-grant-limit-uses"
+          :label="t('users.inviteGrantLimitUsesLabel')"
+          :hint="t('users.inviteGrantLimitUsesHint')"
+          :disabled="qrLoading || Boolean(qrResultUrl)"
+        />
+        <p v-if="totalMintText(qrGrantCredits, qrUsage, qrGrantLimitUses)" class="users-invitation-modals__hint">
+          {{ totalMintText(qrGrantCredits, qrUsage, qrGrantLimitUses) }}
+        </p>
         <p v-if="qrError" class="users-invitation-modals__error" role="alert">
           {{ qrError }}
         </p>
@@ -486,6 +660,7 @@ async function copyUrl(url, which) {
               t('users.inviteResultMaxUses').replace('{n}', String(qrResultMaxUses))
             }}
           </p>
+          <JoinInvitationLegalLinks :community-slug="communitySlugForLegal" />
         </div>
         <p v-if="qrCopyHint" class="users-invitation-modals__hint">{{ qrCopyHint }}</p>
         <div class="users-invitation-modals__actions">

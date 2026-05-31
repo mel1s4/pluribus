@@ -37,6 +37,9 @@ class WalletApiTest extends TestCase
             ->assertOk();
 
         $response->assertJsonPath('wallet.balance', '0.00');
+        $response->assertJsonStructure([
+            'currency' => ['name', 'code'],
+        ]);
         $this->assertNotEmpty($response->json('wallet.public_ref'));
         $this->assertDatabaseHas('wallets', [
             'community_id' => $community->id,

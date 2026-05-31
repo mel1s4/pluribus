@@ -6,9 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\PlaceResource;
 use App\Http\Resources\PostResource;
 use App\Models\Calendar;
+use App\Models\Community;
 use App\Models\Place;
 use App\Models\Post;
 use App\Models\Task;
+use App\Models\User;
 use App\Services\CalendarEventsPresenter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -65,16 +67,25 @@ class DiscoveryController extends Controller
 
     public function map(Request $request): JsonResponse
     {
-        $userId = (int) $request->user()->id;
+        $user = $request->user('sanctum') ?: $request->user();
         $entity = (string) $request->query('entity', 'both');
         $tags = array_values(array_filter((array) $request->query('tags', []), fn ($t) => is_string($t) && $t !== ''));
         $postType = $request->query('post_type');
+        $communityId = $this->resolveMapCommunityId($request, $user);
+
+        if ($user === null) {
+            $placesPublicOnly = true;
+        } else {
+            $placesScope = (string) $request->query('places_scope', 'all');
+            $placesPublicOnly = $placesScope === 'public';
+        }
 
         $places = collect();
         if (in_array($entity, ['both', 'places'], true)) {
             $places = Place::query()
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
+                ->when($placesPublicOnly, fn ($q) => $q->where('is_public', true))
                 ->with('administrators')
                 ->when(count($tags) > 0, function ($q) use ($tags): void {
                     foreach ($tags as $tag) {
@@ -87,8 +98,8 @@ class DiscoveryController extends Controller
 
         $posts = collect();
         if (in_array($entity, ['both', 'posts'], true)) {
-            $posts = Post::query()
-                ->visibleToUser($userId)
+            $postsQuery = Post::query()
+                ->where('community_id', $communityId)
                 ->whereNotNull('latitude')
                 ->whereNotNull('longitude')
                 ->when($postType, fn ($q) => $q->where('type', (string) $postType))
@@ -96,14 +107,36 @@ class DiscoveryController extends Controller
                     foreach ($tags as $tag) {
                         $q->whereJsonContains('tags', $tag);
                     }
-                })
-                ->orderByDesc('created_at')
-                ->get();
+                });
+
+            if ($user instanceof User) {
+                $postsQuery->visibleToUser((int) $user->id);
+            } else {
+                $postsQuery->where('visibility_scope', Post::VISIBILITY_COMMUNITY);
+            }
+
+            $posts = $postsQuery->orderByDesc('created_at')->get();
         }
 
         return response()->json([
             'places' => PlaceResource::collection($places),
             'posts' => PostResource::collection($posts),
         ]);
+    }
+
+    private function resolveMapCommunityId(Request $request, ?User $user): int
+    {
+        if ($user instanceof User) {
+            $requested = (int) $request->query('community_id', 0);
+            if ($requested > 0) {
+                return $requested;
+            }
+        }
+        $active = $request->attributes->get('active_community');
+        if ($active instanceof Community) {
+            return (int) $active->id;
+        }
+
+        return Community::current()->id;
     }
 }

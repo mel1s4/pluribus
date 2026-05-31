@@ -28,7 +28,7 @@ async function loadRows() {
 }
 
 function goToCommunity(row) {
-  router.push(`/${row.slug}/dashboard`)
+  router.push(`/community/${row.slug}/dashboard`)
 }
 
 onMounted(loadRows)

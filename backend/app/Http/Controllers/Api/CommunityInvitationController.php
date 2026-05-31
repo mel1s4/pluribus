@@ -61,8 +61,10 @@ class CommunityInvitationController extends Controller
         $validated = $request->validate([
             'email' => ['nullable', 'string', 'email:rfc', 'max:255'],
             'max_uses' => ['nullable', 'integer', 'min:1', 'max:100000'],
-            // When set (e.g. from the signed-in admin's UI language), shapes the public join path
-            // (/join/… vs /invitacion/…). Falls back to the community default when omitted.
+            'grant_credits' => ['nullable', 'numeric', 'min:0.01', 'max:99999999.99'],
+            'grant_limit_uses' => ['nullable', 'integer', 'min:1', 'max:100000'],
+            // When set (e.g. from the signed-in admin's UI language), shapes the SPA path after the
+            // share page redirect (/join/… vs /invitacion/…). Falls back to the community default when omitted.
             'join_url_locale' => ['nullable', 'string', 'in:en,es'],
         ]);
 
@@ -79,6 +81,19 @@ class CommunityInvitationController extends Controller
                 ? (int) $validated['max_uses']
                 : null;
         }
+        $grantCredits = array_key_exists('grant_credits', $validated) && $validated['grant_credits'] !== null
+            ? \App\Support\WalletMoney::normalize((string) $validated['grant_credits'])
+            : null;
+        $grantLimitUses = array_key_exists('grant_limit_uses', $validated) && $validated['grant_limit_uses'] !== null
+            ? (int) $validated['grant_limit_uses']
+            : null;
+
+        if ($grantLimitUses !== null && $maxUses !== null) {
+            abort(422, __('The grant_limit_uses field is only allowed for unlimited invitations.'));
+        }
+        if ($grantLimitUses !== null && $grantCredits === null) {
+            abort(422, __('The grant_limit_uses field requires grant_credits.'));
+        }
 
         $community = $this->activeCommunity($request);
         CommunityPivotAdmin::assertRootOrPivotAdmin($user, $community);
@@ -92,24 +107,29 @@ class CommunityInvitationController extends Controller
             'email' => $email,
             'max_uses' => $maxUses,
             'uses_count' => 0,
+            'grant_credits' => $grantCredits,
+            'grant_limit_uses' => $grantLimitUses,
+            'grant_uses_count' => 0,
             'expires_at' => now()->addDays(14),
             'revoked_at' => null,
         ]);
 
-        $joinPath = 'join';
+        $redirectLocale = 'en';
         if (
             isset($validated['join_url_locale'])
             && is_string($validated['join_url_locale'])
             && in_array($validated['join_url_locale'], LocaleOptions::codes(), true)
         ) {
-            $joinPath = $validated['join_url_locale'] === 'es' ? 'invitacion' : 'join';
+            $redirectLocale = $validated['join_url_locale'];
         } else {
             $ccLang = (string) $community->default_language;
             if (in_array($ccLang, LocaleOptions::codes(), true)) {
-                $joinPath = $ccLang === 'es' ? 'invitacion' : 'join';
+                $redirectLocale = $ccLang;
             }
         }
-        $joinUrl = rtrim((string) config('app.frontend_url'), '/').'/'.$joinPath.'/'.$plainToken;
+        $shareBase = rtrim((string) config('app.join_share_base_url'), '/');
+        $joinUrl = $shareBase.'/join-invitation-share/'.$plainToken
+            .'?redirect_locale='.rawurlencode($redirectLocale);
 
         $emailSent = false;
         if ($email !== null) {
@@ -129,6 +149,10 @@ class CommunityInvitationController extends Controller
                 'email' => $invitation->email,
                 'email_sent' => $emailSent,
                 'max_uses' => $invitation->max_uses,
+                'grant_credits' => $invitation->grant_credits,
+                'grant_limit_uses' => $invitation->grant_limit_uses,
+                'grant_uses_count' => (int) $invitation->grant_uses_count,
+                'grant_max_mint_total' => $this->maxGrantMintTotal($invitation),
             ],
         ], 201);
     }
@@ -146,6 +170,11 @@ class CommunityInvitationController extends Controller
             'email' => $invitation->email,
             'max_uses' => $invitation->max_uses,
             'uses_count' => (int) $invitation->uses_count,
+            'grant_credits' => $invitation->grant_credits,
+            'grant_limit_uses' => $invitation->grant_limit_uses,
+            'grant_uses_count' => (int) $invitation->grant_uses_count,
+            'grant_uses_remaining' => $invitation->remainingGrantUses(),
+            'grant_max_mint_total' => $this->maxGrantMintTotal($invitation),
             'has_been_used' => (int) $invitation->uses_count > 0,
             'expires_at' => $invitation->expires_at?->toIso8601String(),
             'revoked_at' => $invitation->revoked_at?->toIso8601String(),
@@ -163,5 +192,21 @@ class CommunityInvitationController extends Controller
         }
 
         return Community::current();
+    }
+
+    private function maxGrantMintTotal(CommunityInvitation $invitation): ?string
+    {
+        if ($invitation->grant_credits === null) {
+            return null;
+        }
+
+        $capUses = $invitation->max_uses !== null
+            ? (int) $invitation->max_uses
+            : ($invitation->grant_limit_uses !== null ? (int) $invitation->grant_limit_uses : null);
+        if ($capUses === null) {
+            return null;
+        }
+
+        return \App\Support\WalletMoney::mul((string) $invitation->grant_credits, (string) $capUses);
     }
 }

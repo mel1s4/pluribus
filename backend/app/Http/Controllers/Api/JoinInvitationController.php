@@ -12,7 +12,11 @@ use App\Models\CommunityInvitation;
 use App\Models\CommunityInvitationEmailVerification;
 use App\Models\CommunityMembership;
 use App\Models\User;
+use App\Models\Wallet;
+use App\Models\WalletLedgerEntry;
 use App\Support\LocaleOptions;
+use App\Support\WalletLedger\LedgerAppender;
+use App\Support\WalletMoney;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,6 +27,8 @@ use Illuminate\Validation\ValidationException;
 
 class JoinInvitationController extends Controller
 {
+    public function __construct(private LedgerAppender $ledgerAppender) {}
+
     public function show(Request $request, string $token): JsonResponse
     {
         if (! $this->tokenLooksValid($token)) {
@@ -44,15 +50,15 @@ class JoinInvitationController extends Controller
 
         $reason = $invitation->failureReason();
         if ($reason !== null) {
-            return response()->json([
+            return response()->json(array_merge([
                 'valid' => false,
                 'reason' => $reason,
                 'community_name' => $invitation->community?->name,
                 'default_language' => $this->inviteUiLanguage($invitation->community),
-            ]);
+            ], $this->invitationCommunityMeta($invitation->community)));
         }
 
-        return response()->json([
+        return response()->json(array_merge([
             'valid' => true,
             'community_name' => $invitation->community?->name,
             'default_language' => $this->inviteUiLanguage($invitation->community),
@@ -61,7 +67,7 @@ class JoinInvitationController extends Controller
             'uses_remaining' => $invitation->usesRemaining(),
             'locked_email' => $invitation->email !== null && $invitation->email !== '',
             'email' => $invitation->email,
-        ]);
+        ], $this->invitationCommunityMeta($invitation->community)));
     }
 
     public function requestVerifyEmail(RequestInvitationVerifyEmailRequest $request, string $token): JsonResponse
@@ -150,25 +156,25 @@ class JoinInvitationController extends Controller
 
         $reason = $invitation->failureReason();
         if ($reason !== null) {
-            return response()->json([
+            return response()->json(array_merge([
                 'valid' => false,
                 'reason' => $reason,
                 'community_name' => $invitation->community?->name,
                 'default_language' => $this->inviteUiLanguage($invitation->community),
-            ]);
+            ], $this->invitationCommunityMeta($invitation->community)));
         }
 
         $verification = CommunityInvitationEmailVerification::findByPlainTokenForInvitation($invitation->id, $verifyToken);
         if ($verification === null || ! $verification->isUsable()) {
-            return response()->json([
+            return response()->json(array_merge([
                 'valid' => false,
                 'reason' => 'invalid_verification',
                 'community_name' => $invitation->community?->name,
                 'default_language' => $this->inviteUiLanguage($invitation->community),
-            ]);
+            ], $this->invitationCommunityMeta($invitation->community)));
         }
 
-        return response()->json([
+        return response()->json(array_merge([
             'valid' => true,
             'email_verified' => true,
             'email' => $verification->email,
@@ -178,7 +184,7 @@ class JoinInvitationController extends Controller
             'uses_count' => $invitation->uses_count,
             'uses_remaining' => $invitation->usesRemaining(),
             'locked_email' => true,
-        ]);
+        ], $this->invitationCommunityMeta($invitation->community)));
     }
 
     public function registerVerified(RegisterViaInvitationVerifiedRequest $request, string $token, string $verifyToken): JsonResponse
@@ -235,18 +241,30 @@ class JoinInvitationController extends Controller
                 ]);
             }
 
-            CommunityMembership::query()->updateOrCreate(
-                [
+            $membership = CommunityMembership::query()
+                ->where('community_id', $invitation->community_id)
+                ->where('user_id', $created->id)
+                ->lockForUpdate()
+                ->first();
+            $createdMembership = false;
+            if (! $membership instanceof CommunityMembership) {
+                $membership = CommunityMembership::query()->create([
                     'community_id' => $invitation->community_id,
                     'user_id' => $created->id,
-                ],
-                [
                     'role' => 'member',
-                ]
-            );
+                ]);
+                $createdMembership = true;
+            } elseif ($membership->role !== 'member') {
+                $membership->forceFill(['role' => 'member'])->save();
+            }
 
             $verification->forceFill(['consumed_at' => now()])->save();
             $invitation->increment('uses_count');
+            $invitation->refresh();
+
+            if ($createdMembership && $invitation->canMintGrant()) {
+                $this->mintInvitationGrant($invitation, $created);
+            }
 
             return $created;
         });
@@ -284,5 +302,61 @@ class JoinInvitationController extends Controller
         $code = (string) $community->default_language;
 
         return in_array($code, LocaleOptions::codes(), true) ? $code : LocaleOptions::default();
+    }
+
+    /**
+     * @return array{community_slug: string|null}
+     */
+    private function invitationCommunityMeta(?Community $community): array
+    {
+        if ($community === null) {
+            return [
+                'community_slug' => null,
+                'community_logo_url' => null,
+            ];
+        }
+        $slug = trim((string) ($community->slug ?? ''));
+
+        return [
+            'community_slug' => $slug !== '' ? $slug : null,
+            'community_logo_url' => $community->publicLogoUrl(),
+        ];
+    }
+
+    private function mintInvitationGrant(CommunityInvitation $invitation, User $recipient): void
+    {
+        $amount = $invitation->grant_credits;
+        if (! is_string($amount) || ! WalletMoney::isPositive($amount)) {
+            return;
+        }
+
+        $wallet = Wallet::query()
+            ->where('community_id', $invitation->community_id)
+            ->where('user_id', $recipient->id)
+            ->lockForUpdate()
+            ->first();
+        if (! $wallet instanceof Wallet) {
+            $wallet = Wallet::firstOrCreateForMember((int) $invitation->community_id, (int) $recipient->id);
+            $wallet = Wallet::query()->whereKey($wallet->id)->lockForUpdate()->firstOrFail();
+        }
+
+        $wallet->balance = WalletMoney::add((string) $wallet->balance, $amount);
+        $wallet->save();
+
+        $community = Community::query()->whereKey($invitation->community_id)->first();
+        $lang = $this->inviteUiLanguage($community);
+        $note = trans('invitations.auto_grant_note', [], $lang);
+
+        $this->ledgerAppender->append(
+            (int) $invitation->community_id,
+            WalletLedgerEntry::TYPE_GRANT,
+            $amount,
+            null,
+            (string) $wallet->public_ref,
+            WalletLedgerEntry::ACTOR_COMMUNITY_GRANT,
+            $note
+        );
+
+        $invitation->increment('grant_uses_count');
     }
 }

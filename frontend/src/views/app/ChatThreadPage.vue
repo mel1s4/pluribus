@@ -251,7 +251,7 @@ async function retryMessage(msg) {
 }
 
 function goBackToChats() {
-  void router.push({ name: 'chats' })
+  void router.push({ name: 'folders' })
 }
 
 function goToInfo() {

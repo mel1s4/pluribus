@@ -9,6 +9,7 @@ function invalidateChatCaches() {
 function invalidateFolderRelatedCaches() {
   invalidateChatCaches()
   invalidateCache(/^\/api\/tasks/)
+  invalidateCache(/^\/api\/notes/)
 }
 
 export function fetchChats() {
@@ -103,7 +104,7 @@ export async function deleteFolder(folderId) {
   return result
 }
 
-/** @param {{ q: string, type?: 'all'|'folder'|'chat'|'task' }} params */
+/** @param {{ q: string, type?: 'all'|'folder'|'chat'|'task'|'note' }} params */
 export function searchFoldersAndItems(params) {
   const q = new URLSearchParams()
   q.set('q', String(params.q))

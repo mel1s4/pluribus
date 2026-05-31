@@ -21,6 +21,9 @@ class CommunityInvitation extends Model
         'email',
         'max_uses',
         'uses_count',
+        'grant_credits',
+        'grant_limit_uses',
+        'grant_uses_count',
         'expires_at',
         'revoked_at',
     ];
@@ -33,6 +36,7 @@ class CommunityInvitation extends Model
         return [
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
+            'grant_credits' => 'decimal:2',
         ];
     }
 
@@ -102,5 +106,33 @@ class CommunityInvitation extends Model
         }
 
         return max(0, (int) $this->max_uses - (int) $this->uses_count);
+    }
+
+    public function remainingGrantUses(): ?int
+    {
+        if ($this->grant_credits === null) {
+            return 0;
+        }
+
+        if ($this->max_uses !== null) {
+            return $this->usesRemaining();
+        }
+
+        if ($this->grant_limit_uses === null) {
+            return null;
+        }
+
+        return max(0, (int) $this->grant_limit_uses - (int) $this->grant_uses_count);
+    }
+
+    public function canMintGrant(): bool
+    {
+        if ($this->grant_credits === null) {
+            return false;
+        }
+
+        $remaining = $this->remainingGrantUses();
+
+        return $remaining === null || $remaining > 0;
     }
 }

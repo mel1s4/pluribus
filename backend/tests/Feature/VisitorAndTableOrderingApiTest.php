@@ -12,10 +12,12 @@ use App\Models\VisitorLoginToken;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Mail;
+use Tests\Concerns\FundsCommunityWallet;
 use Tests\TestCase;
 
 class VisitorAndTableOrderingApiTest extends TestCase
 {
+    use FundsCommunityWallet;
     use RefreshDatabase;
 
     private function statefulJson(string $method, string $uri, array $data = [])
@@ -85,6 +87,7 @@ class VisitorAndTableOrderingApiTest extends TestCase
         ]);
 
         $this->actingAs($visitor);
+        $this->fundMemberWallet($visitor, '100.00');
         $this->statefulJson('POST', '/api/cart/items', [
             'place_offer_id' => $offer->id,
             'quantity' => 1,
@@ -205,6 +208,7 @@ class VisitorAndTableOrderingApiTest extends TestCase
         ]);
 
         $this->actingAs($visitor);
+        $this->fundMemberWallet($visitor, '100.00');
         $this->statefulJson('POST', '/api/cart/items', [
             'place_offer_id' => $kitchen->id,
             'quantity' => 1,

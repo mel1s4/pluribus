@@ -11,10 +11,12 @@ use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Concerns\FundsCommunityWallet;
 use Tests\TestCase;
 
 class NotificationsApiTest extends TestCase
 {
+    use FundsCommunityWallet;
     use RefreshDatabase;
 
     private function attach(User $user, Community $community, string $role = 'member'): void
@@ -175,6 +177,8 @@ class NotificationsApiTest extends TestCase
             'visibility_scope' => PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
         ]);
 
+        $this->fundMemberWallet($visitor, '50.00');
+
         $this->actingAs($visitor)
             ->withoutMiddleware(ValidateCsrfToken::class)
             ->postJson('/api/cart/items', [
@@ -225,6 +229,8 @@ class NotificationsApiTest extends TestCase
             'price' => 1.00,
             'visibility_scope' => PlaceOffer::VISIBILITY_SCOPE_PUBLIC,
         ]);
+
+        $this->fundMemberWallet($visitor, '50.00');
 
         $this->actingAs($visitor)
             ->withoutMiddleware(ValidateCsrfToken::class)

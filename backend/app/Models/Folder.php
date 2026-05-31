@@ -75,6 +75,14 @@ class Folder extends Model
         return $this->hasMany(Task::class, 'folder_id');
     }
 
+    /**
+     * @return HasMany<Note, $this>
+     */
+    public function notes(): HasMany
+    {
+        return $this->hasMany(Note::class, 'folder_id');
+    }
+
     public function scopeForUser(Builder $query, int $userId): Builder
     {
         return $query->where('user_id', $userId);

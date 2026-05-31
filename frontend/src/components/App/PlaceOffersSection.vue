@@ -5,14 +5,13 @@ import Button from '../../atoms/Button.vue'
 import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
 import { formatOfferPrice } from '../../utils/formatPrice'
+import { formatLocalCurrencyPrice } from '../../utils/formatLocalCurrencyPrice'
 import Title from '../../atoms/Title.vue'
 import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
 import {
   deleteOffer,
   downloadOffersCsvUrl,
-  fetchAudiences,
   fetchOffers,
-  updateOffer,
   uploadOffersCsv,
 } from '../../services/placesApi.js'
 
@@ -27,94 +26,54 @@ const emit = defineEmits(['changed'])
 const router = useRouter()
 
 const offers = ref([])
-const audiences = ref([])
 const error = ref('')
-const editing = ref(null)
-const form = ref({ title: '', description: '', price: '', tags: [], category: '', visibility_scope: 'public', audience_ids: [] })
-const removeGallery = ref([])
-const photoInput = ref(null)
-const galleryInput = ref(null)
-const editTagsRef = ref(null)
 const csvInput = ref(null)
+const currentPage = ref(1)
+const totalPages = ref(1)
+const hasNextPage = ref(false)
+const hasPrevPage = ref(false)
 
 const { communityCurrencyCode } = useCommunity()
 
 function formatPrice(amount) {
+  if (amount == null || amount === '') return '—'
   return formatOfferPrice(amount, communityCurrencyCode.value)
 }
 
-async function load() {
+function formatLocalPrice(amount, currencyCode) {
+  if (amount == null || amount === '') return ''
+  return formatLocalCurrencyPrice(amount, currencyCode)
+}
+
+async function load(page = 1) {
   error.value = ''
-  const { ok, status, data } = await fetchOffers(props.placeId)
+  const { ok, status, data } = await fetchOffers(props.placeId, page)
   if (!ok) {
     error.value = t('myPlaces.offersLoadError').replace('{status}', String(status))
     offers.value = []
     return
   }
   offers.value = Array.isArray(data?.data) ? data.data : []
-  const audiencesResponse = await fetchAudiences(props.placeId)
-  audiences.value = audiencesResponse.ok && Array.isArray(audiencesResponse.data?.data) ? audiencesResponse.data.data : []
+  if (data?.meta) {
+    currentPage.value = data.meta.current_page || 1
+    totalPages.value = data.meta.last_page || 1
+  }
+  if (data?.links) {
+    hasNextPage.value = Boolean(data.links.next)
+    hasPrevPage.value = Boolean(data.links.prev)
+  }
 }
 
 watch(
   () => props.placeId,
   () => {
-    editing.value = null
-    removeGallery.value = []
-    load()
+    load(1)
   },
   { immediate: true },
 )
 
-function startEdit(o) {
-  editing.value = o
-  form.value = {
-    title: o.title,
-    description: o.description || '',
-    price: String(o.price),
-    tags: Array.isArray(o.tags) ? [...o.tags] : [],
-    category: typeof o.category === 'string' ? o.category : '',
-    visibility_scope: o.visibility_scope || 'public',
-    audience_ids: Array.isArray(o.audience_ids) ? [...o.audience_ids] : [],
-  }
-  removeGallery.value = []
-}
-
-function cancelEdit() {
-  editing.value = null
-  removeGallery.value = []
-}
-
-async function saveEdit() {
-  if (!editing.value) return
-  editTagsRef.value?.commit?.()
-  const fd = new FormData()
-  fd.append('title', form.value.title)
-  fd.append('description', form.value.description || '')
-  fd.append('price', form.value.price)
-  fd.append('tags', JSON.stringify(Array.isArray(form.value.tags) ? form.value.tags : []))
-  fd.append('category', typeof form.value.category === 'string' ? form.value.category.trim() : '')
-  fd.append('visibility_scope', form.value.visibility_scope || 'public')
-  fd.append('audience_ids', JSON.stringify(Array.isArray(form.value.audience_ids) ? form.value.audience_ids : []))
-  if (photoInput.value?.files?.[0]) {
-    fd.append('photo', photoInput.value.files[0])
-  }
-  if (galleryInput.value?.files?.length) {
-    for (let i = 0; i < galleryInput.value.files.length; i += 1) {
-      fd.append('gallery[]', galleryInput.value.files[i])
-    }
-  }
-  removeGallery.value.sort((a, b) => a - b).forEach((idx) => {
-    fd.append('remove_gallery_indices[]', String(idx))
-  })
-  const { ok, status } = await updateOffer(props.placeId, editing.value.id, fd)
-  if (!ok) {
-    error.value = t('myPlaces.offerSaveError').replace('{status}', String(status))
-    return
-  }
-  cancelEdit()
-  await load()
-  emit('changed')
+function goToEditPage(o) {
+  router.push({ name: 'placeOfferEdit', params: { placeId: String(props.placeId), offerId: String(o.id) } })
 }
 
 async function removeOffer(o) {
@@ -124,7 +83,7 @@ async function removeOffer(o) {
     error.value = t('myPlaces.offerDeleteError').replace('{status}', String(status))
     return
   }
-  await load()
+  await load(currentPage.value)
   emit('changed')
 }
 
@@ -153,8 +112,16 @@ async function handleCsvSelected(event) {
   const updated = Number(data?.updated ?? 0)
   const failed = Number(data?.failed ?? 0)
   window.alert(`Offer CSV import complete.\nCreated: ${created}\nUpdated: ${updated}\nFailed: ${failed}`)
-  await load()
+  await load(currentPage.value)
   emit('changed')
+}
+
+function loadPrev() {
+  if (hasPrevPage.value) load(currentPage.value - 1)
+}
+
+function loadNext() {
+  if (hasNextPage.value) load(currentPage.value + 1)
 }
 </script>
 
@@ -163,7 +130,6 @@ async function handleCsvSelected(event) {
     <div class="place-offers__head">
       <Title tag="h3" class="place-offers__title">{{ t('myPlaces.offersHeading') }}</Title>
       <Button
-        v-if="!editing"
         type="button"
         variant="primary"
         size="sm"
@@ -171,10 +137,10 @@ async function handleCsvSelected(event) {
       >
         {{ t('myPlaces.addOffer') }}
       </Button>
-      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="downloadCsv">
+      <Button type="button" variant="ghost" size="sm" @click="downloadCsv">
         Download CSV
       </Button>
-      <Button v-if="!editing" type="button" variant="ghost" size="sm" @click="openCsvPicker">
+      <Button type="button" variant="ghost" size="sm" @click="openCsvPicker">
         Upload CSV
       </Button>
       <input ref="csvInput" type="file" accept=".csv,text/csv" class="place-offers__csvInput" @change="handleCsvSelected" />
@@ -188,14 +154,17 @@ async function handleCsvSelected(event) {
         class="place-offers__row"
       >
         <span class="place-offers__name">{{ o.title }}</span>
-        <span class="place-offers__price">{{ formatPrice(o.price) }}</span>
+        <div class="place-offers__prices">
+          <span v-if="o.price != null && o.price !== ''" class="place-offers__price">{{ formatPrice(o.price) }}</span>
+          <span v-if="o.local_price" class="place-offers__localPrice">{{ formatLocalPrice(o.local_price, o.local_currency_code) }}</span>
+        </div>
         <span v-if="o.category" class="place-offers__category">{{ o.category }}</span>
         <span v-if="o.tags?.length" class="place-offers__tags">{{ o.tags.join(', ') }}</span>
         <Button
           type="button"
           variant="link"
           size="sm"
-          @click="startEdit(o)"
+          @click="goToEditPage(o)"
         >
           {{ t('myPlaces.edit') }}
         </Button>
@@ -210,109 +179,15 @@ async function handleCsvSelected(event) {
       </li>
     </ul>
 
-    <form
-      v-if="editing"
-      class="place-offers__form"
-      @submit.prevent="saveEdit"
-    >
-      <label class="place-offers__label">{{ t('myPlaces.offerTitle') }}</label>
-      <input
-        v-model="form.title"
-        class="place-offers__input"
-        type="text"
-        required
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerDescription') }}</label>
-      <textarea
-        v-model="form.description"
-        class="place-offers__textarea"
-        rows="2"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerPrice') }}</label>
-      <input
-        v-model="form.price"
-        class="place-offers__input"
-        type="number"
-        min="0"
-        step="0.01"
-        required
-      />
-      <PlaceTagsField
-        ref="editTagsRef"
-        :model-value="form.tags"
-        :label="t('myPlaces.offerTags')"
-        :hint="t('myPlaces.offerTagsHint')"
-        @update:model-value="form.tags = $event"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerCategory') }}</label>
-      <input
-        v-model="form.category"
-        class="place-offers__input"
-        type="text"
-        maxlength="128"
-      />
-      <p class="place-offers__hint">{{ t('myPlaces.offerCategoryHint') }}</p>
-      <label class="place-offers__label">{{ t('myPlaces.postVisibilityScope') }}</label>
-      <select v-model="form.visibility_scope" class="place-offers__input">
-        <option value="public">{{ t('myPlaces.postVisibilityPublic') }}</option>
-        <option value="audience">{{ t('myPlaces.postVisibilityAudience') }}</option>
-      </select>
-      <label v-if="form.visibility_scope === 'audience'" class="place-offers__label">{{ t('myPlaces.postVisibilityAudiences') }}</label>
-      <select
-        v-if="form.visibility_scope === 'audience'"
-        v-model="form.audience_ids"
-        class="place-offers__input"
-        multiple
-      >
-        <option v-for="a in audiences" :key="a.id" :value="a.id">{{ a.name }}</option>
-      </select>
-      <label class="place-offers__label">{{ t('myPlaces.offerPhoto') }}</label>
-      <input
-        ref="photoInput"
-        class="place-offers__file"
-        type="file"
-        accept="image/*"
-      />
-      <label class="place-offers__label">{{ t('myPlaces.offerGallery') }}</label>
-      <input
-        ref="galleryInput"
-        class="place-offers__file"
-        type="file"
-        accept="image/*"
-        multiple
-      />
-      <div v-if="editing.gallery_urls?.length" class="place-offers__gallery">
-        <p class="place-offers__gallery-caption">{{ t('myPlaces.removeGalleryHint') }}</p>
-        <div
-          v-for="(url, idx) in editing.gallery_urls"
-          :key="idx"
-          class="place-offers__thumb-wrap"
-        >
-          <img
-            :src="url"
-            alt=""
-            class="place-offers__thumb"
-            loading="lazy"
-          />
-          <label class="place-offers__check">
-            <input
-              v-model="removeGallery"
-              type="checkbox"
-              :value="idx"
-            />
-            {{ t('myPlaces.remove') }}
-          </label>
-        </div>
-      </div>
-      <div class="place-offers__actions">
-        <Button type="submit" variant="primary" size="sm">
-          {{ t('myPlaces.saveOffer') }}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" @click="cancelEdit">
-          {{ t('myPlaces.cancel') }}
-        </Button>
-      </div>
-    </form>
+    <div v-if="totalPages > 1" class="place-offers__pagination">
+      <Button type="button" variant="ghost" size="sm" :disabled="!hasPrevPage" @click="loadPrev">
+        Previous
+      </Button>
+      <span class="place-offers__page-info">Page {{ currentPage }} of {{ totalPages }}</span>
+      <Button type="button" variant="ghost" size="sm" :disabled="!hasNextPage" @click="loadNext">
+        Next
+      </Button>
+    </div>
 
   </section>
 </template>
@@ -373,8 +248,21 @@ async function handleCsvSelected(event) {
   min-width: 8rem;
 }
 
+.place-offers__prices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
 .place-offers__price {
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.place-offers__localPrice {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  opacity: 0.8;
 }
 
 .place-offers__category {
@@ -460,5 +348,20 @@ async function handleCsvSelected(event) {
 
 .place-offers__csvInput {
   display: none;
+}
+
+.place-offers__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.place-offers__page-info {
+  font-size: 0.9rem;
+  opacity: 0.8;
 }
 </style>

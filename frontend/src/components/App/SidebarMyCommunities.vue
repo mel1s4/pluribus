@@ -65,7 +65,7 @@ onMounted(load)
           </RouterLink>
           <RouterLink
             class="sidebar-my-communities__link"
-            :to="`/${row.slug}/dashboard`"
+            :to="`/community/${row.slug}/dashboard`"
             @click="onNavigate"
           >
             <Icon class="sidebar-my-communities__icon" name="gauge-high" aria-hidden="true" />
@@ -73,7 +73,7 @@ onMounted(load)
           </RouterLink>
           <RouterLink
             class="sidebar-my-communities__link"
-            :to="`/${row.slug}/community-settings`"
+            :to="{ name: 'communitySettingsBySlug', params: { slug: row.slug } }"
             @click="onNavigate"
           >
             <Icon class="sidebar-my-communities__icon" name="gear" aria-hidden="true" />

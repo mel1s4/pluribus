@@ -32,12 +32,17 @@ class Order extends Model
         self::STATUS_CANCELLED,
     ];
 
+    public const PAYMENT_COMMUNITY_WALLET = 'community_wallet';
+
     /** @var list<string> */
     protected $fillable = [
         'user_id',
+        'community_id',
         'order_number',
         'status',
         'total_amount',
+        'payment_method',
+        'wallet_settled_at',
         'notes',
     ];
 
@@ -47,7 +52,9 @@ class Order extends Model
     protected function casts(): array
     {
         return [
+            'community_id' => 'integer',
             'total_amount' => 'decimal:2',
+            'wallet_settled_at' => 'datetime',
         ];
     }
 
@@ -75,6 +82,14 @@ class Order extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * @return BelongsTo<Community, $this>
+     */
+    public function community(): BelongsTo
+    {
+        return $this->belongsTo(Community::class);
     }
 
     /**

@@ -17,6 +17,12 @@
 #   ./deploy.sh cat <remote_path>            Read remote file
 #   ./deploy.sh put <source> <destination>   Upload file or folder
 #
+# Laravel logs (REMOTE_BACKEND_PATH/storage/logs):
+#   ./deploy.sh logs                    List log files on the server
+#   ./deploy.sh logs tail [file] [n]   Last n lines (default laravel.log, n=200)
+#   ./deploy.sh logs head [file] [n]   First n lines
+#   ./deploy.sh logs cat [file]        Print entire log (use tail for large files)
+#
 # Examples:
 #   ./deploy.sh list prod/backend
 #   ./deploy.sh cat prod/backend/.env
@@ -62,6 +68,8 @@ REMOTE_FRONTEND_PATH="${REMOTE_FRONTEND_PATH:-prod/frontend}"
 FTP_TIMEOUT="${FTP_TIMEOUT:-3600}"
 # Set FTP_SSL=1 for FTPS (FTP over SSL/TLS)
 FTP_SSL="${FTP_SSL:-0}"
+# Seconds allowed when downloading logs for tail/head (full file is fetched)
+DEPLOY_LOGS_DOWNLOAD_TIMEOUT="${DEPLOY_LOGS_DOWNLOAD_TIMEOUT:-600}"
 
 # --- Parse .secrets key=value lines (e.g. ftp_user=, db=, mysql_user=, mysql_password=) ---
 read_secrets_keyval() {
@@ -213,12 +221,13 @@ EOF
   fi
 }
 
-# --- Read remote file ---
-ftp_cat() {
+# --- Download remote file to local path (timeout seconds). Caller removes local_out. ---
+ftp_get_file() {
   local remote_path="$1"
-  [[ -z "$FTP_HOST" ]] && { print_error "FTP_HOST is not set."; exit 1; }
+  local local_out="$2"
+  local max_sec="${3:-120}"
+  [[ -z "$FTP_HOST" ]] && { print_error "FTP_HOST is not set."; return 1; }
   local script
-  local tmpfile
   local remote_dir remote_name
   remote_name="${remote_path##*/}"
   remote_dir="${remote_path%/*}"
@@ -226,40 +235,166 @@ ftp_cat() {
     remote_dir="."
   fi
   script="$(mktemp)"
-  tmpfile="$(mktemp)"
   _CLEANUP_SCRIPT="$script"
-  _CLEANUP_TMPFILE="$tmpfile"
-  trap 'rm -f "$_CLEANUP_SCRIPT" "$_CLEANUP_TMPFILE"' RETURN
+  trap 'rm -f "$_CLEANUP_SCRIPT"' RETURN
   lftp_preamble > "$script"
-  # mktemp creates an empty file; lftp get refuses to overwrite unless removed
-  rm -f "$tmpfile"
-  # cd into parent dir then get basename — some hosts reject full-path RETR
+  rm -f "$local_out"
   cat >> "$script" <<EOF
 
 cd "$remote_dir"
-get "$remote_name" -o "$tmpfile"
+get "$remote_name" -o "$local_out"
 bye
 EOF
-  print_info "Reading $remote_path ..."
-  echo ""
   local lftp_out lftp_exit
   set +e
-  lftp_out="$(run_with_timeout 120 lftp -f "$script" 2>&1)"
+  lftp_out="$(run_with_timeout "$max_sec" lftp -f "$script" 2>&1)"
   lftp_exit=$?
   set -e
   if [[ $lftp_exit -ne 0 ]]; then
-    print_error "Failed to read $remote_path (lftp exit $lftp_exit)"
-    echo "$lftp_out"
+    print_error "Failed to download $remote_path (lftp exit $lftp_exit)"
+    [[ -n "$lftp_out" ]] && echo "$lftp_out"
+    return 1
+  fi
+  if [[ ! -f "$local_out" ]]; then
+    print_error "Download finished but local file missing: $local_out"
+    return 1
+  fi
+  return 0
+}
+
+# --- Read remote file ---
+ftp_cat() {
+  local remote_path="$1"
+  local tmpfile
+  tmpfile="$(mktemp)"
+  trap 'rm -f "$tmpfile"' RETURN
+  print_info "Reading $remote_path ..."
+  echo ""
+  if ! ftp_get_file "$remote_path" "$tmpfile" 120; then
     exit 1
   fi
-  if [[ -f "$tmpfile" ]]; then
-    cat "$tmpfile"
-    echo ""
-    print_success "File read completed"
+  cat "$tmpfile"
+  echo ""
+  print_success "File read completed"
+}
+
+# --- Remote Laravel log directory (FTP path from account root) ---
+logs_remote_dir() {
+  printf '%s' "${REMOTE_BACKEND_PATH%/}/storage/logs"
+}
+
+# --- Resolve log name: basename under storage/logs, or full remote path if it contains / ---
+logs_resolve_path() {
+  local name="${1:-laravel.log}"
+  if [[ "$name" == */* ]]; then
+    printf '%s' "$name"
   else
-    print_error "Failed to read $remote_path"
+    printf '%s' "$(logs_remote_dir)/$name"
+  fi
+}
+
+# --- Parse optional [logfile] [lines] for tail/head (default laravel.log, 200 lines) ---
+logs_parse_tail_head_args() {
+  LOG_FILE_BASENAME="laravel.log"
+  LOG_LINE_COUNT=200
+  if [[ $# -eq 0 ]]; then
+    return
+  fi
+  if [[ $# -eq 1 ]]; then
+    if [[ "$1" =~ ^[0-9]+$ ]]; then
+      LOG_LINE_COUNT="$1"
+    else
+      LOG_FILE_BASENAME="$1"
+    fi
+    return
+  fi
+  LOG_FILE_BASENAME="$1"
+  LOG_LINE_COUNT="$2"
+  if ! [[ "$LOG_LINE_COUNT" =~ ^[0-9]+$ ]]; then
+    print_error "Line count must be a positive integer, got: $LOG_LINE_COUNT"
     exit 1
   fi
+}
+
+logs_tail_or_head() {
+  local which="$1"
+  shift
+  logs_parse_tail_head_args "$@"
+  local remote_path
+  remote_path="$(logs_resolve_path "$LOG_FILE_BASENAME")"
+  local tmpfile
+  tmpfile="$(mktemp "${TMPDIR:-/tmp}/deploy-logs.XXXXXX")"
+  trap 'rm -f "$tmpfile"' RETURN
+  print_info "Fetching $remote_path (timeout ${DEPLOY_LOGS_DOWNLOAD_TIMEOUT}s) ..."
+  if ! ftp_get_file "$remote_path" "$tmpfile" "$DEPLOY_LOGS_DOWNLOAD_TIMEOUT"; then
+    exit 1
+  fi
+  local sz
+  sz="$(wc -c < "$tmpfile" | tr -d ' ')"
+  if [[ "$which" == "tail" ]]; then
+    print_info "Local copy: ${sz} bytes — showing last $LOG_LINE_COUNT lines:"
+  else
+    print_info "Local copy: ${sz} bytes — showing first $LOG_LINE_COUNT lines:"
+  fi
+  echo ""
+  if [[ "$which" == "tail" ]]; then
+    tail -n "$LOG_LINE_COUNT" "$tmpfile"
+  else
+    head -n "$LOG_LINE_COUNT" "$tmpfile"
+  fi
+  echo ""
+  print_success "Done ($which)"
+}
+
+logs_cat_app() {
+  local name="${1:-laravel.log}"
+  local remote_path
+  remote_path="$(logs_resolve_path "$name")"
+  print_warning "Printing the full remote file (may be large). Prefer: $0 logs tail $name"
+  ftp_cat "$remote_path"
+}
+
+logs_command() {
+  local sub="${1:-list}"
+  case "$sub" in
+    list|"")
+      print_info "Remote: $(logs_remote_dir)/"
+      ftp_list "$(logs_remote_dir)"
+      ;;
+    tail)
+      shift || true
+      logs_tail_or_head tail "$@"
+      ;;
+    head)
+      shift || true
+      logs_tail_or_head head "$@"
+      ;;
+    cat)
+      shift
+      logs_cat_app "${1:-}"
+      ;;
+    help|-h|--help)
+      echo "Usage: $0 logs [list]"
+      echo "       $0 logs tail [log_filename|line_count] [line_count]"
+      echo "       $0 logs head [log_filename|line_count] [line_count]"
+      echo "       $0 logs cat [log_filename]"
+      echo ""
+      echo "  list   List files in storage/logs (default when no subcommand)"
+      echo "  tail   Download log and show last N lines (default N=200, file=laravel.log)"
+      echo "  head   Download log and show first N lines"
+      echo "  cat    Download and print the whole file (same as: $0 cat <remote_path>)"
+      echo ""
+      echo "  log_filename is a basename in storage/logs (e.g. laravel-2026-05-01.log)."
+      echo "  If it contains '/', it is treated as a full FTP path from account root."
+      echo ""
+      echo "  Override download timeout: DEPLOY_LOGS_DOWNLOAD_TIMEOUT=900 $0 logs tail"
+      ;;
+    *)
+      print_error "Unknown logs subcommand: $sub"
+      echo "Run: $0 logs help"
+      exit 1
+      ;;
+  esac
 }
 
 # --- Upload file or directory (generic put) ---
@@ -590,8 +725,12 @@ main() {
       fi
       ftp_put_generic "$2" "$3"
       ;;
+    logs)
+      shift
+      logs_command "$@"
+      ;;
     *)
-      echo "Usage: $0 [--install-deps] [backend|all|env|file|list|cat|put] [args...]"
+      echo "Usage: $0 [--install-deps] [backend|all|env|file|list|cat|put|logs] [args...]"
       echo ""
       echo "Deploy:"
       echo "  all      (default) Build frontend, upload frontend + backend"
@@ -600,6 +739,13 @@ main() {
       echo "  env      Upload .env.production to server as backend/.env"
       echo "  file <local_file> [remote_path]  Upload a single file"
       echo "  --install-deps  Run npm install before build even when deps already look installed"
+      echo ""
+      echo "Logs (Laravel storage/logs on server):"
+      echo "  logs [list]              List remote log files"
+      echo "  logs tail [file] [n]     Last n lines (downloads file; default n=200)"
+      echo "  logs head [file] [n]     First n lines"
+      echo "  logs cat [file]          Print full log (prefer tail for large files)"
+      echo "  logs help                Show logs subcommands"
       echo ""
       echo "FTP (list / read / upload any path):"
       echo "  list <remote_path>       List remote directory"

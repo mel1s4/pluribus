@@ -18,6 +18,7 @@ class UserFavoriteController extends Controller
         'users',
         'communities',
         'my-communities',
+        'my-projects',
         'support-personification',
         'community-settings',
         'chats',

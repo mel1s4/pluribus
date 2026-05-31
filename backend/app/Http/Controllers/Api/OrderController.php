@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateOrderItemTableRequest;
 use App\Http\Requests\UpdatePlaceOrderRequest;
 use App\Http\Resources\OrderResource;
 use App\Models\CartItem;
+use App\Models\Community;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Place;
@@ -16,7 +17,9 @@ use App\Models\Table;
 use App\Models\User;
 use App\Notifications\OrderStatusChangedForBuyerNotification;
 use App\Notifications\PlaceNewOrderNotification;
+use App\Support\OrderCheckoutWalletSettlement;
 use App\Support\PlaceMedia;
+use App\Support\WalletMoney;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -25,6 +28,10 @@ use Illuminate\Validation\ValidationException;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        private OrderCheckoutWalletSettlement $orderCheckoutWalletSettlement,
+    ) {}
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -70,20 +77,42 @@ class OrderController extends Controller
                 $this->authorizeOfferForCheckout($request, $row->offer);
             }
 
+            $community = Community::current();
+            $this->assertMemberOfCommunity($user, (int) $community->id);
+
             $total = '0.00';
+            /** @var array<int, string> */
+            $placeSubtotals = [];
             foreach ($cartRows as $row) {
                 $offer = $row->offer;
                 assert($offer instanceof PlaceOffer);
                 $price = (string) $offer->price;
                 $qty = (int) $row->quantity;
-                $total = $this->addMoney($total, $this->multiplyMoney($price, $qty));
+                $line = WalletMoney::normalize($this->multiplyMoney($price, $qty));
+                $total = WalletMoney::add($total, $line);
+                $pid = (int) $offer->place_id;
+                $placeSubtotals[$pid] = WalletMoney::add($placeSubtotals[$pid] ?? '0.00', $line);
             }
+
+            $notes = $request->validated('notes') ?? null;
+            $ledgerNote = is_string($notes) && trim($notes) !== '' ? trim($notes) : null;
+
+            $this->orderCheckoutWalletSettlement->settle(
+                $user,
+                (int) $community->id,
+                $total,
+                $placeSubtotals,
+                $ledgerNote,
+            );
 
             $order = Order::query()->create([
                 'user_id' => $user->id,
+                'community_id' => (int) $community->id,
                 'status' => Order::STATUS_PENDING,
                 'total_amount' => $total,
-                'notes' => $request->validated('notes') ?? null,
+                'payment_method' => Order::PAYMENT_COMMUNITY_WALLET,
+                'wallet_settled_at' => now(),
+                'notes' => $notes,
             ]);
 
             foreach ($cartRows as $row) {
@@ -273,6 +302,16 @@ class OrderController extends Controller
         return response()->json([
             'order' => new OrderResource($order),
         ]);
+    }
+
+    private function assertMemberOfCommunity(User $user, int $communityId): void
+    {
+        $exists = $user->communities()->where('communities.id', $communityId)->exists();
+        if (! $exists) {
+            throw ValidationException::withMessages([
+                'cart' => [__('You must be a community member to place wallet-funded orders.')],
+            ]);
+        }
     }
 
     private function authorizeOfferForCheckout(Request $request, PlaceOffer $offer): void

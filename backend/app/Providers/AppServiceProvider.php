@@ -4,16 +4,23 @@ namespace App\Providers;
 
 use App\Models\Calendar;
 use App\Models\Chat;
+use App\Models\Community;
+use App\Models\CommunityProject;
 use App\Models\Group;
+use App\Models\Note;
 use App\Models\Place;
 use App\Models\Post;
+use App\Models\ProjectArgument;
 use App\Models\Task;
 use App\Models\User;
 use App\Policies\CalendarPolicy;
+use App\Policies\CommunityProjectPolicy;
 use App\Policies\ChatPolicy;
 use App\Policies\GroupPolicy;
 use App\Policies\PlacePolicy;
+use App\Policies\NotePolicy;
 use App\Policies\PostPolicy;
+use App\Policies\ProjectArgumentPolicy;
 use App\Policies\TaskPolicy;
 use App\Support\CapabilityResolver;
 use App\Support\WalletLedger\LedgerAppender;
@@ -56,12 +63,58 @@ class AppServiceProvider extends ServiceProvider
             return Place::query()->where('slug', $value)->firstOrFail();
         });
 
+        Route::bind('note', function (string $value) {
+            $userId = auth()->id();
+            abort_unless($userId, 404);
+
+            return Note::query()
+                ->visibleToUser((int) $userId)
+                ->whereKey((int) $value)
+                ->firstOrFail();
+        });
+
+        Route::bind('project', function (string $value, \Illuminate\Routing\Route $route): CommunityProject {
+            $slug = $route->parameter('slug');
+            if (! is_string($slug) || $slug === '') {
+                abort(404);
+            }
+            $community = Community::query()->where('slug', $slug)->first();
+            if ($community === null) {
+                abort(404);
+            }
+
+            $project = CommunityProject::query()
+                ->where('community_id', $community->id)
+                ->whereKey((int) $value)
+                ->first();
+            if ($project === null) {
+                abort(404);
+            }
+
+            return $project;
+        });
+
+        Route::bind('argument', function (string $value, \Illuminate\Routing\Route $route): ProjectArgument {
+            $project = $route->parameter('project');
+            if (! $project instanceof CommunityProject) {
+                abort(404);
+            }
+
+            return ProjectArgument::query()
+                ->where('project_id', $project->id)
+                ->whereKey((int) $value)
+                ->firstOrFail();
+        });
+
         Gate::policy(Place::class, PlacePolicy::class);
         Gate::policy(Chat::class, ChatPolicy::class);
         Gate::policy(Group::class, GroupPolicy::class);
         Gate::policy(Calendar::class, CalendarPolicy::class);
         Gate::policy(Post::class, PostPolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
+        Gate::policy(Note::class, NotePolicy::class);
+        Gate::policy(CommunityProject::class, CommunityProjectPolicy::class);
+        Gate::policy(ProjectArgument::class, ProjectArgumentPolicy::class);
 
         Gate::before(function ($user, string $_ability) {
             if ($user instanceof User && $user->isRoot()) {
@@ -85,6 +138,14 @@ class AppServiceProvider extends ServiceProvider
         });
 
         RateLimiter::for('join-invitation-show', function (Request $request) {
+            return Limit::perMinute(60)->by($request->ip());
+        });
+
+        RateLimiter::for('join-invitation-share', function (Request $request) {
+            return Limit::perMinute(120)->by($request->ip());
+        });
+
+        RateLimiter::for('discovery-map', function (Request $request) {
             return Limit::perMinute(60)->by($request->ip());
         });
 

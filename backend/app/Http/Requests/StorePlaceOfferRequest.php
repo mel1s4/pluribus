@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Requests\Concerns\ValidatesPlaceOfferLocalPrice;
 use App\Models\Place;
 use App\Models\PlaceOffer;
 use Illuminate\Contracts\Validation\Validator;
@@ -10,6 +11,8 @@ use Illuminate\Validation\Rule;
 
 class StorePlaceOfferRequest extends FormRequest
 {
+    use ValidatesPlaceOfferLocalPrice;
+
     public function authorize(): bool
     {
         return $this->user() !== null;
@@ -28,7 +31,8 @@ class StorePlaceOfferRequest extends FormRequest
             'sku' => ['nullable', 'string', 'max:64', Rule::unique('place_offers', 'sku')->where('place_id', $placeId)],
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
-            'price' => ['required', 'numeric', 'min:0', 'max:9999999999.99'],
+            'price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
+            'local_price' => ['nullable', 'numeric', 'min:0', 'max:9999999999.99'],
             'visibility_scope' => ['required', 'string', Rule::in([PlaceOffer::VISIBILITY_SCOPE_PUBLIC, PlaceOffer::VISIBILITY_SCOPE_AUDIENCE])],
             'audience_ids' => ['nullable', 'array'],
             'audience_ids.*' => ['integer', Rule::exists('place_audiences', 'id')->where('place_id', $placeId)],
@@ -68,6 +72,15 @@ class StorePlaceOfferRequest extends FormRequest
                 $this->merge(['audience_ids' => is_array($decoded) ? $decoded : []]);
             }
         }
+        $merge = [];
+        foreach (['price', 'local_price'] as $key) {
+            if ($this->has($key) && ($this->input($key) === '' || $this->input($key) === null)) {
+                $merge[$key] = null;
+            }
+        }
+        if ($merge !== []) {
+            $this->merge($merge);
+        }
     }
 
     public function withValidator(Validator $validator): void
@@ -81,5 +94,6 @@ class StorePlaceOfferRequest extends FormRequest
                 $v->errors()->add('audience_ids', 'Select at least one audience when visibility is audience-scoped.');
             }
         });
+        $this->validatePlaceOfferLocalPrice($validator);
     }
 }

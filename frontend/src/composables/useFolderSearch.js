@@ -29,11 +29,12 @@ function saveRecent(list) {
 export function useFolderSearch(opts = {}) {
   const debounceMs = opts.debounceMs ?? 320
   const query = ref('')
-  const filterType = ref(/** @type {'all'|'folder'|'chat'|'task'} */ ('all'))
+  const filterType = ref(/** @type {'all'|'folder'|'chat'|'task'|'note'} */ ('all'))
   const loading = ref(false)
   const folders = ref([])
   const chats = ref([])
   const tasks = ref([])
+  const notes = ref([])
   const recentQueries = ref(loadRecent())
   let timer = null
 
@@ -43,6 +44,7 @@ export function useFolderSearch(opts = {}) {
       folders.value = []
       chats.value = []
       tasks.value = []
+      notes.value = []
       loading.value = false
       return
     }
@@ -63,6 +65,7 @@ export function useFolderSearch(opts = {}) {
     folders.value = unwrap(d.folders)
     chats.value = unwrap(d.chats)
     tasks.value = unwrap(d.tasks)
+    notes.value = unwrap(d.notes)
   }
 
   function pushRecent(q) {
@@ -90,6 +93,7 @@ export function useFolderSearch(opts = {}) {
     folders,
     chats,
     tasks,
+    notes,
     recentQueries,
     runSearch,
     pushRecent,

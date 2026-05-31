@@ -1,16 +1,23 @@
 <script setup>
+import { computed } from 'vue'
 import Title from '../../atoms/Title.vue'
 import { t } from '../../i18n/i18n'
+import { walletCurrencyDisplayLine } from '../../utils/walletCurrencyDisplay.js'
 
-defineProps({
+const props = defineProps({
   balance: { type: String, required: true },
   publicRef: { type: String, required: true },
+  currencyName: { type: String, default: '' },
+  currencyCode: { type: String, default: '' },
 })
+
+const currencyLine = computed(() => walletCurrencyDisplayLine(props.currencyName, props.currencyCode))
 </script>
 
 <template>
   <section class="wallet-balance-card">
     <Title tag="h2" class="wallet-balance-card__title">{{ t('wallet.balanceLabel') }}</Title>
+    <p v-if="currencyLine" class="wallet-balance-card__currency">{{ currencyLine }}</p>
     <p class="wallet-balance-card__amount">{{ balance }}</p>
     <p class="wallet-balance-card__ref">
       <span class="wallet-balance-card__ref-label">{{ t('wallet.publicRef') }}</span>
@@ -35,6 +42,13 @@ defineProps({
   letter-spacing: 0.04em;
   margin: 0 0 0.45rem;
   color: var(--color-muted, #71717a);
+}
+
+.wallet-balance-card__currency {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0 0 0.35rem;
+  color: var(--color-text, #18181b);
 }
 
 .wallet-balance-card__amount {

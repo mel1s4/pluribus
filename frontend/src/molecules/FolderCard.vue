@@ -33,6 +33,10 @@ defineProps({
     type: Number,
     default: 0,
   },
+  noteCount: {
+    type: Number,
+    default: 0,
+  },
 })
 
 const emit = defineEmits(['open', 'menu', 'dragstart', 'dragend', 'dragover', 'dragleave', 'drop'])
@@ -71,8 +75,8 @@ const emit = defineEmits(['open', 'menu', 'dragstart', 'dragend', 'dragover', 'd
           {{ folder.icon_emoji || '📁' }}
         </span>
         <span class="folder-card__name">{{ folder.name || t('folders.unnamed') }}</span>
-        <span v-if="chatCount + taskCount > 0" class="folder-card__meta">
-          {{ chatCount }} {{ t('folders.stats.chatsShort') }} · {{ taskCount }} {{ t('folders.stats.tasksShort') }}
+        <span v-if="chatCount + taskCount + noteCount > 0" class="folder-card__meta">
+          {{ chatCount }} {{ t('folders.stats.chatsShort') }} · {{ taskCount }} {{ t('folders.stats.tasksShort') }}<template v-if="noteCount > 0"> · {{ noteCount }} {{ t('folders.stats.notesShort') }}</template>
         </span>
       </button>
     </div>

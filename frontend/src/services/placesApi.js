@@ -82,9 +82,18 @@ export async function deletePlace(id) {
 
 /**
  * @param {number|string} placeId
+ * @param {number} [page]
  */
-export async function fetchOffers(placeId) {
-  return cachedGet(`/api/places/${placeId}/offers`)
+export async function fetchOffers(placeId, page = 1) {
+  return cachedGet(`/api/places/${placeId}/offers?page=${page}`)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {number|string} offerId
+ */
+export async function fetchOffer(placeId, offerId) {
+  return cachedGet(`/api/places/${placeId}/offers/${offerId}`)
 }
 
 /**
@@ -324,4 +333,27 @@ export async function removePlaceAdministrator(placeId, userId) {
   const result = await apiJson('DELETE', `/api/places/${placeId}/administrators/${userId}`)
   if (result.ok) invalidatePlacesCaches()
   return result
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {{ page?: number, perPage?: number }} [opts]
+ */
+export async function fetchPlaceWallet(placeId, opts = {}) {
+  const page = opts.page ?? 1
+  const perPage = opts.perPage ?? 20
+  const q = new URLSearchParams({
+    page: String(page),
+    per_page: String(perPage),
+  })
+  return apiJson('GET', `/api/places/${placeId}/wallet?${q.toString()}`)
+}
+
+/**
+ * @param {number|string} placeId
+ * @param {{ recipient_email: string, amount: number|string, note?: string }} body
+ */
+export async function postPlaceWalletTransfer(placeId, body) {
+  await ensureCsrfCookie()
+  return apiJson('POST', `/api/places/${placeId}/wallet/transfer`, body)
 }

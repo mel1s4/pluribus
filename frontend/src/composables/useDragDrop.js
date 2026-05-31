@@ -14,7 +14,7 @@ export function useDragDrop(options = {}) {
 
   /**
    * @param {DragEvent} e
-   * @param {{ type: 'chat'|'task'|'folder', id: number|string }} payload
+   * @param {{ type: 'chat'|'task'|'note'|'folder', id: number|string }} payload
    */
   function onDragStart(e, payload) {
     if (!e.dataTransfer) return

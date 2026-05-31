@@ -26,9 +26,33 @@ class PlaceOfferController extends Controller
         if (! $canManage) {
             $offersQuery->visibleToUser($uid);
         }
-        $offers = $offersQuery->get();
+        $offers = $offersQuery->paginate(15);
 
         return PlaceOfferResource::collection($offers);
+    }
+
+    public function show(Request $request, Place $place, PlaceOffer $offer): JsonResponse
+    {
+        $this->authorize('view', $place);
+        if ((int) $offer->place_id !== (int) $place->id) {
+            abort(404);
+        }
+
+        $uid = (int) $request->user()->id;
+        $canManage = $request->user()->can('update', $place);
+
+        if (! $canManage) {
+            $isVisible = $offer->visibility_scope === PlaceOffer::VISIBILITY_SCOPE_PUBLIC
+                || $offer->audiences()->whereHas('members', fn ($m) => $m->where('users.id', $uid))->exists();
+            if (! $isVisible) {
+                abort(403);
+            }
+        }
+        $offer->load('audiences:id');
+
+        return response()->json([
+            'offer' => new PlaceOfferResource($offer),
+        ]);
     }
 
     public function store(StorePlaceOfferRequest $request, Place $place): JsonResponse
@@ -65,7 +89,8 @@ class PlaceOfferController extends Controller
             'sku' => PlaceSku::generate($validated['sku'] ?? $validated['title']),
             'title' => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'price' => $validated['price'],
+            'price' => array_key_exists('price', $validated) ? $validated['price'] : null,
+            'local_price' => array_key_exists('local_price', $validated) ? $validated['local_price'] : null,
             'photo_path' => $photoPath,
             'gallery_paths' => $galleryPaths === [] ? null : $galleryPaths,
             'tags' => $tags === [] ? null : $tags,
@@ -138,7 +163,8 @@ class PlaceOfferController extends Controller
             'sku' => array_key_exists('sku', $validated) ? PlaceSku::normalize($validated['sku']) : $offer->sku,
             'title' => $validated['title'] ?? $offer->title,
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $offer->description,
-            'price' => $validated['price'] ?? $offer->price,
+            'price' => array_key_exists('price', $validated) ? $validated['price'] : $offer->price,
+            'local_price' => array_key_exists('local_price', $validated) ? $validated['local_price'] : $offer->local_price,
             'visibility_scope' => $validated['visibility_scope'] ?? $offer->visibility_scope,
         ]);
         if (array_key_exists('photo_path', $validated)) {

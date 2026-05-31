@@ -10,6 +10,12 @@ export function useActiveCommunity() {
     if (typeof value === 'string' && value.trim() !== '') {
       return value.trim()
     }
+    if (String(route.name || '') === 'communitySettingsBySlug') {
+      const slug = route.params.slug
+      if (typeof slug === 'string' && slug.trim() !== '') {
+        return slug.trim()
+      }
+    }
     return null
   })
 

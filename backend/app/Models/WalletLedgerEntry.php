@@ -15,9 +15,15 @@ class WalletLedgerEntry extends Model
 
     public const TYPE_TRANSFER = 'transfer';
 
+    public const TYPE_ORDER_SETTLEMENT = 'order_settlement';
+
     public const ACTOR_COMMUNITY_GRANT = 'community_grant';
 
     public const ACTOR_MEMBER_TRANSFER = 'member_transfer';
+
+    public const ACTOR_ORDER_CHECKOUT = 'order_checkout';
+
+    public const ACTOR_PLACE_TREASURY_TRANSFER = 'place_treasury_transfer';
 
     protected $table = 'wallet_ledger_entries';
 

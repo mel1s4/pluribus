@@ -38,4 +38,22 @@ class PlacePolicy
 
         return $role === 'owner' || $role === Place::ADMIN_ROLE_FULL_ACCESS;
     }
+
+    /**
+     * View community wallet balance and history for this place.
+     */
+    public function viewPlaceWallet(User $user, Place $place): bool
+    {
+        return $this->update($user, $place);
+    }
+
+    /**
+     * Send community currency from the place treasury to a member.
+     */
+    public function transferFromPlaceWallet(User $user, Place $place): bool
+    {
+        $role = $place->roleForUser($user);
+
+        return $role === 'owner' || $role === Place::ADMIN_ROLE_FULL_ACCESS;
+    }
 }

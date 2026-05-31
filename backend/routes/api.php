@@ -10,8 +10,11 @@ use App\Http\Controllers\Api\ChatMemberController;
 use App\Http\Controllers\Api\ChatMessageController;
 use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityMembershipController;
+use App\Http\Controllers\Api\CommunityProjectArgumentController;
+use App\Http\Controllers\Api\CommunityProjectController;
 use App\Http\Controllers\Api\CommunityCreditsController;
 use App\Http\Controllers\Api\CommunityMicrositeController;
+use App\Http\Controllers\Api\CommunityPublicLegalDocumentsController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunityAdminController;
 use App\Http\Controllers\Api\CommunitySettingsController;
@@ -31,6 +34,7 @@ use App\Http\Controllers\Api\PlaceAudienceController;
 use App\Http\Controllers\Api\PlaceController;
 use App\Http\Controllers\Api\PlaceOfferCsvController;
 use App\Http\Controllers\Api\PlaceOfferController;
+use App\Http\Controllers\Api\PlaceWalletController;
 use App\Http\Controllers\Api\PlaceRequirementCsvController;
 use App\Http\Controllers\Api\PlaceRequirementController;
 use App\Http\Controllers\Api\PlaceRequirementResponseController;
@@ -44,6 +48,8 @@ use App\Http\Controllers\Api\UserVotingIdAuditController;
 use App\Http\Controllers\Api\UserFavoriteController;
 use App\Http\Controllers\Api\WalletController;
 use App\Http\Controllers\Api\MyCommunitiesController;
+use App\Http\Controllers\Api\MyCommunityProjectsController;
+use App\Http\Controllers\Api\NoteController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\VisitorAuthController;
 use App\Http\Controllers\Api\PlaceTableController;
@@ -64,6 +70,8 @@ Route::get('/places/{place}/public', [PlaceController::class, 'showPublic']);
 
 Route::get('/communities/{slug}/microsite', [CommunityMicrositeController::class, 'show']);
 Route::get('/communities/{slug}/credits', [CommunityCreditsController::class, 'show']);
+Route::get('/communities/{slug}/legal-documents', [CommunityPublicLegalDocumentsController::class, 'show'])
+    ->middleware('throttle:join-invitation-show');
 
 Route::post('/login', [AuthController::class, 'login'])
     ->middleware('throttle:login');
@@ -89,6 +97,9 @@ Route::post('/join-invitations/{token}/verify-email', [JoinInvitationController:
 
 Route::get('/join-invitations/{token}', [JoinInvitationController::class, 'show'])
     ->middleware('throttle:join-invitation-show');
+
+Route::get('/discovery/map', [DiscoveryController::class, 'map'])
+    ->middleware('throttle:discovery-map');
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/personification/start', [PersonificationController::class, 'start'])
@@ -127,8 +138,33 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::get('/users', [UserAdminController::class, 'index']);
         Route::get('/my-communities', [MyCommunitiesController::class, 'index']);
+        Route::get('/my-projects', [MyCommunityProjectsController::class, 'index'])->name('myCommunityProjects.index');
         Route::post('/my-communities/join/{token}', [MyCommunitiesController::class, 'joinByInvitation'])
             ->middleware('throttle:join-invitation-show');
+        Route::get('/communities/{slug}/projects', [CommunityProjectController::class, 'index'])
+            ->where('slug', '[a-z0-9-]+');
+        Route::post('/communities/{slug}/projects', [CommunityProjectController::class, 'store'])
+            ->where('slug', '[a-z0-9-]+');
+        Route::get('/communities/{slug}/projects/{project}', [CommunityProjectController::class, 'show'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project');
+        Route::patch('/communities/{slug}/projects/{project}', [CommunityProjectController::class, 'update'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project');
+        Route::delete('/communities/{slug}/projects/{project}', [CommunityProjectController::class, 'destroy'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project');
+        Route::post('/communities/{slug}/projects/{project}/arguments', [CommunityProjectArgumentController::class, 'store'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project');
+        Route::patch('/communities/{slug}/projects/{project}/arguments/{argument}', [CommunityProjectArgumentController::class, 'update'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project')
+            ->whereNumber('argument');
+        Route::delete('/communities/{slug}/projects/{project}/arguments/{argument}', [CommunityProjectArgumentController::class, 'destroy'])
+            ->where('slug', '[a-z0-9-]+')
+            ->whereNumber('project')
+            ->whereNumber('argument');
         Route::get('/communities', [CommunityAdminController::class, 'index']);
         Route::post('/communities', [CommunityAdminController::class, 'store']);
         Route::get('/communities/{community}', [CommunityAdminController::class, 'show']);
@@ -150,12 +186,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/community/leadership', [CommunitySettingsController::class, 'leadership']);
         Route::patch('/community', [CommunitySettingsController::class, 'update']);
         Route::patch('/community/currency', [CommunitySettingsController::class, 'updateCurrency']);
+        Route::patch('/community/legal-documents', [CommunitySettingsController::class, 'updateLegalDocuments']);
 
         Route::get('/community-place-offers', [CommunityPlaceOfferController::class, 'index']);
         Route::get('/global-search', [GlobalSearchController::class, 'index']);
         Route::get('/community-map/places', [PlaceController::class, 'mapIndex']);
         Route::get('/discovery/calendar', [DiscoveryController::class, 'calendar']);
-        Route::get('/discovery/map', [DiscoveryController::class, 'map']);
         Route::get('/groups', [GroupController::class, 'index']);
         Route::post('/groups', [GroupController::class, 'store']);
         Route::get('/groups/{group}', [GroupController::class, 'show']);
@@ -202,6 +238,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/folders/{folder}/stats', [FolderController::class, 'stats'])->scopeBindings();
         Route::patch('/folders/{folder}', [FolderController::class, 'update']);
         Route::delete('/folders/{folder}', [FolderController::class, 'destroy']);
+        Route::get('/notes', [NoteController::class, 'index']);
+        Route::post('/notes', [NoteController::class, 'store']);
+        Route::get('/notes/{note}', [NoteController::class, 'show'])->scopeBindings();
+        Route::patch('/notes/{note}', [NoteController::class, 'update'])->scopeBindings();
+        Route::delete('/notes/{note}', [NoteController::class, 'destroy'])->scopeBindings();
+        Route::get('/notes/{note}/collaborators', [NoteController::class, 'collaboratorsIndex'])->scopeBindings();
+        Route::post('/notes/{note}/collaborators', [NoteController::class, 'collaboratorsStore'])->scopeBindings();
+        Route::patch('/notes/{note}/collaborators/{user}', [NoteController::class, 'collaboratorsUpdate'])->scopeBindings();
+        Route::delete('/notes/{note}/collaborators/{user}', [NoteController::class, 'collaboratorsDestroy'])->scopeBindings();
+        Route::post('/notes/{note}/lock', [NoteController::class, 'lockAcquire'])->scopeBindings();
+        Route::put('/notes/{note}/lock', [NoteController::class, 'lockRenew'])->scopeBindings();
+        Route::delete('/notes/{note}/lock', [NoteController::class, 'lockRelease'])->scopeBindings();
+        Route::get('/notes/{note}/revisions', [NoteController::class, 'revisionsIndex'])->scopeBindings();
+        Route::get('/notes/{note}/revisions/{revision}', [NoteController::class, 'revisionsShow'])->scopeBindings();
+        Route::post('/notes/{note}/revert', [NoteController::class, 'revert'])->scopeBindings();
         Route::get('/chats/{chat}/backups', [ChatBackupController::class, 'index'])->scopeBindings();
         Route::post('/chats/{chat}/backups', [ChatBackupController::class, 'store'])->scopeBindings();
         Route::get('/chat-backups/{backup}/download', [ChatBackupController::class, 'download'])
@@ -214,6 +265,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/places/{place}', [PlaceController::class, 'destroy']);
 
         Route::get('/places/{place}/offers', [PlaceOfferController::class, 'index'])->scopeBindings();
+        Route::get('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'show'])->scopeBindings();
         Route::post('/places/{place}/offers', [PlaceOfferController::class, 'store'])->scopeBindings();
         Route::patch('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'update'])->scopeBindings();
         Route::delete('/places/{place}/offers/{offer}', [PlaceOfferController::class, 'destroy'])->scopeBindings();
@@ -267,6 +319,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/places/{place}/orders/{order}', [OrderController::class, 'placeShow']);
         Route::patch('/places/{place}/orders/{order}', [OrderController::class, 'updatePlaceOrder']);
         Route::patch('/places/{place}/orders/{order}/items/{item}/table', [OrderController::class, 'reassignTable']);
+
+        Route::get('/places/{place}/wallet', [PlaceWalletController::class, 'show'])->scopeBindings();
+        Route::post('/places/{place}/wallet/transfer', [PlaceWalletController::class, 'transfer'])->scopeBindings();
 
         Route::get('/wallet/audit-ledger', [WalletController::class, 'auditLedger']);
         Route::get('/wallet/ledger/public-key', [WalletController::class, 'ledgerPublicKey']);

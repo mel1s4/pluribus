@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Community;
 use App\Models\Place;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -58,6 +59,7 @@ class PlaceOffersApiTest extends TestCase
 
         $this->assertSame('Winter deal', $offerRes->json('offer.title'));
         $this->assertSame('19.99', $offerRes->json('offer.price'));
+        $this->assertNull($offerRes->json('offer.local_price'));
         $this->assertSame(['deal', 'winter'], $offerRes->json('offer.tags'));
         $this->assertSame('Seasonal specials', $offerRes->json('offer.category'));
 
@@ -69,6 +71,90 @@ class PlaceOffersApiTest extends TestCase
             ])
             ->assertOk();
         $this->assertSame('Clearance', $patchRes->json('offer.category'));
+    }
+
+    public function test_can_create_offer_with_community_credits_only(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+        $place = $this->makePlaceForUser($user, 'Credits shop');
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places/'.$place->id.'/offers', [
+                'title' => 'Credits item',
+                'price' => '12.50',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('offer.price', '12.50')
+            ->assertJsonPath('offer.local_price', null);
+    }
+
+    public function test_can_create_offer_with_local_price_when_community_configured(): void
+    {
+        Community::current()->update(['local_currency_code' => 'MXN']);
+        $user = User::factory()->create(['user_type' => 'member']);
+        $place = $this->makePlaceForUser($user, 'Local shop');
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places/'.$place->id.'/offers', [
+                'title' => 'Local item',
+                'local_price' => '89.00',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('offer.price', null)
+            ->assertJsonPath('offer.local_price', '89.00')
+            ->assertJsonPath('offer.local_currency_code', 'MXN');
+    }
+
+    public function test_can_create_offer_with_both_prices(): void
+    {
+        Community::current()->update(['local_currency_code' => 'USD']);
+        $user = User::factory()->create(['user_type' => 'member']);
+        $place = $this->makePlaceForUser($user, 'Dual shop');
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places/'.$place->id.'/offers', [
+                'title' => 'Dual item',
+                'price' => '150.00',
+                'local_price' => '25.00',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('offer.price', '150.00')
+            ->assertJsonPath('offer.local_price', '25.00')
+            ->assertJsonPath('offer.local_currency_code', 'USD');
+    }
+
+    public function test_can_create_offer_without_prices(): void
+    {
+        $user = User::factory()->create(['user_type' => 'member']);
+        $place = $this->makePlaceForUser($user, 'Free shop');
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places/'.$place->id.'/offers', [
+                'title' => 'Unpriced item',
+            ])
+            ->assertCreated()
+            ->assertJsonPath('offer.price', null)
+            ->assertJsonPath('offer.local_price', null);
+    }
+
+    public function test_local_price_rejected_when_community_has_no_local_currency(): void
+    {
+        Community::current()->update(['local_currency_code' => null]);
+        $user = User::factory()->create(['user_type' => 'member']);
+        $place = $this->makePlaceForUser($user, 'No local currency');
+
+        $this->actingAs($user)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/places/'.$place->id.'/offers', [
+                'title' => 'Bad local price',
+                'local_price' => '10.00',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['local_price']);
     }
 
     public function test_offer_must_belong_to_place_when_scoped(): void

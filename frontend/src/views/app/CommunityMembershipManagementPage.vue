@@ -45,6 +45,11 @@ const deletingInvitationId = ref(null)
 const invitationDeleteError = ref('')
 
 const grantDialogEl = ref(null)
+const grantResultDialogEl = ref(null)
+/** @type {import('vue').Ref<'success' | 'error'>} */
+const grantResultVariant = ref('success')
+const grantResultTitle = ref('')
+const grantResultBody = ref('')
 /** @type {import('vue').Ref<{ id: number, name: string } | null>} */
 const grantTarget = ref(null)
 /** Set from memberships API so root (and others) have a stable community id for wallet grants. */
@@ -245,8 +250,44 @@ function closeGrantDialog() {
   grantTarget.value = null
 }
 
+function closeGrantResultDialog() {
+  grantResultDialogEl.value?.close()
+}
+
+function onGrantResultDialogClose() {
+  grantResultTitle.value = ''
+  grantResultBody.value = ''
+}
+
+function openGrantResultDialog(kind, title, body) {
+  grantResultVariant.value = kind
+  grantResultTitle.value = title
+  grantResultBody.value = body
+  void nextTick(() => {
+    grantResultDialogEl.value?.showModal()
+  })
+}
+
 function onGrantSubmitted() {
+  const name = grantTarget.value?.name != null ? String(grantTarget.value.name).trim() : ''
+  const body = name
+    ? t('communityMemberships.grantResultSuccessBody').replace('{name}', name)
+    : t('wallet.grantSuccess')
   closeGrantDialog()
+  openGrantResultDialog('success', t('communityMemberships.grantResultSuccessTitle'), body)
+}
+
+/** @param {{ message?: string } | undefined} payload */
+function onGrantError(payload) {
+  const msg =
+    payload && typeof payload === 'object' && payload.message != null
+      ? String(payload.message).trim()
+      : ''
+  openGrantResultDialog(
+    'error',
+    t('communityMemberships.grantResultErrorTitle'),
+    msg || t('communityMemberships.grantResultErrorFallback'),
+  )
 }
 
 watch(slug, () => {
@@ -373,7 +414,11 @@ onUnmounted(() => {
     <template v-if="canManageInvitations">
       <h2 class="community-memberships-page__h2">{{ t('communityMemberships.invitationsHeading') }}</h2>
       <p class="community-memberships-page__intro">{{ t('communityMemberships.invitationsIntro') }}</p>
-      <UsersInvitationsToolbar :request-options="scopedRequestOptions" @invitations-changed="loadInvitations" />
+      <UsersInvitationsToolbar
+        :request-options="scopedRequestOptions"
+        :community-slug="slug"
+        @invitations-changed="loadInvitations"
+      />
 
       <p v-if="invitationsError" class="community-memberships-page__error" role="alert">{{ invitationsError }}</p>
       <p v-if="invitationDeleteError" class="community-memberships-page__error" role="alert">
@@ -446,8 +491,35 @@ onUnmounted(() => {
           :community-id="communityIdNum"
           :recipient-user-id="grantTarget.id"
           :recipient-name="grantTarget.name"
+          surface-errors-to-parent
           @granted="onGrantSubmitted"
+          @grant-error="onGrantError"
         />
+      </div>
+    </dialog>
+
+    <dialog
+      ref="grantResultDialogEl"
+      class="community-memberships-page__dialog community-memberships-page__grantResultDialog"
+      :class="{
+        'community-memberships-page__grantResultDialog--success': grantResultVariant === 'success',
+        'community-memberships-page__grantResultDialog--error': grantResultVariant === 'error',
+      }"
+      @close="onGrantResultDialogClose"
+    >
+      <div class="community-memberships-page__grantResultDialogInner">
+        <h2 class="community-memberships-page__grantResultDialogTitle">{{ grantResultTitle }}</h2>
+        <p
+          class="community-memberships-page__grantResultDialogBody"
+          :role="grantResultVariant === 'error' ? 'alert' : 'status'"
+        >
+          {{ grantResultBody }}
+        </p>
+        <div class="community-memberships-page__grantResultDialogActions">
+          <Button type="button" variant="primary" @click="closeGrantResultDialog">
+            {{ t('communityMemberships.grantResultOk') }}
+          </Button>
+        </div>
       </div>
     </dialog>
   </section>
@@ -581,5 +653,35 @@ onUnmounted(() => {
   display: flex;
   justify-content: flex-end;
   margin-bottom: 0.5rem;
+}
+
+.community-memberships-page__grantResultDialogInner {
+  padding: 1.25rem 1.35rem 1.35rem;
+  max-width: 22rem;
+}
+.community-memberships-page__grantResultDialogTitle {
+  margin: 0 0 0.65rem;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.community-memberships-page__grantResultDialogBody {
+  margin: 0 0 1.25rem;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--muted, #4b5563);
+}
+.community-memberships-page__grantResultDialog--error .community-memberships-page__grantResultDialogBody {
+  color: var(--color-danger-text, #b91c1c);
+}
+.community-memberships-page__grantResultDialogActions {
+  display: flex;
+  justify-content: flex-end;
+}
+.community-memberships-page__grantResultDialog--success {
+  border-top: 3px solid var(--color-success-text, #166534);
+}
+.community-memberships-page__grantResultDialog--error {
+  border-top: 3px solid var(--color-danger-text, #b91c1c);
 }
 </style>

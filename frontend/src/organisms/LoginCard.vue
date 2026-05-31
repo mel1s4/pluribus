@@ -20,7 +20,7 @@ function defaultPostLoginPath(user) {
   const communityCount = Number(user?.community_count || 0)
   if (communityCount <= 0) return '/my-communities'
   const first = Array.isArray(user?.communities) ? user.communities[0] : null
-  if (first?.slug) return `/${first.slug}/dashboard`
+  if (first?.slug) return `/community/${first.slug}/dashboard`
   return '/dashboard'
 }
 

@@ -50,7 +50,7 @@ const sidebarKey = computed(() => {
 })
 
 const quickItems = computed(() => [
-  { to: '/chats', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
+  { to: '/folders', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
   { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
   {
     to: '/notifications',

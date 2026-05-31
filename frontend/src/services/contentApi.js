@@ -6,6 +6,7 @@ function invalidateContentCaches() {
   invalidateCache(/^\/api\/calendars/)
   invalidateCache(/^\/api\/posts/)
   invalidateCache(/^\/api\/tasks/)
+  invalidateCache(/^\/api\/notes/)
   invalidateCache(/^\/api\/discovery\//)
   invalidateCache(/^\/api\/events\//)
   invalidateCache(/^\/api\/folders/)
@@ -200,8 +201,9 @@ export function fetchMapDiscovery(params = {}) {
   const q = new URLSearchParams()
   if (params.entity) q.set('entity', String(params.entity))
   if (params.post_type) q.set('post_type', String(params.post_type))
+  if (params.places_scope) q.set('places_scope', String(params.places_scope))
   for (const tag of (params.tags || [])) q.append('tags[]', String(tag))
   const qs = q.toString()
-  return cachedGet(`/api/discovery/map${qs ? `?${qs}` : ''}`)
+  return cachedGet(`/api/discovery/map${qs ? `?${qs}` : ''}`, { skipCache: true })
 }
 

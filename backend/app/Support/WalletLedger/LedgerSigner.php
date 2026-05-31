@@ -2,6 +2,7 @@
 
 namespace App\Support\WalletLedger;
 
+use ParagonIE_Sodium_Compat;
 use RuntimeException;
 
 /**
@@ -20,20 +21,20 @@ final class LedgerSigner
             throw new RuntimeException('WALLET_LEDGER_SECRET_KEY is not configured.');
         }
         $decoded = base64_decode($secret, true);
-        if ($decoded === false || strlen($decoded) !== SODIUM_CRYPTO_SIGN_SECRETKEYBYTES) {
-            throw new RuntimeException('WALLET_LEDGER_SECRET_KEY must be base64 of a '.SODIUM_CRYPTO_SIGN_SECRETKEYBYTES.'-byte libsodium secret key.');
+        if ($decoded === false || strlen($decoded) !== ParagonIE_Sodium_Compat::CRYPTO_SIGN_SECRETKEYBYTES) {
+            throw new RuntimeException('WALLET_LEDGER_SECRET_KEY must be base64 of a '.ParagonIE_Sodium_Compat::CRYPTO_SIGN_SECRETKEYBYTES.'-byte libsodium secret key.');
         }
         $this->secretKey = $decoded;
 
         $pubOverride = $publicKeyBase64 ?? (string) config('wallet_ledger.public_key');
         if ($pubOverride !== '') {
             $pubDecoded = base64_decode($pubOverride, true);
-            if ($pubDecoded === false || strlen($pubDecoded) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
-                throw new RuntimeException('WALLET_LEDGER_PUBLIC_KEY must be base64 of a '.SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES.'-byte public key.');
+            if ($pubDecoded === false || strlen($pubDecoded) !== ParagonIE_Sodium_Compat::CRYPTO_SIGN_PUBLICKEYBYTES) {
+                throw new RuntimeException('WALLET_LEDGER_PUBLIC_KEY must be base64 of a '.ParagonIE_Sodium_Compat::CRYPTO_SIGN_PUBLICKEYBYTES.'-byte public key.');
             }
             $this->publicKey = $pubDecoded;
         } else {
-            $this->publicKey = sodium_crypto_sign_publickey_from_secretkey($this->secretKey);
+            $this->publicKey = ParagonIE_Sodium_Compat::crypto_sign_publickey_from_secretkey($this->secretKey);
         }
     }
 
@@ -57,7 +58,7 @@ final class LedgerSigner
             throw new RuntimeException('Invalid commitment hex.');
         }
 
-        return sodium_crypto_sign_detached($binary, $this->secretKey);
+        return ParagonIE_Sodium_Compat::crypto_sign_detached($binary, $this->secretKey);
     }
 
     /**
@@ -70,6 +71,6 @@ final class LedgerSigner
             return false;
         }
 
-        return sodium_crypto_sign_verify_detached($signatureBinary, $binary, $publicKeyBinary);
+        return ParagonIE_Sodium_Compat::crypto_sign_verify_detached($signatureBinary, $binary, $publicKeyBinary);
     }
 }

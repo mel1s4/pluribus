@@ -14,6 +14,9 @@ const { displayName } = useCommunity()
       <RouterLink class="public-nav__link" to="/" active-class="is-active" exact-active-class="is-active">
         {{ t('nav.home') }}
       </RouterLink>
+      <RouterLink class="public-nav__link" to="/map" active-class="is-active">
+        {{ t('publicNav.map') }}
+      </RouterLink>
       <RouterLink class="public-nav__link" to="/contact" active-class="is-active">
         {{ t('publicNav.contact') }}
       </RouterLink>

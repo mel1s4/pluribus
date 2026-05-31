@@ -4,6 +4,7 @@ import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Title from '../../atoms/Title.vue'
+import CommunityHubTabs from '../../components/App/CommunityHubTabs.vue'
 import { t } from '../../i18n/i18n'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { hasCapability } from '../../composables/useCapabilities'
@@ -95,6 +96,7 @@ function goLogin() {
     <p v-if="loadError" class="community-microsite__error" role="alert">{{ loadError }}</p>
     <p v-else-if="loading" class="community-microsite__muted">{{ t('communityMicrosite.loading') }}</p>
     <template v-else-if="community">
+      <CommunityHubTabs class="community-microsite__tabs" :slug="slug" :is-member="isMember" />
       <header class="community-microsite__hero">
         <img
           v-if="community.logo_url"
@@ -110,6 +112,16 @@ function goLogin() {
           </RouterLink>
         </p>
       </header>
+
+      <Card v-if="isMember" class="community-microsite__card">
+        <h2 class="community-microsite__h2">{{ t('communityMicrosite.projectsTitle') }}</h2>
+        <p class="community-microsite__hint">{{ t('communityMicrosite.projectsHint') }}</p>
+        <p class="community-microsite__creditsLink">
+          <RouterLink class="community-microsite__link" :to="{ name: 'communityProjects', params: { slug } }">
+            {{ t('communityMicrosite.projectsLink') }}
+          </RouterLink>
+        </p>
+      </Card>
 
       <Card class="community-microsite__card">
         <h2 class="community-microsite__h2">{{ t('communityMicrosite.creditsTitle') }}</h2>
@@ -188,6 +200,9 @@ function goLogin() {
   max-width: 720px;
   margin: 0 auto;
   padding: 1.5rem 1rem 2.5rem;
+}
+.community-microsite__tabs {
+  margin-bottom: 0.75rem;
 }
 .community-microsite__hero {
   margin-bottom: 1.5rem;

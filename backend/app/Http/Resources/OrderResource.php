@@ -21,6 +21,9 @@ class OrderResource extends JsonResource
             'order_number' => $this->order_number,
             'status' => $this->status,
             'total_amount' => (string) $this->total_amount,
+            'community_id' => $this->community_id,
+            'payment_method' => $this->payment_method,
+            'wallet_settled_at' => $this->wallet_settled_at?->toIso8601String(),
             'notes' => $this->notes,
             'place_subtotal' => $this->when(
                 $this->resource->getAttribute('place_subtotal') !== null,

@@ -56,12 +56,12 @@ final class WalletLedgerVerifier
         }
 
         $pub = base64_decode($publicKeyBase64, true);
-        if ($pub === false || strlen($pub) !== SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
+        if ($pub === false || strlen($pub) !== \SODIUM_CRYPTO_SIGN_PUBLICKEYBYTES) {
             return false;
         }
 
         $sig = base64_decode((string) $block->operator_signature, true);
-        if ($sig === false || strlen($sig) !== SODIUM_CRYPTO_SIGN_BYTES) {
+        if ($sig === false || strlen($sig) !== \SODIUM_CRYPTO_SIGN_BYTES) {
             return false;
         }
 

@@ -233,4 +233,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Wallet::class);
     }
+
+    /**
+     * @return HasMany<CommunityProject, $this>
+     */
+    public function proposedCommunityProjects(): HasMany
+    {
+        return $this->hasMany(CommunityProject::class, 'proposer_id');
+    }
+
+    /**
+     * @return HasMany<ProjectArgument, $this>
+     */
+    public function projectArguments(): HasMany
+    {
+        return $this->hasMany(ProjectArgument::class, 'author_id');
+    }
 }

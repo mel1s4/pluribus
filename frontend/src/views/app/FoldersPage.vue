@@ -1,23 +1,31 @@
 <script setup>
 import { computed, onMounted, reactive, ref, unref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import FolderCard from '../../molecules/FolderCard.vue'
 import FolderIconPicker from '../../molecules/FolderIconPicker.vue'
+import ChatIconPicker from '../../molecules/ChatIconPicker.vue'
+import ChatColorPicker from '../../molecules/ChatColorPicker.vue'
+import FolderNoteCreateDialog from '../../molecules/FolderNoteCreateDialog.vue'
 import FolderShareDialog from '../../molecules/FolderShareDialog.vue'
 import ViewModeSwitcher from '../../molecules/ViewModeSwitcher.vue'
 import FolderTree from '../../organisms/FolderTree.vue'
 import FolderSearchPanel from '../../organisms/FolderSearchPanel.vue'
+import FolderUnfiledSection from '../../organisms/FolderUnfiledSection.vue'
+import { useChatUnread } from '../../composables/useChatUnread.js'
+import { unwrapList } from '../../composables/useFolderExplorerContent.js'
 import { useFolders } from '../../composables/useFolders.js'
 import { useDragDrop } from '../../composables/useDragDrop.js'
 import { useFolderSearch } from '../../composables/useFolderSearch.js'
 import { useChatMemberPicker } from '../../composables/useChatMemberPicker.js'
 import { t } from '../../i18n/i18n'
-import { bulkMoveFolderItems, createChat, fetchChats } from '../../services/chatApi.js'
-import { createTask, fetchTasks } from '../../services/contentApi.js'
-import { shareFolderWithGroup, unshareFolderWithGroup } from '../../services/chatApi.js'
+import { bulkMoveFolderItems, createChat, fetchChats, shareFolderWithGroup, unshareFolderWithGroup } from '../../services/chatApi.js'
+import { fetchNotes } from '../../services/notesApi.js'
+import { createTask, fetchCalendars, fetchGroups, fetchTasks } from '../../services/contentApi.js'
 
 const router = useRouter()
+const route = useRoute()
+const { hydrateFromChats } = useChatUnread()
 const {
   folders,
   folderTree,
@@ -29,8 +37,13 @@ const {
 
 const chats = ref([])
 const tasks = ref([])
+const notes = ref([])
+const calendars = ref([])
+const taskSidebarGroups = ref([])
 
 const viewMode = ref(/** @type {'list'|'grid'|'tree'} */ ('grid'))
+
+const unfiledFocusKind = computed(() => String(route.query.focus || ''))
 const expandedIds = reactive(/** @type {Record<number, boolean>} */ ({}))
 
 const drag = useDragDrop()
@@ -43,22 +56,28 @@ const {
   folders: folderSearchFolders,
   chats: folderSearchChats,
   tasks: folderSearchTasks,
+  notes: folderSearchNotes,
   recentQueries: folderSearchRecentQueries,
   pushRecent: pushFolderSearchRecent,
 } = useFolderSearch()
 
-function unwrapList(payload) {
-  if (!payload || typeof payload !== 'object') return []
-  if (Array.isArray(payload)) return payload
-  if (Array.isArray(payload.data)) return payload.data
-  return []
-}
-
 async function loadAll() {
   await loadFolders()
-  const [chRes, tkRes] = await Promise.all([fetchChats(), fetchTasks()])
-  if (chRes.ok) chats.value = unwrapList(chRes.data)
+  const [chRes, tkRes, ntRes, calsRes, groupsRes] = await Promise.all([
+    fetchChats(),
+    fetchTasks(),
+    fetchNotes(),
+    fetchCalendars(),
+    fetchGroups(),
+  ])
+  if (chRes.ok) {
+    chats.value = unwrapList(chRes.data)
+    hydrateFromChats(chats.value)
+  }
   if (tkRes.ok) tasks.value = unwrapList(tkRes.data)
+  if (ntRes.ok) notes.value = unwrapList(ntRes.data)
+  if (calsRes.ok) calendars.value = unwrapList(calsRes.data)
+  if (groupsRes.ok) taskSidebarGroups.value = unwrapList(groupsRes.data)
 }
 
 const rootFolders = computed(() =>
@@ -76,15 +95,22 @@ const countsByFolder = computed(() => {
   for (const c of chats.value) {
     const fid = c.folder_id != null ? Number(c.folder_id) : null
     if (fid == null) continue
-    const cur = m.get(fid) || { chats: 0, tasks: 0 }
+    const cur = m.get(fid) || { chats: 0, tasks: 0, notes: 0 }
     cur.chats += 1
     m.set(fid, cur)
   }
   for (const tk of tasks.value) {
     const fid = tk.folder_id != null ? Number(tk.folder_id) : null
     if (fid == null) continue
-    const cur = m.get(fid) || { chats: 0, tasks: 0 }
+    const cur = m.get(fid) || { chats: 0, tasks: 0, notes: 0 }
     cur.tasks += 1
+    m.set(fid, cur)
+  }
+  for (const n of notes.value) {
+    const fid = n.folder_id != null ? Number(n.folder_id) : null
+    if (fid == null) continue
+    const cur = m.get(fid) || { chats: 0, tasks: 0, notes: 0 }
+    cur.notes += 1
     m.set(fid, cur)
   }
   return m
@@ -94,6 +120,7 @@ const totals = computed(() => ({
   folders: folders.value.length,
   chats: chats.value.length,
   tasks: tasks.value.length,
+  notes: notes.value.length,
 }))
 
 const createDialogRef = ref(null)
@@ -119,6 +146,8 @@ const chatDialogRef = ref(null)
 const chatForm = reactive({
   title: '',
   folder_id: null,
+  icon_emoji: '💬',
+  icon_bg_color: '#2563eb',
 })
 const {
   memberSearchQuery,
@@ -147,6 +176,8 @@ const taskForm = reactive({
 const shareDialogRef = ref(null)
 const shareDialogOpen = ref(false)
 const shareFolder = ref(null)
+
+const noteDialogRef = ref(null)
 
 function openFolder(f) {
   router.push({ name: 'folderDetail', params: { folderId: f.id } })
@@ -283,7 +314,12 @@ function onSearchOpenChat(id) {
 
 function onSearchOpenTask() {
   pushFolderSearchRecent(unref(folderSearchQuery))
-  router.push({ name: 'tasks' })
+  router.push({ name: 'folders', query: { focus: 'tasks' } })
+}
+
+function onSearchOpenNote(id) {
+  pushFolderSearchRecent(unref(folderSearchQuery))
+  router.push({ name: 'noteDetail', params: { noteId: id } })
 }
 
 function onPickRecent(q) {
@@ -300,6 +336,8 @@ function onChatDialogBackdrop(e) {
 async function openNewChatDialog() {
   chatForm.title = ''
   chatForm.folder_id = null
+  chatForm.icon_emoji = '💬'
+  chatForm.icon_bg_color = '#2563eb'
   resetMemberPicker()
   await loadGroups()
   chatDialogRef.value?.showModal()
@@ -346,11 +384,17 @@ async function submitCreateChat() {
     folder_id: chatForm.folder_id,
     member_ids: selectedMembers.value.map((member) => Number(member.id)).filter((id) => Number.isFinite(id)),
   }
+  if (chatForm.icon_emoji?.trim()) payload.icon_emoji = chatForm.icon_emoji.trim()
+  if (chatForm.icon_bg_color && /^#[0-9A-Fa-f]{6}$/.test(chatForm.icon_bg_color)) {
+    payload.icon_bg_color = chatForm.icon_bg_color
+  }
   const res = await createChat(payload)
   if (!res.ok) return
   chatDialogRef.value?.close()
   chatForm.title = ''
   chatForm.folder_id = null
+  chatForm.icon_emoji = '💬'
+  chatForm.icon_bg_color = '#2563eb'
   resetMemberPicker()
   await loadAll()
   const id = res.data?.chat?.id
@@ -374,6 +418,15 @@ async function submitCreateTask() {
   await loadAll()
 }
 
+function openNewNoteDialog() {
+  noteDialogRef.value?.showModal()
+}
+
+async function onNoteCreated(id) {
+  await loadAll()
+  if (id != null) router.push({ name: 'noteDetail', params: { noteId: id } })
+}
+
 onMounted(async () => {
   await loadAll()
   for (const f of folders.value) {
@@ -389,7 +442,7 @@ onMounted(async () => {
         <h1 class="folders-page__title">{{ t('folders.title') }}</h1>
         <p class="folders-page__subline" role="status">
           <span class="folders-page__counts">
-            {{ totals.folders }} {{ t('folders.stats.foldersShort') }} · {{ totals.chats }} {{ t('folders.stats.chatsShort') }} · {{ totals.tasks }} {{ t('folders.stats.tasksShort') }}
+            {{ totals.folders }} {{ t('folders.stats.foldersShort') }} · {{ totals.chats }} {{ t('folders.stats.chatsShort') }} · {{ totals.tasks }} {{ t('folders.stats.tasksShort') }} · {{ totals.notes }} {{ t('folders.stats.notesShort') }}
           </span>
           <span class="folders-page__sublineSep" aria-hidden="true">·</span>
           <span class="folders-page__tagline">{{ t('folders.introShort') }}</span>
@@ -399,6 +452,15 @@ onMounted(async () => {
         <Button size="sm" @click="createDialogRef.showModal()">+ {{ t('folders.createNew') }}</Button>
         <Button size="sm" variant="secondary" @click="openNewChatDialog">+ {{ t('folders.newChat') }}</Button>
         <Button size="sm" variant="secondary" @click="taskDialogRef.showModal()">+ {{ t('folders.newTask') }}</Button>
+        <Button
+          size="sm"
+          variant="secondary"
+          :disabled="!folders.length"
+          :title="!folders.length ? t('folders.newNoteNeedFolder') : undefined"
+          @click="openNewNoteDialog"
+        >
+          + {{ t('folders.newNote') }}
+        </Button>
       </div>
     </header>
 
@@ -410,12 +472,14 @@ onMounted(async () => {
         :folders="folderSearchFolders"
         :chats="folderSearchChats"
         :tasks="folderSearchTasks"
+        :notes="folderSearchNotes"
         :recent-queries="folderSearchRecentQueries"
         class="folders-page__searchPanel"
         @pick-recent="onPickRecent"
         @open-folder="onSearchOpenFolder"
         @open-chat="onSearchOpenChat"
         @open-task="onSearchOpenTask"
+        @open-note="onSearchOpenNote"
       />
       <ViewModeSwitcher v-model="viewMode" />
     </div>
@@ -461,6 +525,7 @@ onMounted(async () => {
             :is-drop-over="drag.dragOverTargetId === String(f.id)"
             :chat-count="countsByFolder.get(Number(f.id))?.chats ?? 0"
             :task-count="countsByFolder.get(Number(f.id))?.tasks ?? 0"
+            :note-count="countsByFolder.get(Number(f.id))?.notes ?? 0"
             @open="openFolder"
             @menu="onFolderMenu"
             @dragstart="startFolderDrag(f, $event)"
@@ -475,6 +540,19 @@ onMounted(async () => {
         <p class="folders-page__dropHint">{{ t('folders.dragDrop.dropHereRootShort') }}</p>
       </div>
     </div>
+
+    <FolderUnfiledSection
+      v-if="viewMode === 'list' || viewMode === 'grid'"
+      :focus-kind="unfiledFocusKind"
+      :chats="chats"
+      :tasks="tasks"
+      :notes="notes"
+      :folders="folders"
+      :view-mode="viewMode === 'list' ? 'list' : 'grid'"
+      :calendars="calendars"
+      :groups="taskSidebarGroups"
+      @refresh="loadAll"
+    />
 
     <dialog ref="createDialogRef" class="folders-page__dialog" @click="onCreateBackdrop">
       <form class="folders-page__dialogPanel" @submit.prevent="submitCreate" @click.stop>
@@ -537,6 +615,14 @@ onMounted(async () => {
             <option v-for="x in folders" :key="x.id" :value="Number(x.id)">{{ x.name }}</option>
           </select>
         </label>
+        <div class="folders-page__field">
+          <span class="folders-page__fieldLabel">{{ t('chats.info.editIcon') }}</span>
+          <ChatIconPicker v-model="chatForm.icon_emoji" />
+        </div>
+        <div class="folders-page__field">
+          <span class="folders-page__fieldLabel">{{ t('chats.info.editColor') }}</span>
+          <ChatColorPicker v-model="chatForm.icon_bg_color" />
+        </div>
         <div class="folders-page__field folders-page__field--groups">
           <span id="folders-chat-groups-label" class="folders-page__fieldLabel">{{ t('chats.modal.groupsLabel') }}</span>
           <p class="folders-page__groupHint">{{ t('chats.modal.groupsHint') }}</p>
@@ -656,6 +742,13 @@ onMounted(async () => {
       @close="closeShareDialog"
       @share="handleFolderShare"
       @unshare="handleFolderUnshare"
+    />
+
+    <FolderNoteCreateDialog
+      ref="noteDialogRef"
+      :lock-folder="false"
+      :folders="folders"
+      @created="onNoteCreated"
     />
   </section>
 </template>

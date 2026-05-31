@@ -29,6 +29,26 @@ class PasswordResetController extends Controller
 
         $user = $this->findUserByEmail($email);
 
+        // #region agent log
+        $debugLog = static function (string $hypothesisId, string $location, string $message, array $data = []): void {
+            $payload = json_encode([
+                'sessionId' => '3019ec',
+                'hypothesisId' => $hypothesisId,
+                'location' => $location,
+                'message' => $message,
+                'data' => $data,
+                'timestamp' => (int) (microtime(true) * 1000),
+            ], JSON_THROW_ON_ERROR);
+            @file_put_contents(base_path('../.cursor/debug-3019ec.log'), $payload."\n", FILE_APPEND);
+            Log::info('debug.password_reset', ['hypothesisId' => $hypothesisId, 'location' => $location, 'message' => $message, 'data' => $data]);
+        };
+        $debugLog('A', 'PasswordResetController::request', 'forgot-password request received', [
+            'mailer' => config('mail.default'),
+            'queue' => config('queue.default'),
+            'user_found' => $user instanceof User,
+        ]);
+        // #endregion
+
         // Branchless-ish: always perform a hash to keep timing roughly even
         // between known and unknown email paths and avoid leaking enumeration.
         PasswordResetToken::hashPlainToken(Str::random(64));
@@ -56,14 +76,26 @@ class PasswordResetController extends Controller
                 .'/reset-password/'.$plainToken;
 
             try {
-                Mail::to($user->email)->queue(new PasswordResetMail(
+                Mail::to($user->email)->send(new PasswordResetMail(
                     $resetUrl,
                     self::EXPIRES_IN_MINUTES,
                     $ip,
                 ));
+                // #region agent log
+                $debugLog('C', 'PasswordResetController::request', 'password reset mail sent', [
+                    'user_id' => $user->id,
+                ]);
+                // #endregion
             } catch (\Throwable $e) {
                 report($e);
-                Log::warning('auth.password_reset.mail_queue_failed', [
+                // #region agent log
+                $debugLog('C', 'PasswordResetController::request', 'password reset mail failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                    'class' => $e::class,
+                ]);
+                // #endregion
+                Log::warning('auth.password_reset.mail_send_failed', [
                     'user_id' => $user->id,
                     'email' => $user->email,
                     'exception' => $e->getMessage(),
@@ -128,14 +160,14 @@ class PasswordResetController extends Controller
         event(new PasswordReset($user));
 
         try {
-            Mail::to($user->email)->queue(new PasswordChangedMail(
+            Mail::to($user->email)->send(new PasswordChangedMail(
                 $request->ip(),
                 Str::limit((string) $request->userAgent(), 200, ''),
                 now()->toIso8601String(),
             ));
         } catch (\Throwable $e) {
             report($e);
-            Log::warning('auth.password_changed.mail_queue_failed', [
+            Log::warning('auth.password_changed.mail_send_failed', [
                 'user_id' => $user->id,
                 'email' => $user->email,
                 'exception' => $e->getMessage(),

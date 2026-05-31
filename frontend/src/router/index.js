@@ -12,6 +12,7 @@ const HomeView = () => import('../views/public/Home.vue')
 const LoginView = () => import('../views/public/Login.vue')
 const ContactView = () => import('../views/public/Contact.vue')
 const LegalView = () => import('../views/public/Legal.vue')
+const CommunityLegalPublicView = () => import('../views/public/CommunityLegalPublicPage.vue')
 const JoinInvitationView = () => import('../views/public/JoinInvitation.vue')
 const VisitorAuthConsumeView = () => import('../views/public/VisitorAuthConsume.vue')
 const ForgotPasswordView = () => import('../views/public/ForgotPassword.vue')
@@ -19,15 +20,13 @@ const ResetPasswordView = () => import('../views/public/ResetPassword.vue')
 const TableAccessView = () => import('../views/public/TableAccessPage.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
-const ChatsView = () => import('../views/app/ChatsPage.vue')
 const MyContactsPage = () => import('../views/app/MyContactsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
 const ChatInfoPage = () => import('../views/app/ChatInfoPage.vue')
-const FolderPage = () => import('../views/app/ChatFolderPage.vue')
-const MapView = () => import('../views/app/MapView.vue')
-const TasksPage = () => import('../views/app/TasksPage.vue')
+const MapPage = () => import('../views/public/MapPage.vue')
 const FoldersPage = () => import('../views/app/FoldersPage.vue')
 const FolderDetailPage = () => import('../views/app/FolderDetailPage.vue')
+const NoteDetailPage = () => import('../views/app/NoteDetailPage.vue')
 const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
 const PostDetailPage = () => import('../views/app/PostDetailPage.vue')
@@ -51,9 +50,13 @@ const PlaceTableDetailPage = () => import('../views/app/PlaceTableDetailPage.vue
 const PlaceLiveOrdersPage = () => import('../views/app/PlaceLiveOrdersPage.vue')
 const PlaceOrderDetailPage = () => import('../views/app/PlaceOrderDetailPage.vue')
 const PlaceOfferCreatePage = () => import('../views/app/PlaceOfferCreatePage.vue')
+const PlaceOfferEditPage = () => import('../views/app/PlaceOfferEditPage.vue')
 const CommunitySettingsPage = () => import('../views/app/CommunitySettingsPage.vue')
 const CommunityMicrositePage = () => import('../views/app/CommunityMicrositePage.vue')
 const CommunityCreditsPage = () => import('../views/app/CommunityCreditsPage.vue')
+const CommunityProjectsPage = () => import('../views/app/CommunityProjectsPage.vue')
+const CommunityProjectDetailPage = () => import('../views/app/CommunityProjectDetailPage.vue')
+const MyProjectsPage = () => import('../views/app/MyProjectsPage.vue')
 const CommunityMembershipManagementPage = () =>
   import('../views/app/CommunityMembershipManagementPage.vue')
 const CommunitiesPage = () => import('../views/app/CommunitiesPage.vue')
@@ -82,6 +85,15 @@ const routes = [
     component: ContactView,
     meta: {
       layout: 'public',
+    },
+  },
+  {
+    path: '/legal/community/:communitySlug([a-z0-9-]+)/:document(terms|privacy)',
+    name: 'communityLegalPublic',
+    component: CommunityLegalPublicView,
+    meta: {
+      layout: 'public',
+      headerTitleKey: 'communityLegalPublic.headerTitle',
     },
   },
   {
@@ -153,7 +165,7 @@ const routes = [
     },
   },
   {
-    path: '/:communitySlug([a-z0-9-]+)/dashboard',
+    path: '/community/:communitySlug([a-z0-9-]+)/dashboard',
     name: 'dashboardScoped',
     component: DashboardView,
     meta: {
@@ -162,6 +174,20 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'dashboard.title',
       sidebarKey: 'dashboard',
+    },
+  },
+  {
+    path: '/:communitySlug([a-z0-9-]+)/dashboard',
+    name: 'dashboardScopedLegacy',
+    redirect: (to) => ({
+      name: 'dashboardScoped',
+      params: { communitySlug: to.params.communitySlug },
+      query: to.query,
+      hash: to.hash,
+    }),
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
     },
   },
   {
@@ -186,6 +212,15 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'dashboard.title',
       sidebarKey: 'dashboard',
+    },
+  },
+  {
+    path: '/community/dashboard',
+    name: 'dashboardCommunityLegacy',
+    redirect: () => ({ name: 'dashboard' }),
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
     },
   },
   {
@@ -216,7 +251,7 @@ const routes = [
   {
     path: '/chats',
     name: 'chats',
-    component: ChatsView,
+    redirect: () => ({ name: 'folders' }),
     meta: {
       layout: 'app',
       requiresAuth: true,
@@ -240,7 +275,7 @@ const routes = [
   {
     path: '/chats/folder/:folderId',
     name: 'chatFolder',
-    component: FolderPage,
+    redirect: (to) => ({ name: 'folderDetail', params: { folderId: to.params.folderId } }),
     meta: {
       layout: 'app',
       requiresAuth: true,
@@ -273,11 +308,9 @@ const routes = [
   {
     path: '/map/:placeId?/:tab?',
     name: 'map',
-    component: MapView,
+    component: MapPage,
     meta: {
-      layout: 'app',
-      requiresAuth: true,
-      hideHeader: false,
+      layout: 'public',
       headerTitleKey: 'map.title',
       sidebarKey: 'map',
     },
@@ -285,7 +318,7 @@ const routes = [
   {
     path: '/tasks',
     name: 'tasks',
-    component: TasksPage,
+    redirect: () => ({ name: 'folders', query: { focus: 'tasks' } }),
     meta: {
       layout: 'app',
       requiresAuth: true,
@@ -315,6 +348,18 @@ const routes = [
       requiresAuth: true,
       hideHeader: false,
       headerTitleKey: 'folders.detail',
+      sidebarKey: 'folders',
+    },
+  },
+  {
+    path: '/notes/:noteId',
+    name: 'noteDetail',
+    component: NoteDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'notes.detailTitle',
       sidebarKey: 'folders',
     },
   },
@@ -494,6 +539,52 @@ const routes = [
       requiresAuth: false,
       hideHeader: false,
       headerTitleKey: 'communityCredits.pageTitle',
+    },
+  },
+  {
+    path: '/my-projects',
+    name: 'myProjects',
+    component: MyProjectsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'communityProjects.myProjectsTitle',
+      sidebarKey: 'my-projects',
+    },
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)/projects/:projectId(\\d+)',
+    name: 'communityProjectDetail',
+    component: CommunityProjectDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'communityProjects.detailTitle',
+    },
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)/projects',
+    name: 'communityProjects',
+    component: CommunityProjectsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: false,
+      hideHeader: false,
+      headerTitleKey: 'communityProjects.listTitle',
+    },
+  },
+  {
+    path: '/community/:slug([a-z0-9-]+)/settings/:tab?',
+    name: 'communitySettingsBySlug',
+    component: CommunitySettingsPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'communitySettings.title',
+      sidebarKey: 'community-settings',
     },
   },
   {
@@ -762,6 +853,17 @@ const routes = [
     },
   },
   {
+    path: '/my-places/:placeId/offers/:offerId/edit',
+    name: 'placeOfferEdit',
+    component: PlaceOfferEditPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'myPlaces.editOfferPageTitle',
+    },
+  },
+  {
     path: '/my-places/:placeId/live-orders',
     name: 'placeLiveOrders',
     component: PlaceLiveOrdersPage,
@@ -942,6 +1044,9 @@ router.beforeEach(async (to) => {
       'walletMovementScoped',
       'communityMicrosite',
       'communityCredits',
+      'communityProjects',
+      'communityProjectDetail',
+      'myProjects',
       'communityMemberships',
       'communities',
       'communitiesScoped',
@@ -949,6 +1054,7 @@ router.beforeEach(async (to) => {
       'communityEdit',
       'communityCreateScoped',
       'communityEditScoped',
+      'map',
     ].includes(String(to.name || ''))
   ) {
     return { name: 'myCommunities' }
@@ -963,6 +1069,7 @@ router.beforeEach(async (to) => {
       'placePublic',
       'communityMicrosite',
       'communityCredits',
+      'communityProjects',
       'cart',
       'orders',
       'orderDetail',

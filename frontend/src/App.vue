@@ -38,7 +38,11 @@ watch(
       return route.params.communitySlug.trim()
     }
     if (
-      (name === 'communityMicrosite' || name === 'communityMemberships')
+      (name === 'communityMicrosite'
+        || name === 'communityMemberships'
+        || name === 'communityProjects'
+        || name === 'communityProjectDetail'
+        || name === 'communitySettingsBySlug')
       && typeof route.params.slug === 'string'
     ) {
       return route.params.slug.trim()

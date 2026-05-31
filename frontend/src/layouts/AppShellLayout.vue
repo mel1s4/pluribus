@@ -3,15 +3,10 @@
     class="app-shell"
     :class="{
       'app-shell--hasHeader': showHeader,
-      'app-shell--chromeHidden': showHeader && !chromeVisible,
       'app-shell--mobileTopPad': showMobileTopPadding,
     }"
   >
-    <div
-      v-if="showHeader"
-      class="app-shell__headerWrap"
-      :class="{ 'is-chrome-hidden': !chromeVisible }"
-    >
+    <div v-if="showHeader" class="app-shell__headerWrap">
       <AppHeader />
     </div>
 
@@ -31,11 +26,7 @@
       </main>
     </div>
 
-    <div
-      v-if="showHeader"
-      class="app-shell__bottomNav"
-      :class="{ 'is-chrome-hidden': !chromeVisible }"
-    >
+    <div v-if="showHeader" class="app-shell__bottomNav">
       <QuickNav placement="bottom" />
     </div>
 
@@ -60,7 +51,6 @@ import PersonificationBanner from '../components/App/PersonificationBanner.vue'
 import Sidebar from '../components/App/Sidebar.vue'
 import { useAppShell } from '../composables/useAppShell'
 import { useDesktopViewport } from '../composables/useDesktopViewport'
-import { useMobileChromeScroll } from '../composables/useMobileChromeScroll'
 import { sessionStatus } from '../composables/useSession'
 
 const route = useRoute()
@@ -73,7 +63,6 @@ const CART_FAB_ROUTE_NAMES = new Set(['placePublic', 'placeView'])
 const showCartFab = computed(() => CART_FAB_ROUTE_NAMES.has(String(route.name || '')))
 
 const showHeader = computed(() => !route.meta?.hideHeader)
-const { chromeVisible } = useMobileChromeScroll(showHeader)
 
 /** Mobile fixed header only when title/actions strip is shown (menu is in bottom bar). */
 const showMobileTopPadding = computed(() => {
@@ -111,12 +100,7 @@ watch(
     left: 0;
     right: 0;
     z-index: 35;
-    transition: transform 0.22s ease;
     background: var(--bg);
-
-    &.is-chrome-hidden {
-      transform: translateY(-100%);
-    }
   }
 }
 
@@ -130,11 +114,6 @@ watch(
     right: 0;
     bottom: 0;
     z-index: 35;
-    transition: transform 0.22s ease;
-
-    &.is-chrome-hidden {
-      transform: translateY(100%);
-    }
   }
 }
 
@@ -152,21 +131,16 @@ watch(
 }
 
 @media (max-width: 1023px) {
-  .app-shell--hasHeader:not(.app-shell--chromeHidden).app-shell--mobileTopPad .app-shell__content {
+  .app-shell--hasHeader.app-shell--mobileTopPad .app-shell__content {
     padding-top: 57px;
   }
 
-  .app-shell--hasHeader:not(.app-shell--mobileTopPad) .app-shell__content,
-  .app-shell--hasHeader.app-shell--chromeHidden .app-shell__content {
+  .app-shell--hasHeader:not(.app-shell--mobileTopPad) .app-shell__content {
     padding-top: 0;
   }
 
-  .app-shell--hasHeader:not(.app-shell--chromeHidden) .app-shell__main {
+  .app-shell--hasHeader .app-shell__main {
     padding-bottom: calc(3.25rem + env(safe-area-inset-bottom, 0px));
-  }
-
-  .app-shell--hasHeader.app-shell--chromeHidden .app-shell__main {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
 

@@ -6,6 +6,7 @@ import Title from '../../atoms/Title.vue'
 import { useActiveCommunity } from '../../composables/useActiveCommunity.js'
 import { useWalletCommunityScope } from '../../composables/useWalletCommunityScope.js'
 import { t } from '../../i18n/i18n'
+import { walletCurrencyDisplayLine } from '../../utils/walletCurrencyDisplay.js'
 import { fetchWalletTransaction } from '../../services/walletApi.js'
 
 const route = useRoute()
@@ -13,6 +14,7 @@ const { withCommunityPath } = useActiveCommunity()
 const { memberships, showCommunityPicker, communityScope, communityIdNum } = useWalletCommunityScope()
 
 const tx = ref(null)
+const currencyLine = ref('')
 const loading = ref(false)
 const error = ref('')
 
@@ -38,6 +40,7 @@ async function load() {
   if (!cid || !tid) return
   loading.value = true
   error.value = ''
+  currencyLine.value = ''
   tx.value = null
   const res = await fetchWalletTransaction(cid, tid)
   loading.value = false
@@ -45,6 +48,15 @@ async function load() {
     error.value =
       res.status === 404 ? t('wallet.movementNotFound') : t('wallet.movementLoadError', { status: res.status })
     return
+  }
+  const cur = res.data?.currency
+  if (cur && typeof cur === 'object') {
+    currencyLine.value = walletCurrencyDisplayLine(
+      typeof cur.name === 'string' ? cur.name : '',
+      typeof cur.code === 'string' ? cur.code : '',
+    )
+  } else {
+    currencyLine.value = ''
   }
   const row = res.data?.transaction
   tx.value = row && typeof row === 'object' ? row : null
@@ -66,6 +78,7 @@ watch(
   <section class="wallet-app wallet-app--movement">
     <PageToolbarTitle route-key="my-wallet">
       <Title tag="h1">{{ t('wallet.movementDetailTitle') }}</Title>
+      <p v-if="currencyLine && tx" class="wallet-app__currency-line">{{ currencyLine }}</p>
     </PageToolbarTitle>
 
     <p class="wallet-app__back">
@@ -125,6 +138,13 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+}
+
+.wallet-app__currency-line {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-muted, #71717a);
 }
 
 .wallet-app__back {

@@ -1,12 +1,17 @@
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import Button from '../../atoms/Button.vue'
 import { t } from '../../i18n/i18n'
+import { walletCurrencyDisplayLine } from '../../utils/walletCurrencyDisplay.js'
 import { postWalletTransfer } from '../../services/walletApi.js'
 
 const props = defineProps({
   communityId: { type: Number, required: true },
+  currencyName: { type: String, default: '' },
+  currencyCode: { type: String, default: '' },
 })
+
+const currencyLine = computed(() => walletCurrencyDisplayLine(props.currencyName, props.currencyCode))
 
 const emit = defineEmits(['sent'])
 
@@ -47,6 +52,7 @@ async function submit() {
 <template>
   <section class="wallet-send-form">
     <h2 class="wallet-send-form__title">{{ t('wallet.sendHeading') }}</h2>
+    <p v-if="currencyLine" class="wallet-send-form__currency">{{ currencyLine }}</p>
     <form class="wallet-send-form__form" @submit.prevent="submit">
       <label class="wallet-send-form__label">
         {{ t('wallet.recipientEmail') }}
@@ -86,6 +92,13 @@ async function submit() {
   font-weight: 800;
   margin: 0 0 0.85rem;
   letter-spacing: -0.02em;
+}
+
+.wallet-send-form__currency {
+  margin: -0.5rem 0 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-muted, #71717a);
 }
 
 .wallet-send-form__form {

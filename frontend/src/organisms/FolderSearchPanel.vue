@@ -27,13 +27,17 @@ defineProps({
     type: Array,
     default: () => [],
   },
+  notes: {
+    type: Array,
+    default: () => [],
+  },
   recentQueries: {
     type: Array,
     default: () => [],
   },
 })
 
-const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'openFolder', 'openChat', 'openTask'])
+const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'openFolder', 'openChat', 'openTask', 'openNote'])
 </script>
 
 <template>
@@ -83,6 +87,14 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
         :aria-selected="filterType === 'task'"
         @click="emit('update:filterType', 'task')"
       >{{ t('folders.filterTasks') }}</button>
+      <button
+        type="button"
+        role="tab"
+        class="folder-search-panel__tab"
+        :class="{ 'is-active': filterType === 'note' }"
+        :aria-selected="filterType === 'note'"
+        @click="emit('update:filterType', 'note')"
+      >{{ t('folders.filterNotes') }}</button>
     </div>
     <div v-if="recentQueries.length && !query.trim()" class="folder-search-panel__recent">
       <span class="folder-search-panel__recentLabel">{{ t('folders.recentSearches') }}</span>
@@ -127,7 +139,17 @@ const emit = defineEmits(['update:query', 'update:filterType', 'pickRecent', 'op
           </li>
         </ul>
       </div>
-      <p v-if="!loading && !folders.length && !chats.length && !tasks.length" class="folder-search-panel__empty">
+      <div v-if="notes.length" class="folder-search-panel__block">
+        <h3 class="folder-search-panel__h">{{ t('folders.searchNotesHeading') }}</h3>
+        <ul class="folder-search-panel__list">
+          <li v-for="n in notes" :key="'n-' + n.id">
+            <button type="button" class="folder-search-panel__hit" @click="emit('openNote', n.id)">
+              {{ n.title || t('notes.untitled') }}
+            </button>
+          </li>
+        </ul>
+      </div>
+      <p v-if="!loading && !folders.length && !chats.length && !tasks.length && !notes.length" class="folder-search-panel__empty">
         {{ t('folders.searchNoResults') }}
       </p>
     </div>

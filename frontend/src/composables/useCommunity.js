@@ -7,6 +7,14 @@ export const communityLogoUrl = ref(null)
 export const communityDefaultLanguage = ref(null)
 /** @type {import('vue').Ref<string | null>} */
 export const communityCurrencyCode = ref(null)
+/** @type {import('vue').Ref<string | null>} */
+export const communityCurrencyName = ref(null)
+/** @type {import('vue').Ref<string | null>} */
+export const communityLocalCurrencyCode = ref(null)
+/** @type {import('vue').Ref<number | null>} */
+export const communityLatitude = ref(null)
+/** @type {import('vue').Ref<number | null>} */
+export const communityLongitude = ref(null)
 
 export function useCommunity() {
   const displayName = computed(() => {
@@ -23,6 +31,10 @@ export function useCommunity() {
     communityLogoUrl,
     communityDefaultLanguage,
     communityCurrencyCode,
+    communityCurrencyName,
+    communityLocalCurrencyCode,
+    communityLatitude,
+    communityLongitude,
     displayName,
     fetchCommunityBranding,
   }
@@ -43,6 +55,10 @@ export async function fetchCommunityBranding(activeCommunitySlug) {
     communityLogoUrl.value = null
     communityDefaultLanguage.value = null
     communityCurrencyCode.value = null
+    communityCurrencyName.value = null
+    communityLocalCurrencyCode.value = null
+    communityLatitude.value = null
+    communityLongitude.value = null
     return
   }
   const c = data.community
@@ -54,4 +70,12 @@ export async function fetchCommunityBranding(activeCommunitySlug) {
   communityDefaultLanguage.value = typeof defaultLanguage === 'string' ? defaultLanguage : null
   const cur = c.currency_code
   communityCurrencyCode.value = typeof cur === 'string' && cur.trim().length ? cur.trim() : null
+  const cname = c.currency_name
+  communityCurrencyName.value = typeof cname === 'string' && cname.trim().length ? cname.trim() : null
+  const localCur = c.local_currency_code
+  communityLocalCurrencyCode.value = typeof localCur === 'string' && localCur.trim().length ? localCur.trim() : null
+  const lat = c.latitude
+  const lng = c.longitude
+  communityLatitude.value = typeof lat === 'number' && Number.isFinite(lat) ? lat : null
+  communityLongitude.value = typeof lng === 'number' && Number.isFinite(lng) ? lng : null
 }

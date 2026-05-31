@@ -23,6 +23,7 @@ class PlaceOffer extends Model
         'title',
         'description',
         'price',
+        'local_price',
         'photo_path',
         'gallery_paths',
         'tags',
@@ -37,6 +38,7 @@ class PlaceOffer extends Model
     {
         return [
             'price' => 'decimal:2',
+            'local_price' => 'decimal:2',
             'gallery_paths' => 'array',
             'tags' => 'array',
         ];

@@ -25,9 +25,11 @@ class PlaceResource extends JsonResource
         $actor = $request->user();
         $viewerRole = '';
         $canManageAdmins = false;
+        $canTransferFromPlaceWallet = false;
         if ($actor instanceof User) {
             $viewerRole = $this->resource->roleForUser($actor);
             $canManageAdmins = $viewerRole === 'owner' || $viewerRole === Place::ADMIN_ROLE_FULL_ACCESS;
+            $canTransferFromPlaceWallet = $canManageAdmins;
         }
 
         $data = [
@@ -35,6 +37,7 @@ class PlaceResource extends JsonResource
             'user_id' => $this->user_id,
             'viewer_place_role' => $viewerRole,
             'can_manage_admins' => $canManageAdmins,
+            'can_transfer_from_place_wallet' => $canTransferFromPlaceWallet,
             'name' => $this->name,
             'slug' => $this->slug,
             'is_public' => (bool) $this->is_public,

@@ -14,9 +14,25 @@ defineProps({
     type: Function,
     default: () => false,
   },
+  getChatUnread: {
+    type: Function,
+    default: () => 0,
+  },
 })
 
-const emit = defineEmits(['openChat', 'openTask', 'toggleSelect', 'dragStartChat', 'dragEndChat', 'dragStartTask', 'dragEndTask'])
+const emit = defineEmits([
+  'openChat',
+  'openTask',
+  'openNote',
+  'toggleSelect',
+  'dragStartChat',
+  'dragEndChat',
+  'dragStartTask',
+  'dragEndTask',
+  'dragStartNote',
+  'dragEndNote',
+  'menuAction',
+])
 </script>
 
 <template>
@@ -29,13 +45,15 @@ const emit = defineEmits(['openChat', 'openTask', 'toggleSelect', 'dragStartChat
         layout="grid"
         :selected="isSelected('chat', row.item.id)"
         :show-checkbox="showCheckboxes"
+        :unread-count="getChatUnread(row.item.id)"
         @open="emit('openChat', row.item)"
         @toggle-select="emit('toggleSelect', 'chat', row.item.id, $event)"
         @dragstart="emit('dragStartChat', row.item, $event)"
         @dragend="emit('dragEndChat', $event)"
+        @menu-action="emit('menuAction', $event)"
       />
       <ChatTaskItem
-        v-else
+        v-else-if="row.kind === 'task'"
         kind="task"
         :item="row.item"
         layout="grid"
@@ -45,6 +63,20 @@ const emit = defineEmits(['openChat', 'openTask', 'toggleSelect', 'dragStartChat
         @toggle-select="emit('toggleSelect', 'task', row.item.id, $event)"
         @dragstart="emit('dragStartTask', row.item, $event)"
         @dragend="emit('dragEndTask', $event)"
+        @menu-action="emit('menuAction', $event)"
+      />
+      <ChatTaskItem
+        v-else-if="row.kind === 'note'"
+        kind="note"
+        :item="row.item"
+        layout="grid"
+        :selected="isSelected('note', row.item.id)"
+        :show-checkbox="showCheckboxes"
+        @open="emit('openNote', row.item)"
+        @toggle-select="emit('toggleSelect', 'note', row.item.id, $event)"
+        @dragstart="emit('dragStartNote', row.item, $event)"
+        @dragend="emit('dragEndNote', $event)"
+        @menu-action="emit('menuAction', $event)"
       />
     </li>
   </ul>

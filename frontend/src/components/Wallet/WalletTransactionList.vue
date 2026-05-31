@@ -22,6 +22,7 @@ function directionLabel(direction) {
 
 function typeLabel(type) {
   if (type === 'grant') return t('wallet.typeGrant')
+  if (type === 'order_settlement') return t('wallet.typeOrderSettlement')
   return t('wallet.typeTransfer')
 }
 </script>

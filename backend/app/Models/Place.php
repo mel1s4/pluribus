@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Place extends Model
 {
@@ -127,6 +128,16 @@ class Place extends Model
     public function orderItems(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /**
+     * Community currency treasury for this place (one per community row).
+     *
+     * @return HasOne<Wallet, $this>
+     */
+    public function communityWallet(): HasOne
+    {
+        return $this->hasOne(Wallet::class, 'place_id');
     }
 
     /**

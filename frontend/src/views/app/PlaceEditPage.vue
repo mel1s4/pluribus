@@ -11,6 +11,7 @@ import PlaceOffersSection from '../../components/App/PlaceOffersSection.vue'
 import PlaceTablesSection from '../../components/App/PlaceTablesSection.vue'
 import PlaceRequirementsSection from '../../components/App/PlaceRequirementsSection.vue'
 import PlaceBrandLinksSection from '../../components/App/PlaceBrandLinksSection.vue'
+import PlaceWalletSection from '../../components/App/PlaceWalletSection.vue'
 import PlaceBasicsForm from '../../organisms/PlaceBasicsForm.vue'
 import { t } from '../../i18n/i18n'
 import { deletePlace, fetchPlace, updatePlace } from '../../services/placesApi.js'
@@ -40,6 +41,7 @@ const tab = computed(() => {
     || raw === 'audiences'
     || raw === 'administrators'
     || raw === 'brand'
+    || raw === 'wallet'
   ) {
     return raw
   }
@@ -135,6 +137,7 @@ watch(
       && pTab !== 'audiences'
       && pTab !== 'administrators'
       && pTab !== 'brand'
+      && pTab !== 'wallet'
     ) {
       router.replace({ name: 'placeEdit', params: { placeId: id } })
     }
@@ -269,6 +272,16 @@ load()
         <button
           type="button"
           class="place-edit-page__tab"
+          :class="{ 'is-active': tab === 'wallet' }"
+          role="tab"
+          :aria-selected="tab === 'wallet'"
+          @click="onTabClick('wallet')"
+        >
+          {{ t('myPlaces.tabWallet') }}
+        </button>
+        <button
+          type="button"
+          class="place-edit-page__tab"
           :class="{ 'is-active': tab === 'requirements' }"
           role="tab"
           :aria-selected="tab === 'requirements'"
@@ -335,6 +348,12 @@ load()
           v-else-if="tab === 'orders'"
           :place-id="place.id"
         />
+        <Card v-else-if="tab === 'wallet'" class="place-edit-page__card">
+          <PlaceWalletSection
+            :place-id="place.id"
+            :can-transfer="Boolean(place.can_transfer_from_place_wallet)"
+          />
+        </Card>
         <PlaceRequirementsSection
           v-else-if="tab === 'requirements'"
           :place-id="place.id"

@@ -17,11 +17,14 @@ import { fetchUsersPage } from '../../services/usersApi.js'
 const router = useRouter()
 const { setHeaderActions, clearHeaderActions } = useAppShell()
 
+const PER_PAGE_OPTIONS = [10, 20, 50, 100]
+
 const rows = ref([])
 const meta = ref(null)
 const listError = ref('')
 const listLoading = ref(false)
 const page = ref(1)
+const perPage = ref(20)
 
 const deletingId = ref(null)
 const deleteError = ref('')
@@ -32,10 +35,30 @@ const canEdit = computed(() => hasCapability('users.update'))
 const canPersonify = computed(() => hasCapability('users.personify'))
 const showRowActions = computed(() => canDelete.value || canEdit.value || canPersonify.value)
 
+const listSummaryLabel = computed(() => {
+  const m = meta.value
+  if (!m || typeof m.total !== 'number') {
+    return ''
+  }
+  const total = m.total
+  if (total === 0) {
+    return t('users.listTotal').replace('{total}', '0')
+  }
+  const from = m.from
+  const to = m.to
+  if (typeof from === 'number' && typeof to === 'number') {
+    return t('users.listRange')
+      .replace('{from}', String(from))
+      .replace('{to}', String(to))
+      .replace('{total}', String(total))
+  }
+  return t('users.listTotal').replace('{total}', String(total))
+})
+
 async function fetchPage(nextPage) {
   listError.value = ''
   listLoading.value = true
-  const { ok, status, data } = await fetchUsersPage(nextPage, 20)
+  const { ok, status, data } = await fetchUsersPage(nextPage, perPage.value)
   listLoading.value = false
   if (!ok) {
     listError.value =
@@ -61,6 +84,10 @@ function goNext() {
   if (typeof p === 'number' && typeof last === 'number' && p < last) {
     fetchPage(p + 1)
   }
+}
+
+function onPerPageChange() {
+  void fetchPage(1)
 }
 
 function rowDeleteDisabled(target) {
@@ -169,7 +196,24 @@ onUnmounted(() => {
       {{ t('users.loading') }}
     </div>
 
-    <div v-else-if="rows.length" class="users-list__grid">
+    <div v-if="meta && !listError" class="users-list__metaRow">
+      <span v-if="listSummaryLabel" class="users-list__summary">{{ listSummaryLabel }}</span>
+      <label class="users-list__perPage">
+        <span class="users-list__perPageLabel">{{ t('users.perPageLabel') }}</span>
+        <select
+          v-model.number="perPage"
+          class="users-list__perPageSelect"
+          :disabled="listLoading"
+          @change="onPerPageChange"
+        >
+          <option v-for="n in PER_PAGE_OPTIONS" :key="n" :value="n">
+            {{ n }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <div v-if="!listLoading && rows.length" class="users-list__grid">
       <UserCard
         v-for="u in rows"
         :key="u.id"
@@ -272,6 +316,41 @@ onUnmounted(() => {
   .users-list__grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+}
+
+.users-list__metaRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1rem;
+  margin: 0 0 1rem;
+  font-size: 0.9rem;
+  color: var(--muted, #4b5563);
+}
+
+.users-list__summary {
+  margin: 0;
+}
+
+.users-list__perPage {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.users-list__perPageLabel {
+  white-space: nowrap;
+}
+
+.users-list__perPageSelect {
+  min-width: 4.5rem;
+  padding: 0.35rem 0.5rem;
+  font-size: inherit;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 0.375rem;
+  background: var(--surface, #fff);
+  color: inherit;
 }
 
 .users-list__pager {

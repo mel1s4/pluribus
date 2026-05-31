@@ -26,6 +26,8 @@ const form = reactive({
   rules: '',
   default_language: DEFAULT_LANGUAGE,
   currency_code: '',
+  currency_name: '',
+  local_currency_code: '',
   latitude: null,
   longitude: null,
 })
@@ -128,6 +130,8 @@ async function load() {
   form.rules = c.rules ?? ''
   form.default_language = c.default_language ?? DEFAULT_LANGUAGE
   form.currency_code = typeof c.currency_code === 'string' ? c.currency_code : ''
+  form.currency_name = typeof c.currency_name === 'string' ? c.currency_name : ''
+  form.local_currency_code = typeof c.local_currency_code === 'string' ? c.local_currency_code : ''
   form.latitude = c.latitude != null && c.latitude !== '' ? Number(c.latitude) : null
   form.longitude = c.longitude != null && c.longitude !== '' ? Number(c.longitude) : null
   if (
@@ -155,6 +159,12 @@ function normalizeCurrencyInput(raw) {
   return s.slice(0, 4)
 }
 
+function normalizeCurrencyNameInput(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s.length) return null
+  return s.slice(0, 64)
+}
+
 async function saveCurrencyOnly() {
   if (!canEditCurrency.value) return
   currencySaveError.value = ''
@@ -162,6 +172,8 @@ async function saveCurrencyOnly() {
   const { ok, status, data } = await patchCommunityCurrency(
     {
       currency_code: normalizeCurrencyInput(form.currency_code),
+      currency_name: normalizeCurrencyNameInput(form.currency_name),
+      local_currency_code: form.local_currency_code.trim() === '' ? null : form.local_currency_code,
     },
     communityRequestOptions(),
   )
@@ -202,6 +214,8 @@ async function onSubmit() {
     fd.append('rules', form.rules.trim() === '' ? '' : form.rules.trim())
     fd.append('default_language', form.default_language)
     fd.append('currency_code', form.currency_code.trim() === '' ? '' : normalizeCurrencyInput(form.currency_code) ?? '')
+    fd.append('currency_name', form.currency_name.trim() === '' ? '' : normalizeCurrencyNameInput(form.currency_name) ?? '')
+    fd.append('local_currency_code', form.local_currency_code.trim() === '' ? '' : form.local_currency_code)
     if (form.latitude != null && form.longitude != null) {
       fd.append('latitude', String(form.latitude))
       fd.append('longitude', String(form.longitude))
@@ -226,6 +240,8 @@ async function onSubmit() {
       rules: form.rules.trim() === '' ? null : form.rules.trim(),
       default_language: form.default_language,
       currency_code: normalizeCurrencyInput(form.currency_code),
+      currency_name: normalizeCurrencyNameInput(form.currency_name),
+      local_currency_code: form.local_currency_code.trim() === '' ? null : form.local_currency_code,
       latitude: form.latitude,
       longitude: form.longitude,
     })
@@ -263,6 +279,9 @@ async function onSubmit() {
 
       <form class="community-settings-form-tab__form" @submit.prevent="onSubmit">
         <div class="community-settings-form-tab__fields">
+          <h3 class="community-settings-form-tab__sectionTitle">
+            {{ t('communitySettings.sectionCommunityCredits') }}
+          </h3>
           <label class="community-settings-form-tab__areaLabel" for="community-currency-code">{{
             t('communitySettings.fieldCurrency')
           }}</label>
@@ -278,6 +297,44 @@ async function onSubmit() {
           >
           <p class="community-settings-form-tab__muted community-settings-form-tab__muted--small">
             {{ t('communitySettings.currencyHelp') }}
+          </p>
+          <label class="community-settings-form-tab__areaLabel" for="community-currency-name">{{
+            t('communitySettings.fieldCurrencyName')
+          }}</label>
+          <input
+            id="community-currency-name"
+            v-model="form.currency_name"
+            class="community-settings-form-tab__currencyInput community-settings-form-tab__currencyInput--wide"
+            type="text"
+            name="community-currency-name"
+            maxlength="64"
+            :disabled="!canEditCurrency || (canEdit && saveLoading) || currencySaving"
+            :placeholder="t('communitySettings.currencyNamePlaceholder')"
+          >
+          <p class="community-settings-form-tab__muted community-settings-form-tab__muted--small">
+            {{ t('communitySettings.currencyNameHelp') }}
+          </p>
+
+          <h3 class="community-settings-form-tab__sectionTitle">
+            {{ t('communitySettings.sectionLocalCurrency') }}
+          </h3>
+          <label class="community-settings-form-tab__areaLabel" for="community-local-currency">{{
+            t('communitySettings.fieldLocalCurrency')
+          }}</label>
+          <select
+            id="community-local-currency"
+            v-model="form.local_currency_code"
+            class="community-settings-form-tab__currencyInput community-settings-form-tab__currencyInput--wide"
+            name="community-local-currency"
+            :disabled="!canEditCurrency || (canEdit && saveLoading) || currencySaving"
+          >
+            <option value="">{{ t('communitySettings.localCurrencyNone') }}</option>
+            <option value="MXN">MXN</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+          <p class="community-settings-form-tab__muted community-settings-form-tab__muted--small">
+            {{ t('communitySettings.localCurrencyHelp') }}
           </p>
           <Button
             v-if="canEditCurrency && !canEdit"
@@ -427,6 +484,16 @@ async function onSubmit() {
   font-size: 0.9rem;
 }
 
+.community-settings-form-tab__sectionTitle {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.community-settings-form-tab__sectionTitle:first-child {
+  margin-top: 0;
+}
+
 .community-settings-form-tab__textarea {
   width: 100%;
   max-width: 32rem;
@@ -456,6 +523,10 @@ async function onSubmit() {
   border: 1px solid var(--border);
   font: inherit;
   background: var(--bg);
+}
+
+.community-settings-form-tab__currencyInput--wide {
+  max-width: 32rem;
 }
 
 .community-settings-form-tab__error {

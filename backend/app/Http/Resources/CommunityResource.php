@@ -2,7 +2,6 @@
 
 namespace App\Http\Resources;
 
-use App\Support\PlaceMedia;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,26 +21,18 @@ class CommunityResource extends JsonResource
             'slug' => $this->slug,
             'description' => $this->description,
             'rules' => $this->rules,
+            'terms_markdown' => $this->terms_markdown,
+            'privacy_policy_markdown' => $this->privacy_policy_markdown,
             'logo' => $this->logo,
-            'logo_url' => $this->resolveLogoUrl($this->logo),
+            'logo_url' => $this->publicLogoUrl(),
             'default_language' => $this->default_language,
             'currency_code' => $this->currency_code,
+            'currency_name' => $this->currency_name,
+            'local_currency_code' => $this->local_currency_code,
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];
-    }
-
-    private function resolveLogoUrl(?string $logo): ?string
-    {
-        if ($logo === null || $logo === '') {
-            return null;
-        }
-        if (preg_match('#^https?://#i', $logo) === 1) {
-            return $logo;
-        }
-
-        return PlaceMedia::publicUrl($logo);
     }
 }

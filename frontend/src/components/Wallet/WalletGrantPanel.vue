@@ -9,9 +9,14 @@ const props = defineProps({
   /** When set, grant only to this member (hides email / ID field). */
   recipientUserId: { type: Number, default: null },
   recipientName: { type: String, default: '' },
+  /**
+   * When true, HTTP/API grant failures are emitted as `grantError` instead of inline text
+   * (e.g. parent shows a modal).
+   */
+  surfaceErrorsToParent: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['granted'])
+const emit = defineEmits(['granted', 'grantError'])
 
 const hasFixedRecipient = computed(
   () => props.recipientUserId != null && Number.isFinite(props.recipientUserId) && props.recipientUserId > 0,
@@ -71,7 +76,11 @@ async function submit() {
       res.data && typeof res.data === 'object' && res.data.message
         ? String(res.data.message)
         : t('wallet.grantError').replace('{status}', String(res.status))
-    error.value = msg
+    if (props.surfaceErrorsToParent) {
+      emit('grantError', { message: msg })
+    } else {
+      error.value = msg
+    }
     return
   }
   message.value = t('wallet.grantSuccess')
@@ -111,8 +120,8 @@ async function submit() {
         {{ busy ? t('wallet.granting') : t('wallet.grant') }}
       </Button>
     </form>
-    <p v-if="message" class="wallet-grant-panel__ok">{{ message }}</p>
-    <p v-if="error" class="wallet-grant-panel__err">{{ error }}</p>
+    <p v-if="message" class="wallet-grant-panel__ok" role="status">{{ message }}</p>
+    <p v-if="error" class="wallet-grant-panel__err" role="alert" aria-live="assertive">{{ error }}</p>
   </section>
 </template>
 

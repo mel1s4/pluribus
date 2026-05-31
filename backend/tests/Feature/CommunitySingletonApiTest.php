@@ -38,7 +38,18 @@ class CommunitySingletonApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('community.name', 'Riverbend Commons')
             ->assertJsonPath('community.default_language', LocaleOptions::default())
-            ->assertJsonStructure(['community' => ['name', 'logo_url', 'default_language', 'currency_code']]);
+            ->assertJsonStructure([
+                'community' => [
+                    'name',
+                    'logo_url',
+                    'default_language',
+                    'currency_code',
+                    'currency_name',
+                    'local_currency_code',
+                    'latitude',
+                    'longitude',
+                ],
+            ]);
     }
 
     public function test_authenticated_member_can_get_community(): void
@@ -49,7 +60,22 @@ class CommunitySingletonApiTest extends TestCase
 
         $this->statefulJson('GET', '/api/community')
             ->assertOk()
-            ->assertJsonStructure(['community' => ['id', 'name', 'description', 'rules', 'logo', 'logo_url', 'default_language', 'currency_code']]);
+            ->assertJsonStructure([
+                'community' => [
+                    'id',
+                    'name',
+                    'description',
+                    'rules',
+                    'terms_markdown',
+                    'privacy_policy_markdown',
+                    'logo',
+                    'logo_url',
+                    'default_language',
+                    'currency_code',
+                    'currency_name',
+                    'local_currency_code',
+                ],
+            ]);
     }
 
     public function test_root_can_patch_community(): void
@@ -128,6 +154,63 @@ class CommunitySingletonApiTest extends TestCase
         ])->assertForbidden();
     }
 
+    public function test_admin_can_patch_community_legal_documents(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $community = Community::current();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/legal-documents', [
+            'terms_markdown' => '# Terms\n\nHello.',
+            'privacy_policy_markdown' => 'We respect privacy.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.terms_markdown', '# Terms\n\nHello.')
+            ->assertJsonPath('community.privacy_policy_markdown', 'We respect privacy.');
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->id,
+            'terms_markdown' => '# Terms\n\nHello.',
+            'privacy_policy_markdown' => 'We respect privacy.',
+        ]);
+    }
+
+    public function test_member_cannot_patch_community_legal_documents(): void
+    {
+        $member = User::factory()->create(['user_type' => 'member']);
+
+        $this->actingAs($member);
+
+        $this->statefulJson('PATCH', '/api/community/legal-documents', [
+            'terms_markdown' => 'x',
+        ])->assertForbidden();
+    }
+
+    public function test_root_can_patch_community_legal_documents(): void
+    {
+        $root = User::factory()->root()->create();
+
+        $this->actingAs($root);
+
+        $this->statefulJson('PATCH', '/api/community/legal-documents', [
+            'terms_markdown' => 'Root terms',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.terms_markdown', 'Root terms');
+    }
+
+    public function test_patch_community_legal_documents_requires_at_least_one_field(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/legal-documents', [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['terms_markdown']);
+    }
+
     public function test_root_can_patch_community_currency_via_dedicated_route(): void
     {
         $root = User::factory()->root()->create();
@@ -152,6 +235,86 @@ class CommunitySingletonApiTest extends TestCase
         ])
             ->assertOk()
             ->assertJsonPath('community.currency_code', 'ABCD');
+    }
+
+    public function test_admin_can_patch_community_currency_name_only(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $community = Community::current();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_name' => 'Sparkles',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.currency_name', 'Sparkles');
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->id,
+            'currency_name' => 'Sparkles',
+        ]);
+    }
+
+    public function test_patch_community_currency_name_truncates_to_sixty_four_characters(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        $long = str_repeat('A', 70);
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'currency_name' => $long,
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.currency_name', str_repeat('A', 64));
+    }
+
+    public function test_admin_can_patch_local_currency_code(): void
+    {
+        $admin = User::factory()->admin()->create();
+        $community = Community::current();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'local_currency_code' => 'MXN',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.local_currency_code', 'MXN');
+
+        $this->assertDatabaseHas('communities', [
+            'id' => $community->id,
+            'local_currency_code' => 'MXN',
+        ]);
+    }
+
+    public function test_patch_local_currency_code_rejects_invalid_value(): void
+    {
+        $admin = User::factory()->admin()->create();
+
+        $this->actingAs($admin);
+
+        $this->statefulJson('PATCH', '/api/community/currency', [
+            'local_currency_code' => 'GBP',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['local_currency_code']);
+    }
+
+    public function test_root_can_patch_local_currency_via_community_update(): void
+    {
+        $root = User::factory()->root()->create();
+        $community = Community::current();
+
+        $this->actingAs($root);
+
+        $this->statefulJson('PATCH', '/api/community', [
+            'name' => $community->name,
+            'local_currency_code' => 'USD',
+        ])
+            ->assertOk()
+            ->assertJsonPath('community.local_currency_code', 'USD');
     }
 
     public function test_root_can_upload_community_logo_via_multipart_patch(): void

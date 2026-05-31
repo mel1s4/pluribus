@@ -121,8 +121,8 @@ class CommunityInvitationStoreApiTest extends TestCase
 
         $joinUrl = $response->json('invitation.join_url');
         $this->assertIsString($joinUrl);
-        $this->assertStringContainsString('/invitacion/', $joinUrl);
-        $this->assertStringNotContainsString('/join/', $joinUrl);
+        $this->assertStringContainsString('/join-invitation-share/', $joinUrl);
+        $this->assertStringContainsString('redirect_locale=es', $joinUrl);
     }
 
     public function test_join_url_uses_join_slug_when_community_default_language_is_english(): void
@@ -139,7 +139,8 @@ class CommunityInvitationStoreApiTest extends TestCase
 
         $joinUrl = $response->json('invitation.join_url');
         $this->assertIsString($joinUrl);
-        $this->assertStringContainsString('/join/', $joinUrl);
+        $this->assertStringContainsString('/join-invitation-share/', $joinUrl);
+        $this->assertStringContainsString('redirect_locale=en', $joinUrl);
     }
 
     public function test_join_url_prefers_join_url_locale_over_community_default(): void
@@ -157,8 +158,8 @@ class CommunityInvitationStoreApiTest extends TestCase
 
         $joinUrl = $response->json('invitation.join_url');
         $this->assertIsString($joinUrl);
-        $this->assertStringContainsString('/invitacion/', $joinUrl);
-        $this->assertStringNotContainsString('/join/', $joinUrl);
+        $this->assertStringContainsString('/join-invitation-share/', $joinUrl);
+        $this->assertStringContainsString('redirect_locale=es', $joinUrl);
     }
 
     public function test_join_url_join_url_locale_en_overrides_spanish_community(): void
@@ -176,8 +177,8 @@ class CommunityInvitationStoreApiTest extends TestCase
 
         $joinUrl = $response->json('invitation.join_url');
         $this->assertIsString($joinUrl);
-        $this->assertStringContainsString('/join/', $joinUrl);
-        $this->assertStringNotContainsString('/invitacion/', $joinUrl);
+        $this->assertStringContainsString('/join-invitation-share/', $joinUrl);
+        $this->assertStringContainsString('redirect_locale=en', $joinUrl);
     }
 
     public function test_member_cannot_create_invitation(): void
@@ -192,5 +193,37 @@ class CommunityInvitationStoreApiTest extends TestCase
         ])->assertForbidden();
 
         Mail::assertNothingSent();
+    }
+
+    public function test_unlimited_link_invitation_can_set_auto_grant_and_cap(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        $this->actingAs($root);
+
+        $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => null,
+            'grant_credits' => 12.5,
+            'grant_limit_uses' => 3,
+        ])->assertCreated()
+            ->assertJsonPath('invitation.grant_credits', '12.50')
+            ->assertJsonPath('invitation.grant_limit_uses', 3)
+            ->assertJsonPath('invitation.grant_uses_count', 0)
+            ->assertJsonPath('invitation.grant_max_mint_total', '37.50');
+    }
+
+    public function test_limited_invitation_rejects_grant_limit_uses(): void
+    {
+        Mail::fake();
+
+        $root = User::factory()->root()->create();
+        $this->actingAs($root);
+
+        $this->statefulJson('POST', '/api/invitations', [
+            'max_uses' => 2,
+            'grant_credits' => 5,
+            'grant_limit_uses' => 1,
+        ])->assertStatus(422);
     }
 }

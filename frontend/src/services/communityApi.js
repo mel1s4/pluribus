@@ -18,6 +18,16 @@ export async function fetchCommunityMicrosite(slug) {
 }
 
 /**
+ * Public legal markdown for a community (no auth).
+ * @param {string} slug
+ * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
+ */
+export function fetchCommunityLegalDocumentsPublic(slug) {
+  const path = `/api/communities/${encodeURIComponent(slug)}/legal-documents`
+  return apiJson('GET', path)
+}
+
+/**
  * @param {string} slug
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
@@ -69,12 +79,25 @@ export async function downloadCommunityLedgerExport(slug) {
 }
 
 /**
- * @param {{ currency_code: string | null }} body
+ * @param {{ currency_code?: string | null, currency_name?: string | null, local_currency_code?: string | null }} body
  * @param {{ headers?: Record<string, string> }} [requestOptions]
  */
 export async function patchCommunityCurrency(body, requestOptions) {
   await ensureCsrfCookie()
   const result = await apiJson('PATCH', '/api/community/currency', body, requestOptions)
+  if (result.ok) {
+    invalidateCache(/^\/api\/community/)
+  }
+  return result
+}
+
+/**
+ * @param {{ terms_markdown?: string | null, privacy_policy_markdown?: string | null }} body
+ * @param {{ headers?: Record<string, string> }} [requestOptions]
+ */
+export async function patchCommunityLegalDocuments(body, requestOptions) {
+  await ensureCsrfCookie()
+  const result = await apiJson('PATCH', '/api/community/legal-documents', body, requestOptions)
   if (result.ok) {
     invalidateCache(/^\/api\/community/)
   }

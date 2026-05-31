@@ -7,6 +7,7 @@ import { useCommunity } from '../composables/useCommunity'
 import { sessionStatus } from '../composables/useSession'
 import { t } from '../i18n/i18n'
 import { formatOfferPrice } from '../utils/formatPrice'
+import { formatLocalCurrencyPrice } from '../utils/formatLocalCurrencyPrice'
 
 const props = defineProps({
   offers: {
@@ -27,7 +28,13 @@ const { cartData, upsertItem } = useCart()
 const busyOfferId = ref(null)
 
 function formatPrice(amount) {
+  if (amount == null || amount === '') return ''
   return formatOfferPrice(amount, communityCurrencyCode.value)
+}
+
+function formatLocalPrice(amount, currencyCode) {
+  if (amount == null || amount === '') return ''
+  return formatLocalCurrencyPrice(amount, currencyCode)
 }
 
 const list = computed(() => (Array.isArray(props.offers) ? props.offers : []))
@@ -118,7 +125,10 @@ async function removeOne(offer) {
         <div class="place-offers-public__body">
           <h3 class="place-offers-public__title">{{ o.title }}</h3>
           <p v-if="o.description" class="place-offers-public__desc">{{ o.description }}</p>
-          <p class="place-offers-public__price">{{ formatPrice(o.price) }}</p>
+          <div class="place-offers-public__prices">
+            <p v-if="o.price != null && o.price !== ''" class="place-offers-public__price">{{ formatPrice(o.price) }}</p>
+            <p v-if="o.local_price" class="place-offers-public__localPrice">{{ formatLocalPrice(o.local_price, o.local_currency_code) }}</p>
+          </div>
           <ul
             v-if="Array.isArray(o.tags) && o.tags.length"
             class="place-offers-public__tags"
@@ -234,9 +244,23 @@ async function removeOne(offer) {
   white-space: pre-wrap;
 }
 
+.place-offers-public__prices {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
 .place-offers-public__price {
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-weight: 600;
+}
+
+.place-offers-public__localPrice {
+  margin: 0;
+  font-size: 0.9rem;
+  opacity: 0.85;
 }
 
 .place-offers-public__tags {

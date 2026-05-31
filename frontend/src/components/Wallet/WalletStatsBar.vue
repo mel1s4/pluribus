@@ -11,11 +11,29 @@ const props = defineProps({
 const total = ref('')
 const error = ref('')
 
+function firstApiErrorMessage(data, fallback) {
+  if (data && typeof data === 'object') {
+    if (typeof data.message === 'string' && data.message.trim()) {
+      return data.message.trim()
+    }
+    const errs = data.errors
+    if (errs && typeof errs === 'object') {
+      for (const k of Object.keys(errs)) {
+        const arr = errs[k]
+        if (Array.isArray(arr) && typeof arr[0] === 'string' && arr[0].trim()) {
+          return arr[0].trim()
+        }
+      }
+    }
+  }
+  return fallback
+}
+
 async function load() {
   error.value = ''
   const res = await fetchWalletCommunityStats(props.communityId)
   if (!res.ok) {
-    error.value = t('wallet.statsLoadError')
+    error.value = firstApiErrorMessage(res.data, t('wallet.statsLoadError'))
     total.value = ''
     return
   }

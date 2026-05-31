@@ -14,7 +14,7 @@ return new class extends Migration
             $table->foreignId('place_id')->constrained('places')->cascadeOnDelete();
             $table->string('title');
             $table->text('description')->nullable();
-            $table->decimal('price', 12, 2)->default(0);
+            $table->decimal('price', 12, 2)->nullable()->default(null);
             $table->string('photo_path')->nullable();
             $table->json('gallery_paths')->nullable();
             $table->json('tags')->nullable();

@@ -5,6 +5,7 @@ import Button from '../../atoms/Button.vue'
 import Card from '../../atoms/Card.vue'
 import Input from '../../atoms/Input.vue'
 import Title from '../../atoms/Title.vue'
+import JoinInvitationLegalLinks from '../../components/public/JoinInvitationLegalLinks.vue'
 import { communityDefaultLanguage } from '../../composables/useCommunity'
 import { setSessionFromLoginUser } from '../../composables/useSession'
 import {
@@ -75,7 +76,7 @@ function defaultPostLoginPath(user) {
   const communityCount = Number(user?.community_count || 0)
   if (communityCount <= 0) return '/my-communities'
   const first = Array.isArray(user?.communities) ? user.communities[0] : null
-  if (first?.slug) return `/${first.slug}/dashboard`
+  if (first?.slug) return `/community/${first.slug}/dashboard`
   return '/dashboard'
 }
 
@@ -86,6 +87,11 @@ const loadingMessage = computed(() =>
 const leadText = computed(() =>
   isVerifyStep.value ? t('joinInvitation.leadVerify') : t('joinInvitation.lead'),
 )
+
+const legalCommunitySlug = computed(() => {
+  const raw = preview.value?.community_slug
+  return typeof raw === 'string' && raw.trim() !== '' ? raw.trim() : ''
+})
 
 function pickLanguageForInvitePage(data) {
   const fromApi = data?.default_language
@@ -230,6 +236,8 @@ onUnmounted(() => {
     <p v-if="tokenPreview" class="page--join-invitation__token">
       {{ t('joinInvitation.tokenLabel') }} <code>{{ tokenPreview }}</code>
     </p>
+
+    <JoinInvitationLegalLinks v-if="!previewLoading" :community-slug="legalCommunitySlug || null" />
 
     <p v-if="previewLoading" class="page--join-invitation__muted">{{ loadingMessage }}</p>
     <p v-else-if="previewError" class="page--join-invitation__error" role="alert">

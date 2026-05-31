@@ -5,7 +5,11 @@ import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
 import PlaceTagsField from '../../molecules/PlaceTagsField.vue'
 import { useOfferCreateForm } from '../../composables/useOfferCreateForm'
+import { useCommunity } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
+import { formatOfferPrice } from '../../utils/formatPrice'
+import { formatLocalCurrencyPrice } from '../../utils/formatLocalCurrencyPrice'
+import { walletCurrencyDisplayLine } from '../../utils/walletCurrencyDisplay.js'
 import { fetchAudiences } from '../../services/placesApi.js'
 
 const route = useRoute()
@@ -28,6 +32,7 @@ const {
   galleryFiles,
   hasAttemptedSubmit,
   isSubmitting,
+  localCurrencyConfigured,
   photoFile,
   saveState,
   stepErrors,
@@ -35,6 +40,22 @@ const {
   goToStep,
   submit,
 } = useOfferCreateForm(placeId)
+
+const { communityCurrencyCode, communityCurrencyName, communityLocalCurrencyCode } = useCommunity()
+
+const creditsSuffix = computed(() =>
+  walletCurrencyDisplayLine(communityCurrencyName.value, communityCurrencyCode.value),
+)
+
+function formatCreditsPreview(amount) {
+  if (amount === '' || amount == null) return '—'
+  return formatOfferPrice(amount, communityCurrencyCode.value)
+}
+
+function formatLocalPreview(amount) {
+  if (amount === '' || amount == null) return ''
+  return formatLocalCurrencyPrice(amount, communityLocalCurrencyCode.value)
+}
 
 function goBack() {
   router.push({ name: 'placeEdit', params: { placeId: placeId.value, tab: 'offers' } })
@@ -102,9 +123,38 @@ watch(placeId, () => {
             <input v-model="form.title" class="offer-create__input" type="text" :placeholder="t('myPlaces.offerTitlePlaceholder')" required @input="clearFieldError('title')">
             <p v-if="fieldErrors.title?.length" class="offer-create__error">{{ fieldErrors.title[0] }}</p>
 
-            <label class="offer-create__label">{{ t('myPlaces.offerPrice') }}</label>
-            <input v-model="form.price" class="offer-create__input" type="number" inputmode="decimal" min="0" step="0.01" required @input="clearFieldError('price')">
+            <label class="offer-create__label">{{ t('myPlaces.offerPriceCommunityCredits') }}</label>
+            <div class="offer-create__priceRow">
+              <input
+                v-model="form.price"
+                class="offer-create__input"
+                type="number"
+                inputmode="decimal"
+                min="0"
+                step="0.01"
+                @input="clearFieldError('price')"
+              >
+              <span v-if="creditsSuffix" class="offer-create__priceSuffix">{{ creditsSuffix }}</span>
+            </div>
             <p v-if="fieldErrors.price?.length" class="offer-create__error">{{ fieldErrors.price[0] }}</p>
+
+            <template v-if="localCurrencyConfigured">
+              <label class="offer-create__label">{{ t('myPlaces.offerPriceLocalCurrency') }}</label>
+              <div class="offer-create__priceRow">
+                <input
+                  v-model="form.local_price"
+                  class="offer-create__input"
+                  type="number"
+                  inputmode="decimal"
+                  min="0"
+                  step="0.01"
+                  @input="clearFieldError('local_price')"
+                >
+                <span class="offer-create__priceSuffix">{{ communityLocalCurrencyCode }}</span>
+              </div>
+              <p v-if="fieldErrors.local_price?.length" class="offer-create__error">{{ fieldErrors.local_price[0] }}</p>
+            </template>
+            <p v-else class="offer-create__hint">{{ t('myPlaces.offerLocalCurrencyNotConfigured') }}</p>
 
             <label class="offer-create__label">{{ t('myPlaces.offerDescription') }}</label>
             <textarea
@@ -188,7 +238,8 @@ watch(placeId, () => {
         <h2 class="offer-create__previewTitle">{{ t('myPlaces.offerPreviewTitle') }}</h2>
         <p class="offer-create__previewName">{{ form.title || t('myPlaces.offerPreviewUntitled') }}</p>
         <p class="offer-create__previewText">{{ form.description || t('myPlaces.offerPreviewNoDescription') }}</p>
-        <p class="offer-create__previewText">{{ t('myPlaces.offerPreviewPrice') }}: {{ form.price || '—' }}</p>
+        <p class="offer-create__previewText">{{ t('myPlaces.offerPreviewCommunityCredits') }}: {{ formatCreditsPreview(form.price) }}</p>
+        <p v-if="form.local_price" class="offer-create__previewText">{{ t('myPlaces.offerPreviewLocalCurrency') }}: {{ formatLocalPreview(form.local_price) }}</p>
         <p class="offer-create__previewText">{{ t('myPlaces.postVisibilityScope') }}: {{ form.visibility_scope === 'audience' ? t('myPlaces.postVisibilityAudience') : t('myPlaces.postVisibilityPublic') }}</p>
         <p v-if="hasAttemptedSubmit && Object.keys(fieldErrors).length" class="offer-create__error">{{ t('myPlaces.offerFixErrorsHint') }}</p>
       </aside>
@@ -209,6 +260,10 @@ watch(placeId, () => {
 .offer-create__step.is-error { border-color: var(--danger, #b00020); }
 .offer-create__panel { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: grid; gap: 0.4rem; background: var(--bg); }
 .offer-create__label { font-size: 0.85rem; margin-top: 0.25rem; }
+.offer-create__priceRow { display: flex; align-items: center; gap: 0.5rem; }
+.offer-create__priceRow .offer-create__input { flex: 1; }
+.offer-create__priceSuffix { font-size: 0.85rem; opacity: 0.85; white-space: nowrap; }
+.offer-create__hint { margin: 0; font-size: 0.85rem; opacity: 0.75; }
 .offer-create__input, .offer-create__textarea { width: 100%; box-sizing: border-box; }
 .offer-create__error { margin: 0; color: var(--danger, #b00020); font-size: 0.85rem; }
 .offer-create__fileList { margin: 0; padding-left: 1rem; font-size: 0.85rem; }

@@ -64,6 +64,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Join invitation share page (Open Graph HTML)
+    |--------------------------------------------------------------------------
+    |
+    | Public invitation links point here so social crawlers receive meta tags.
+    | Defaults to APP_URL; set JOIN_SHARE_BASE_URL to match your API host when
+    | it differs from the SPA host (same value as APP_URL in typical setups).
+    |
+    */
+
+    'join_share_base_url' => env('JOIN_SHARE_BASE_URL', env('APP_URL', 'http://localhost')),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

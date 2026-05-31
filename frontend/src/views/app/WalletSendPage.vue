@@ -1,4 +1,5 @@
 <script setup>
+import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import Title from '../../atoms/Title.vue'
@@ -6,10 +7,45 @@ import WalletSendForm from '../../components/Wallet/WalletSendForm.vue'
 import { useActiveCommunity } from '../../composables/useActiveCommunity.js'
 import { useWalletCommunityScope } from '../../composables/useWalletCommunityScope.js'
 import { t } from '../../i18n/i18n'
+import { fetchWallet } from '../../services/walletApi.js'
 
 const router = useRouter()
 const { withCommunityPath } = useActiveCommunity()
 const { memberships, showCommunityPicker, communityScope, communityIdNum } = useWalletCommunityScope()
+
+const currencyName = ref('')
+const currencyCode = ref('')
+
+async function loadCurrency() {
+  const cid = communityIdNum.value
+  if (!cid) {
+    currencyName.value = ''
+    currencyCode.value = ''
+    return
+  }
+  const res = await fetchWallet(cid, { page: 1, perPage: 1 })
+  if (!res.ok) {
+    currencyName.value = ''
+    currencyCode.value = ''
+    return
+  }
+  const cur = res.data?.currency
+  if (cur && typeof cur === 'object') {
+    currencyName.value = typeof cur.name === 'string' ? cur.name : ''
+    currencyCode.value = typeof cur.code === 'string' ? cur.code : ''
+  } else {
+    currencyName.value = ''
+    currencyCode.value = ''
+  }
+}
+
+watch(
+  communityIdNum,
+  () => {
+    void loadCurrency()
+  },
+  { immediate: true },
+)
 
 function onSent() {
   router.push(withCommunityPath('/wallet'))
@@ -37,7 +73,13 @@ function onSent() {
       </label>
     </div>
 
-    <WalletSendForm v-if="communityIdNum > 0" :community-id="communityIdNum" @sent="onSent" />
+    <WalletSendForm
+      v-if="communityIdNum > 0"
+      :community-id="communityIdNum"
+      :currency-name="currencyName"
+      :currency-code="currencyCode"
+      @sent="onSent"
+    />
   </section>
 </template>
 

@@ -144,6 +144,9 @@ function shouldSkipGlobalUnauthorizedHandler(method, path) {
   if (method === 'GET' && /^\/api\/communities\/[^/]+\/microsite$/.test(path)) {
     return true
   }
+  if (method === 'GET' && path === '/api/discovery/map') {
+    return true
+  }
   return (
     (method === 'GET' && path === '/api/user')
     || (method === 'POST' && path === '/api/login')

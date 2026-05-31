@@ -1,12 +1,22 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { RouterLink, useRoute } from 'vue-router'
 import { t } from '../../i18n/i18n'
 import Title from '../../atoms/Title.vue'
-import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import PlaceMapMiniSitePreview from '../../molecules/PlaceMapMiniSitePreview.vue'
 import { fetchMapDiscovery } from '../../services/contentApi'
-import { fetchCommunity } from '../../services/communityApi.js'
+import {
+  communityLatitude,
+  communityLongitude,
+  communityName,
+  fetchCommunityBranding,
+  useCommunity,
+} from '../../composables/useCommunity.js'
 import { useCommunityPlacesMap } from '../../composables/useCommunityPlacesMap.js'
+import { sessionStatus } from '../../composables/useSession'
+
+const route = useRoute()
+const { displayName } = useCommunity()
 
 const mapContainer = ref(null)
 const mapEntities = ref([])
@@ -15,28 +25,33 @@ const loading = ref(false)
 const error = ref('')
 const filterEntity = ref('both')
 const filterPostType = ref('')
+const filterPlacesScope = ref('all')
 const tagInput = ref('')
-const community = ref(null)
 const locating = ref(false)
 
-function defaultMapCenter() {
-  const c = community.value
-  if (c == null) {
-    return null
+const isAuthenticated = computed(() => sessionStatus.value === 'authenticated')
+
+function activeBrandingSlug() {
+  const name = String(route.name || '')
+  if (
+    (name === 'communityMicrosite'
+      || name === 'communityMemberships'
+      || name === 'communityProjects'
+      || name === 'communityProjectDetail')
+    && typeof route.params.slug === 'string'
+  ) {
+    return route.params.slug.trim()
   }
-  const lat = Number(c.latitude)
-  const lng = Number(c.longitude)
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+  return ''
+}
+
+function defaultMapCenter() {
+  const lat = communityLatitude.value
+  const lng = communityLongitude.value
+  if (lat != null && lng != null && Number.isFinite(lat) && Number.isFinite(lng)) {
     return [lat, lng]
   }
   return null
-}
-
-async function loadCommunity() {
-  const { ok, data } = await fetchCommunity()
-  if (ok && data?.community) {
-    community.value = data.community
-  }
 }
 
 const selectedEntity = computed(() => {
@@ -51,15 +66,20 @@ const selectedPlaceForPreview = computed(() => {
   return e
 })
 
+const mapViewStorageSuffix = computed(() => {
+  const n = communityName.value
+  if (typeof n === 'string' && n.trim().length) {
+    return n.trim()
+  }
+  return displayName.value || 'default'
+})
+
 const mapApi = useCommunityPlacesMap(mapContainer, {
   getPlaces: () => mapEntities.value,
   getSelectedPlaceId: () => selectedEntityId.value,
   getSelectedPlace: () => selectedEntity.value,
   getDefaultCenter: defaultMapCenter,
-  getViewStorageKey: () => {
-    const id = String(community.value?.id || 'default')
-    return `community-map:view-state:v1:${id}`
-  },
+  getViewStorageKey: () => `community-map:view-state:v1:${mapViewStorageSuffix.value}`,
   onSelectPlace: (id) => {
     selectedEntityId.value = String(id)
   },
@@ -90,9 +110,11 @@ async function loadPlaces() {
     .split(',')
     .map((v) => v.trim())
     .filter(Boolean)
+  const places_scope = isAuthenticated.value ? filterPlacesScope.value : undefined
   const { ok, status, data } = await fetchMapDiscovery({
     entity: filterEntity.value,
     post_type: filterPostType.value || undefined,
+    places_scope,
     tags,
   })
   loading.value = false
@@ -130,7 +152,7 @@ function closeSidebar() {
 }
 
 onMounted(async () => {
-  await loadCommunity()
+  await fetchCommunityBranding(activeBrandingSlug() || null)
   mapApi.initMap()
   await loadPlaces()
 })
@@ -148,9 +170,16 @@ onBeforeUnmount(() => {
 <template>
   <section class="page page--map">
     <div class="map-view__head">
-      <PageToolbarTitle class="map-view__titleRow" route-key="map">
+      <div class="map-view__titleRow">
         <Title tag="h1">{{ t('map.title') }}</Title>
-      </PageToolbarTitle>
+        <RouterLink
+          v-if="isAuthenticated"
+          class="map-view__backToApp"
+          to="/dashboard"
+        >
+          {{ t('map.backToApp') }}
+        </RouterLink>
+      </div>
       <p class="page__muted">{{ t('map.discoveryIntro') }}</p>
       <div class="map-view__filters">
         <select v-model="filterEntity" @change="loadPlaces">
@@ -165,6 +194,13 @@ onBeforeUnmount(() => {
           <option value="announcement">{{ t('map.postTypeAnnouncement') }}</option>
           <option value="info">{{ t('map.postTypeInfo') }}</option>
         </select>
+        <template v-if="isAuthenticated">
+          <select v-model="filterPlacesScope" @change="loadPlaces">
+            <option value="all">{{ t('map.placesScopeAll') }}</option>
+            <option value="public">{{ t('map.placesScopePublic') }}</option>
+          </select>
+        </template>
+        <p v-else class="map-view__placesHint page__muted">{{ t('map.placesScopeGuestHint') }}</p>
         <input
           v-model="tagInput"
           :placeholder="t('map.filterTagsPlaceholder')"
@@ -231,7 +267,23 @@ onBeforeUnmount(() => {
 }
 
 .map-view__titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
   width: 100%;
+}
+
+.map-view__backToApp {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--link);
+  text-decoration: none;
+}
+
+.map-view__backToApp:hover {
+  text-decoration: underline;
 }
 
 .map-view__layout {
@@ -244,8 +296,15 @@ onBeforeUnmount(() => {
 
 .map-view__filters {
   display: grid;
-  grid-template-columns: 170px 170px 1fr auto;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 0.5rem;
+  align-items: center;
+}
+
+.map-view__placesHint {
+  margin: 0;
+  font-size: 0.88rem;
+  grid-column: span 1;
 }
 
 .map-view__filters select,
@@ -356,10 +415,6 @@ onBeforeUnmount(() => {
   .map-view__layout {
     flex-direction: column;
     min-height: 70vh;
-  }
-
-  .map-view__filters {
-    grid-template-columns: 1fr;
   }
 
   .map-view__map-wrap {
