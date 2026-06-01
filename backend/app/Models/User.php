@@ -106,6 +106,11 @@ class User extends Authenticatable
         return $this->is_root === true;
     }
 
+    public function hasVotingId(): bool
+    {
+        return filled($this->voting_id);
+    }
+
     /** Community administrators (non-root admin role) and root accounts. */
     public function isCommunityAdministrator(): bool
     {

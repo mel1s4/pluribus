@@ -56,6 +56,13 @@ export const SIDEBAR_LINK_DEFS = [
   { key: 'tasks', to: '/folders?focus=tasks', labelKey: 'tasks.title', icon: 'list-check', capability: null },
   { key: 'calendar', to: '/calendar', labelKey: 'calendar.title', icon: 'calendar-days', capability: null },
   { key: 'posts', to: '/posts', labelKey: 'posts.title', icon: 'newspaper', capability: null },
+  {
+    key: 'surveys',
+    to: '/surveys',
+    labelKey: 'surveys.title',
+    icon: 'square-poll-vertical',
+    capability: 'surveys.view',
+  },
   { key: 'my-groups', to: '/my-groups', labelKey: 'groups.title', icon: 'people-group', capability: null },
   { key: 'orders', to: '/orders', labelKey: 'nav.orders', icon: 'file-lines', capability: null },
   { key: 'my-cart', to: '/cart', labelKey: 'nav.myCart', icon: 'cart-shopping', capability: null },

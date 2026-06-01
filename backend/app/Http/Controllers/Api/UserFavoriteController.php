@@ -26,6 +26,7 @@ class UserFavoriteController extends Controller
         'tasks',
         'calendar',
         'posts',
+        'surveys',
         'my-groups',
         'my-cart',
         'my-places',

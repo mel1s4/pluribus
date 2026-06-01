@@ -39,6 +39,7 @@ use App\Http\Controllers\Api\PlaceRequirementCsvController;
 use App\Http\Controllers\Api\PlaceRequirementController;
 use App\Http\Controllers\Api\PlaceRequirementResponseController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\SurveyController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\RegisterController;
 use App\Http\Controllers\Api\TaskController;
@@ -205,6 +206,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/posts/{post}', [PostController::class, 'show']);
         Route::patch('/posts/{post}', [PostController::class, 'update']);
         Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+
+        Route::get('/surveys', [SurveyController::class, 'index']);
+        Route::post('/surveys', [SurveyController::class, 'store']);
+        Route::get('/surveys/{survey}', [SurveyController::class, 'show']);
+        Route::patch('/surveys/{survey}', [SurveyController::class, 'update']);
+        Route::delete('/surveys/{survey}', [SurveyController::class, 'destroy']);
+        Route::put('/surveys/{survey}/vote', [SurveyController::class, 'vote']);
         Route::get('/tasks', [TaskController::class, 'index']);
         Route::post('/tasks', [TaskController::class, 'store']);
         Route::get('/tasks/{task}', [TaskController::class, 'show']);

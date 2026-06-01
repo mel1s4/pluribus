@@ -37,6 +37,9 @@ const CalendarPage = () => import('../views/app/CalendarPage.vue')
 const PostsPage = () => import('../views/app/PostsPage.vue')
 const PostDetailPage = () => import('../views/app/PostDetailPage.vue')
 const PostComposerPage = () => import('../views/app/PostComposerPage.vue')
+const SurveysPage = () => import('../views/app/SurveysPage.vue')
+const SurveyDetailPage = () => import('../views/app/SurveyDetailPage.vue')
+const SurveyComposerPage = () => import('../views/app/SurveyComposerPage.vue')
 const MyGroupsPage = () => import('../views/app/MyGroups.vue')
 const GroupDetailPage = () => import('../views/app/GroupDetailPage.vue')
 const NotificationsView = () => import('../views/app/Notifications.vue')
@@ -427,6 +430,58 @@ const routes = [
       hideHeader: false,
       headerTitleKey: 'posts.title',
       sidebarKey: 'posts',
+    },
+  },
+  {
+    path: '/surveys/new',
+    name: 'surveys-new',
+    component: SurveyComposerPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'surveys.composerCreateTitle',
+      sidebarKey: 'surveys',
+      requiresCapability: 'surveys.manage',
+    },
+  },
+  {
+    path: '/surveys/:id/edit',
+    name: 'surveys-edit',
+    component: SurveyComposerPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'surveys.composerEditTitle',
+      sidebarKey: 'surveys',
+      requiresCapability: 'surveys.manage',
+    },
+  },
+  {
+    path: '/surveys/:id',
+    name: 'surveys-detail',
+    component: SurveyDetailPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'surveys.detailPageTitle',
+      sidebarKey: 'surveys',
+      requiresCapability: 'surveys.view',
+    },
+  },
+  {
+    path: '/surveys',
+    name: 'surveys',
+    component: SurveysPage,
+    meta: {
+      layout: 'app',
+      requiresAuth: true,
+      hideHeader: false,
+      headerTitleKey: 'surveys.title',
+      sidebarKey: 'surveys',
+      requiresCapability: 'surveys.view',
     },
   },
   {

@@ -328,6 +328,25 @@
       }
     ]
   },
+  "surveys": {
+    "module": "surveys",
+    "capabilities": [
+      {
+        "id": "surveys.view",
+        "name": "view",
+        "category": "read",
+        "isDangerous": false,
+        "description": "View community surveys and aggregated results."
+      },
+      {
+        "id": "surveys.manage",
+        "name": "manage",
+        "category": "write",
+        "isDangerous": false,
+        "description": "Create, edit, close, and delete surveys."
+      }
+    ]
+  },
   "calendars": {
     "module": "calendars",
     "capabilities": [
