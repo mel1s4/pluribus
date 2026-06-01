@@ -3,8 +3,8 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import Icon from '../../atoms/Icon.vue'
 import FavoritesList from './FavoritesList.vue'
+import SidebarCommunitySwitcher from './SidebarCommunitySwitcher.vue'
 import SidebarMyCommunities from './SidebarMyCommunities.vue'
-import { useCommunity } from '../../composables/useCommunity'
 import { isCommunityHostSite } from '../../composables/useCommunityHost'
 import { useActiveCommunity } from '../../composables/useActiveCommunity'
 import { sessionUser } from '../../composables/useSession'
@@ -12,7 +12,6 @@ import { SIDEBAR_LINK_DEFS, isSidebarLinkDefAccessible } from '../../navigation/
 import { t } from '../../i18n/i18n'
 
 const route = useRoute()
-const { displayName } = useCommunity()
 const { withCommunityPath } = useActiveCommunity()
 
 defineProps({
@@ -70,7 +69,13 @@ function isFolderNavActive(key) {
 <template>
   <div :id="sidebarId" class="app-sidebar" role="navigation" :aria-hidden="!open">
     <div class="app-sidebar__header">
-      <span class="app-sidebar__brand">{{ displayName }}</span>
+      <div class="app-sidebar__brandBlock">
+        <span class="app-sidebar__brand">{{ t('nav.appName') }}</span>
+        <SidebarCommunitySwitcher
+          class="app-sidebar__communitySwitcher"
+          @navigate="maybeCloseMobile"
+        />
+      </div>
       <button
         type="button"
         class="app-sidebar__close app-sidebar__close--mobile"
@@ -116,7 +121,7 @@ function isFolderNavActive(key) {
 
 .app-sidebar__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
@@ -124,9 +129,26 @@ function isFolderNavActive(key) {
   flex-shrink: 0;
 }
 
+.app-sidebar__brandBlock {
+  flex: 1;
+  min-width: 0;
+}
+
 .app-sidebar__brand {
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  display: block;
+  font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  color: #128c7e;
+}
+
+html[data-theme='dark'] .app-sidebar__brand {
+  color: #25d366;
+}
+
+.app-sidebar__communitySwitcher {
+  width: 100%;
 }
 
 .app-sidebar__close {

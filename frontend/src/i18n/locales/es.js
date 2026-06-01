@@ -1,5 +1,7 @@
 export default {
     'nav.logo': 'Comunidad',
+    'nav.appName': 'Pluribus',
+    'nav.communitySwitcher': 'Comunidad',
     'nav.home': 'Inicio',
     'nav.login': 'Iniciar sesión',
     'nav.dashboard': 'Panel',
