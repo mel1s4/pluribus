@@ -267,7 +267,20 @@ watch(placeId, () => {
 .offer-create__input, .offer-create__textarea { width: 100%; box-sizing: border-box; }
 .offer-create__error { margin: 0; color: var(--danger, #b00020); font-size: 0.85rem; }
 .offer-create__fileList { margin: 0; padding-left: 1rem; font-size: 0.85rem; }
-.offer-create__actions { position: fixed; left: 0; right: 0; bottom: 0; display: flex; justify-content: flex-end; gap: 0.5rem; padding: 0.75rem 1rem; border-top: 1px solid var(--border); background: var(--bg); }
+.offer-create__actions {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 36; /* above app-shell__bottomNav (35) on mobile */
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
 .offer-create__preview { border: 1px solid var(--border); border-radius: 12px; padding: 1rem; background: var(--btn-bg, rgba(0, 0, 0, 0.02)); display: grid; gap: 0.35rem; height: fit-content; }
 .offer-create__previewTitle, .offer-create__previewName, .offer-create__previewText { margin: 0; }
 .offer-create__previewTitle { font-size: 1rem; }
@@ -277,6 +290,13 @@ watch(placeId, () => {
 @media (min-width: 960px) {
   .offer-create { padding-bottom: 2rem; }
   .offer-create__layout { grid-template-columns: minmax(0, 1fr) 20rem; align-items: start; }
-  .offer-create__actions { position: sticky; bottom: 0; padding: 0.75rem 0 0; border-top: 0; background: transparent; }
+  .offer-create__actions {
+    position: sticky;
+    bottom: 0;
+    z-index: auto;
+    padding: 0.75rem 0 0;
+    border-top: 0;
+    background: transparent;
+  }
 }
 </style>
