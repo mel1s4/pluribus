@@ -55,20 +55,29 @@ const isDisabled = computed(() => props.disabled || props.loading)
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   border: 1px solid transparent;
-  font-weight: 600;
-  line-height: 1;
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
   cursor: pointer;
   user-select: none;
-  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease,
-    transform 80ms ease, opacity 140ms ease;
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-standard) var(--ease-standard);
 
   .btn__inner {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.5rem;
+    gap: var(--space-2);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 2px;
   }
 
   &:not(:disabled):active {
@@ -85,90 +94,91 @@ const isDisabled = computed(() => props.disabled || props.loading)
     width: 1em;
     height: 1em;
     border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.45);
+    border: 2px solid var(--color-spinner-track);
     border-top-color: currentColor;
     animation: btn-spin 0.8s linear infinite;
   }
 }
 
-/* Sizes */
 .btn--sm {
-  padding: 0.4rem 0.75rem;
-  font-size: 0.875rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-sm);
 }
 
 .btn--md {
-  padding: 0.6rem 1rem;
-  font-size: 1rem;
+  padding: var(--space-2) var(--space-4);
+  font-size: var(--text-md);
 }
 
 .btn--lg {
-  padding: 0.85rem 1.25rem;
-  font-size: 1.125rem;
+  padding: var(--space-3) var(--space-5);
+  font-size: var(--text-lg);
 }
 
-/* Variants */
 .btn--primary {
-  background-color: #2563eb;
-  color: #ffffff;
-  border-color: rgba(37, 99, 235, 0.85);
+  background-color: var(--color-primary);
+  color: var(--color-on-primary);
+  border-color: var(--color-primary);
 
   &:not(:disabled):hover {
-    background-color: #1d4ed8;
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
   }
 }
 
 .btn--secondary {
-  background-color: #e5e7eb;
-  color: #111827;
-  border-color: #e5e7eb;
+  background-color: var(--color-secondary-bg);
+  color: var(--color-on-secondary);
+  border-color: var(--color-secondary-bg);
 
   .btn__spinner {
-    border-color: rgba(17, 24, 39, 0.2);
+    border-color: var(--color-outline);
     border-top-color: currentColor;
   }
 
   &:not(:disabled):hover {
-    background-color: #d1d5db;
+    background-color: var(--color-secondary-hover);
+    border-color: var(--color-secondary-hover);
   }
 }
 
 .btn--ghost {
   background-color: transparent;
-  color: #2563eb;
-  border-color: rgba(37, 99, 235, 0.35);
+  color: var(--color-primary);
+  border-color: var(--color-ghost-border);
 
   .btn__spinner {
-    border-color: rgba(37, 99, 235, 0.2);
+    border-color: var(--color-ghost-border);
     border-top-color: currentColor;
   }
 
   &:not(:disabled):hover {
-    background-color: rgba(37, 99, 235, 0.08);
-    border-color: rgba(37, 99, 235, 0.6);
+    background-color: var(--color-ghost-hover);
+    border-color: var(--color-ghost-border-hover);
   }
 }
 
 .btn--danger {
-  background-color: #dc2626;
-  color: #ffffff;
-  border-color: rgba(220, 38, 38, 0.85);
+  background-color: var(--color-danger);
+  color: var(--color-on-danger);
+  border-color: var(--color-danger);
 
   &:not(:disabled):hover {
-    background-color: #b91c1c;
+    background-color: var(--color-danger-hover);
+    border-color: var(--color-danger-hover);
   }
 }
 
 .btn--link {
   background-color: transparent;
-  color: #2563eb;
+  color: var(--color-primary);
   border-color: transparent;
   padding-left: 0;
   padding-right: 0;
   text-decoration: none;
 
   .btn__spinner {
-    border-color: rgba(37, 99, 235, 0.2);
+    border-color: var(--color-ghost-border);
     border-top-color: currentColor;
   }
 

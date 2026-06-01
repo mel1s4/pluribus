@@ -1,0 +1,64 @@
+---
+description: Frontend Vue structure, styling, and maintainability standards
+globs: frontend/src/**/*.vue
+alwaysApply: false
+---
+
+# Frontend Vue Standards
+
+For color, spacing, typography, elevation, and motion, follow
+`frontend-design-system.mdc`.
+
+## SFC block order
+
+- Always keep Vue SFC blocks in this exact order:
+  1) `<script setup lang="ts">` (or `<script>`)
+  2) `<template>`
+  3) `<style scoped lang="scss">` (or `<style>`)
+
+## CSS naming (BEM)
+
+- Use BEM for all classes in Vue styles:
+  - Block: `.chat-card`
+  - Element: `.chat-card__title`
+  - Modifier: `.chat-card--active`
+- Avoid generic class names like `.wrapper`, `.item`, `.left`.
+
+## Atomic design component layering
+
+- Follow Atomic Design when adding or refactoring UI:
+  - Atoms: primitive UI (`Button`, `Icon`, `Input`)
+  - Molecules: simple combinations (`SearchField`, `UserBadge`)
+  - Organisms: section-level composites (`ChatSidebar`, `MessageList`)
+  - Views/pages compose organisms and data flow.
+- Prefer placing reusable UI in atomic component folders before adding logic to views.
+
+## File length limit
+
+- Keep `.vue` files under 300 lines.
+- If a file grows beyond 300 lines, split by responsibility:
+  - Extract child presentational components
+  - Extract composables for reusable state/logic
+  - Extract constants/helpers to separate modules
+
+## Prop formatting and spacing
+
+- Break long tag attributes into one-per-line when there are 3+ props or lines become hard to scan.
+- Keep readable indentation and consistent padding/spacing in template and styles.
+
+```vue
+<!-- Preferred multiline prop formatting -->
+<ChatMessage
+  :author="message.author"
+  :timestamp="message.createdAt"
+  :is-own="message.authorId === currentUserId"
+  :text="message.body"
+/>
+```
+
+## Additional standards to enforce
+
+- Prefer composables for shared logic instead of mixins.
+- Use scoped styles by default; only use global styles intentionally.
+- Define explicit `emits` and typed props.
+- Keep side effects in lifecycle/composables, not inline in template expressions.

@@ -1,5 +1,5 @@
 <template>
-  <component :is="tag" class="title" :id="id || undefined">
+  <component :is="tag" class="title" :class="`title--${tag}`" :id="id || undefined">
     <slot />
   </component>
 </template>
@@ -20,10 +20,30 @@ defineProps({
 
 <style lang="scss" scoped>
 .title {
-  margin: 0 0 1.25rem 0;
-  font-size: 1.5rem;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  margin: 0 0 var(--space-5) 0;
+  font-weight: var(--font-weight-extrabold);
+  letter-spacing: var(--letter-spacing-tight);
+  line-height: var(--line-height-tight);
+  color: var(--text);
+}
+
+.title--h1 {
+  font-size: var(--text-2xl);
+}
+
+.title--h2 {
+  font-size: var(--text-xl);
+  font-weight: var(--font-weight-bold);
+}
+
+.title--h3 {
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.title--h4 {
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: 0;
 }
 </style>

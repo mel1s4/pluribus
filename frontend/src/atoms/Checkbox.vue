@@ -38,21 +38,22 @@ function onChange(e) {
 .checkbox {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: var(--space-3);
   cursor: pointer;
   user-select: none;
   width: fit-content;
 }
 
 .checkbox__input {
-  width: 1rem;
-  height: 1rem;
+  width: var(--text-md);
+  height: var(--text-md);
   margin: 0;
-  accent-color: var(--link);
+  accent-color: var(--color-primary);
 }
 
 .checkbox__label {
-  font-size: 0.95rem;
+  font-size: var(--text-sm);
+  color: var(--text);
 }
 </style>
 

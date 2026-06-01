@@ -5,7 +5,9 @@
 # IDE
 .idea/
 .vscode/
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 
 # OS
 .DS_Store

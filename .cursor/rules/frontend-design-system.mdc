@@ -1,0 +1,58 @@
+---
+description: Pluribus design system — Swiss, Material, and Metro synthesis
+globs: frontend/src/**/*.{vue,scss,css,js,ts}
+alwaysApply: false
+---
+
+# Pluribus Design System
+
+Swiss + Metro for layout and type; Material for spacing rhythm, elevation,
+motion, and accessibility. When they conflict: typography and content structure
+win over decoration; flat chrome over heavy shadows.
+
+## Tokens
+
+Define colors and scales only in `frontend/src/style.scss`. In atoms and
+molecules, use `var(--*)` — no raw hex.
+
+- Spacing: `var(--space-1)` … `var(--space-8)` (8dp grid)
+- Type: `var(--text-xs)` … `var(--text-2xl)`, `var(--font-weight-*)`
+- Radius: `var(--radius-sm|md|lg)` (Metro-leaning, subtle)
+- Elevation: `var(--shadow-1)` or `var(--shadow-2)` only when needed
+- Motion: `var(--motion-fast)`, `var(--motion-standard)`, `var(--ease-standard)`
+- Semantic: `var(--color-primary)`, `var(--color-surface)`, `var(--color-outline)`, etc.
+
+## Typography (Swiss + Metro)
+
+- Headings carry page structure; avoid extra chrome to imply hierarchy.
+- Use `Title` atom with `tag="h1"` … `h4` for the type scale.
+- Body text: regular weight, comfortable line-height (`var(--line-height-normal)`).
+
+## Layout and surfaces
+
+- Align to 8dp spacing; prefer `gap` and padding from the scale.
+- Nav and toolbars stay flat (Metro); segment with type and spacing before borders.
+- Cards: `var(--color-surface)` + optional `var(--shadow-1)`; max 2 elevation levels.
+
+## Interaction (Material)
+
+- Transitions 120–200ms for hover/focus; respect `prefers-reduced-motion`.
+- Always style `:focus-visible` with `var(--color-focus-ring)`.
+- Buttons: primary / secondary / ghost / danger / link variants via `Button` atom.
+
+## Atomic design
+
+- `atoms/` → `molecules/` → `organisms/` → `views/` (pages).
+- One-way imports only; no domain logic or data fetching in atoms.
+
+## Examples
+
+```vue
+<!-- GOOD -->
+<Button variant="primary">Save</Button>
+```
+
+```scss
+/* BAD in atoms — hardcoded hex */
+background: #2563eb;
+```

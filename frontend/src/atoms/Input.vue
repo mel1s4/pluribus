@@ -183,7 +183,7 @@ function togglePassword() {
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: var(--space-2);
   width: 100%;
 }
 
@@ -193,8 +193,9 @@ function togglePassword() {
 }
 
 .field__labelText {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text);
 }
 
 .field__inputWrap {
@@ -205,33 +206,51 @@ function togglePassword() {
 
 .field__input {
   width: 100%;
+  border-color: var(--color-outline);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
+
+  &:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px var(--color-focus-ring);
+  }
 }
 
 .field__input--withToggle {
-  padding-right: 2.5rem;
+  padding-right: var(--space-8);
 }
 
 .field__toggle {
   position: absolute;
-  right: 0.2rem;
+  right: var(--space-1);
   top: 50%;
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: 0.35rem;
+  padding: var(--space-1);
   border: none;
-  border-radius: 0.35rem;
+  border-radius: var(--radius-sm);
   background: transparent;
-  color: inherit;
+  color: var(--text);
   cursor: pointer;
   opacity: 0.65;
+  transition: opacity var(--motion-fast) var(--ease-standard);
+
+  &:focus-visible {
+    outline: 2px solid var(--color-focus-ring);
+    outline-offset: 1px;
+    opacity: 1;
+  }
 }
 
 .field__toggle:hover:not(:disabled) {
   opacity: 1;
-  background: var(--btn-bg, rgba(0, 0, 0, 0.06));
+  background: var(--color-surface);
 }
 
 .field__toggle:disabled {
@@ -240,7 +259,7 @@ function togglePassword() {
 }
 
 .field__toggleIcon {
-  font-size: 1rem;
+  font-size: var(--text-md);
   line-height: 1;
   width: 1em;
 }

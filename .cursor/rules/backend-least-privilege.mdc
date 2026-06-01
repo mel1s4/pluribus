@@ -1,0 +1,36 @@
+---
+description: Apply least-privilege practices in backend authorization and data access
+globs: backend/src/**/*.{ts,js,py,go,java,rb,rs}
+alwaysApply: false
+---
+
+# Backend Least Privilege
+
+Apply the principle of least privilege by default in backend code.
+
+## Authorization Rules
+
+- Default deny access; require explicit allow rules per action/resource.
+- Grant minimal permissions needed for the current operation and duration.
+- Scope permissions by user role, tenant, resource, and operation.
+- Validate permissions on every sensitive endpoint/service call, not only at login.
+- Never expose fields or records unless explicitly authorized for that principal.
+
+## Access and Secrets Rules
+
+- Use short-lived credentials/tokens wherever possible.
+- Separate read/write/admin paths and use different permission checks.
+- Limit database queries to only needed columns and permitted rows.
+- Prefer server-side policy enforcement over client-provided claims.
+- Log authorization denials and privilege elevation paths for auditing.
+
+## Quick Examples
+
+```ts
+// GOOD: Explicit action-level check before data mutation.
+await authz.require(user, "invoice:update", invoiceId);
+```
+
+```ts
+// AVOID: Broad "admin" bypass used for normal flow.
+```

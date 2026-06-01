@@ -49,18 +49,19 @@ function onChange(e) {
 .radio {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: var(--space-3);
   cursor: pointer;
   user-select: none;
 }
 
 .radio__input {
   margin: 0;
-  accent-color: var(--link);
+  accent-color: var(--color-primary);
 }
 
 .radio__label {
-  font-size: 0.95rem;
+  font-size: var(--text-sm);
+  color: var(--text);
 }
 </style>
 

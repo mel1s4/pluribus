@@ -48,7 +48,12 @@ Optional variables for the Vue app (see `frontend/.env` or deployment env):
 
 
 ## Design Philosophy
-"Industrial Design"
+
+**Pluribus design system** — utilitarian UI inspired by Swiss Design
+(typography, grid, whitespace), Material Design (8dp spacing, motion, focus,
+accessibility), and Metro (content over chrome, flat navigation). See
+[design-system.md](design-system.md) for tokens and component guidance.
+
 - Simple
 - Clean
 - Utilitarian
