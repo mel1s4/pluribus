@@ -5,6 +5,7 @@ import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import CommunityLeadershipTab from '../../components/App/CommunityLeadershipTab.vue'
 import CommunityLegalDocumentTab from '../../components/App/CommunityLegalDocumentTab.vue'
+import CommunityDomainsTab from '../../components/App/CommunityDomainsTab.vue'
 import CommunitySettingsFormTab from '../../components/App/CommunitySettingsFormTab.vue'
 import { t } from '../../i18n/i18n'
 
@@ -31,6 +32,7 @@ const settingsRouteName = computed(() => {
 const activeTab = computed(() => {
   const raw = route.params.tab
   if (raw === 'settings') return 'settings'
+  if (raw === 'domains') return 'domains'
   if (raw === 'terms') return 'terms'
   if (raw === 'privacy') return 'privacy'
   if (raw === 'leadership' || raw === undefined) return 'leadership'
@@ -60,7 +62,7 @@ function setTab(id) {
 watch(
   () => route.params.tab,
   (t) => {
-    if (t == null || t === 'leadership' || t === 'settings' || t === 'terms' || t === 'privacy') {
+    if (t == null || t === 'leadership' || t === 'settings' || t === 'domains' || t === 'terms' || t === 'privacy') {
       return
     }
     const n = String(route.name || '')
@@ -110,6 +112,16 @@ watch(
         type="button"
         role="tab"
         class="community-settings-page__tab"
+        :class="{ 'community-settings-page__tab--active': activeTab === 'domains' }"
+        :aria-selected="activeTab === 'domains'"
+        @click="setTab('domains')"
+      >
+        {{ t('communitySettings.tabDomains') }}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        class="community-settings-page__tab"
         :class="{ 'community-settings-page__tab--active': activeTab === 'terms' }"
         :aria-selected="activeTab === 'terms'"
         @click="setTab('terms')"
@@ -141,6 +153,13 @@ watch(
       class="community-settings-page__panel-wrap"
     >
       <CommunitySettingsFormTab />
+    </div>
+    <div
+      v-show="activeTab === 'domains'"
+      role="tabpanel"
+      class="community-settings-page__panel-wrap"
+    >
+      <CommunityDomainsTab />
     </div>
     <div
       v-show="activeTab === 'terms'"

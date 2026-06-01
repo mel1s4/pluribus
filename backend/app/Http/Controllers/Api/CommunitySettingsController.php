@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateCommunityCurrencyRequest;
+use App\Http\Requests\UpdateCommunityDomainsRequest;
 use App\Http\Requests\UpdateCommunityLegalDocumentsRequest;
 use App\Http\Requests\UpdateSingletonCommunityRequest;
+use App\Support\CommunityDomainSync;
 use App\Http\Resources\CommunityLeaderResource;
 use App\Http\Resources\CommunityResource;
 use App\Models\Community;
@@ -21,6 +23,7 @@ class CommunitySettingsController extends Controller
     public function show(Request $request): JsonResponse
     {
         $community = $this->resolveTargetCommunity($request);
+        $community->load('domains');
 
         return response()->json([
             'community' => new CommunityResource($community),
@@ -132,6 +135,28 @@ class CommunitySettingsController extends Controller
         ]);
     }
 
+    public function updateDomains(UpdateCommunityDomainsRequest $request): JsonResponse
+    {
+        $actor = $request->user();
+        if ($actor === null) {
+            abort(401);
+        }
+
+        $community = $this->resolveTargetCommunity($request);
+        if (! $this->canManageDomains($actor, $community)) {
+            abort(403, 'You cannot manage domains for this community.');
+        }
+
+        /** @var list<array{host?: string, is_primary?: bool}> $rows */
+        $rows = $request->validated('domains');
+        CommunityDomainSync::sync($community, $rows);
+        $community->load('domains');
+
+        return response()->json([
+            'community' => new CommunityResource($community),
+        ]);
+    }
+
     public function updateCurrency(UpdateCommunityCurrencyRequest $request): JsonResponse
     {
         $actor = $request->user();
@@ -204,6 +229,19 @@ class CommunitySettingsController extends Controller
         $active = $request->attributes->get('active_community');
 
         return $active instanceof Community ? $active : Community::forRequest($request);
+    }
+
+    private function canManageDomains(User $actor, Community $community): bool
+    {
+        if ($actor->isRoot()) {
+            return true;
+        }
+        if ($actor->can('communities.manage')) {
+            return true;
+        }
+        $membership = $actor->membershipForCommunity((int) $community->id);
+
+        return $membership !== null && $membership->role === 'admin';
     }
 
     private function deleteStoredCommunityLogo(?string $logo): void

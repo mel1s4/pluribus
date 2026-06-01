@@ -92,6 +92,19 @@ export async function patchCommunityCurrency(body, requestOptions) {
 }
 
 /**
+ * @param {{ domains: Array<{ host: string, is_primary?: boolean }> }} body
+ * @param {{ headers?: Record<string, string> }} [requestOptions]
+ */
+export async function patchCommunityDomains(body, requestOptions) {
+  await ensureCsrfCookie()
+  const result = await apiJson('PATCH', '/api/community/domains', body, requestOptions)
+  if (result.ok) {
+    invalidateCache(/^\/api\/community/)
+  }
+  return result
+}
+
+/**
  * @param {{ terms_markdown?: string | null, privacy_policy_markdown?: string | null }} body
  * @param {{ headers?: Record<string, string> }} [requestOptions]
  */

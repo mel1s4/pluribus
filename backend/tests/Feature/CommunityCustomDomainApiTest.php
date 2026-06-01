@@ -169,6 +169,34 @@ class CommunityCustomDomainApiTest extends TestCase
             ->assertOk();
     }
 
+    public function test_community_admin_can_update_domains_via_settings_endpoint(): void
+    {
+        $community = $this->communityWithDomain('old.example', 'domains-co');
+        $admin = User::factory()->create(['user_type' => 'admin']);
+        CommunityMembership::query()->create([
+            'community_id' => $community->id,
+            'user_id' => $admin->id,
+            'role' => 'admin',
+        ]);
+        $headers = array_merge(
+            $this->communityHostHeaders('localhost'),
+            ['X-Community-Slug' => 'domains-co'],
+        );
+
+        $this->actingAs($admin)
+            ->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class)
+            ->patchJson('/api/community/domains', [
+                'domains' => [
+                    ['host' => 'new.example', 'is_primary' => true],
+                ],
+            ], $headers)
+            ->assertOk()
+            ->assertJsonPath('community.domains.0.host', 'new.example');
+
+        $this->assertDatabaseMissing('community_domains', ['host' => 'old.example']);
+        $this->assertDatabaseHas('community_domains', ['host' => 'new.example', 'community_id' => $community->id]);
+    }
+
     public function test_member_in_another_community_keeps_role_when_guest_in_new_one(): void
     {
         $home = Community::query()->create([

@@ -176,6 +176,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/community/leadership', [CommunitySettingsController::class, 'leadership']);
         Route::patch('/community', [CommunitySettingsController::class, 'update']);
         Route::patch('/community/currency', [CommunitySettingsController::class, 'updateCurrency']);
+        Route::patch('/community/domains', [CommunitySettingsController::class, 'updateDomains']);
         Route::patch('/community/legal-documents', [CommunitySettingsController::class, 'updateLegalDocuments']);
 
         Route::get('/community-place-offers', [CommunityPlaceOfferController::class, 'index']);

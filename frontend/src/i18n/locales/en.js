@@ -1386,7 +1386,16 @@ export default {
       'Use Leadership to see who stewards the community and the platform. Settings holds the public name, description, rules, and logo. Terms and Privacy are markdown documents community admins (and root) can edit.',
     'communitySettings.tabLeadership': 'Leadership',
     'communitySettings.tabSettings': 'Settings',
+    'communitySettings.tabDomains': 'Domain',
     'communitySettings.tabTerms': 'Terms',
+    'communitySettings.domainsIntro':
+      'Custom domains show this community’s public site and sign-in on its own hostname.',
+    'communitySettings.domainsNoPermission':
+      'Only root, platform community managers, or community administrators can edit domains.',
+    'communitySettings.domainsSave': 'Save domains',
+    'communitySettings.domainsLoadError': 'Could not load domains (HTTP {status}).',
+    'communitySettings.domainsSaveError': 'Could not save domains (HTTP {status}).',
+    'communitySettings.saving': 'Saving…',
     'communitySettings.tabPrivacy': 'Privacy',
     'communitySettings.tabsAria': 'Community sections',
     'communitySettings.leadershipIntro':

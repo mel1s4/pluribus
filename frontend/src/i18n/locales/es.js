@@ -1426,6 +1426,15 @@ export default {
       'En Liderazgo verás quién cuida la comunidad y la plataforma. En Configuración están el nombre público, la descripción, las normas y el logo. Términos y Privacidad son documentos en Markdown que pueden editar los administradores de la comunidad (y root).',
     'communitySettings.tabLeadership': 'Liderazgo',
     'communitySettings.tabSettings': 'Configuración',
+    'communitySettings.tabDomains': 'Dominio',
+    'communitySettings.domainsIntro':
+      'Los dominios propios muestran el sitio público y el acceso de esta comunidad en su propio hostname.',
+    'communitySettings.domainsNoPermission':
+      'Solo root, gestores de comunidades de la plataforma o administradores de la comunidad pueden editar dominios.',
+    'communitySettings.domainsSave': 'Guardar dominios',
+    'communitySettings.domainsLoadError': 'No se pudieron cargar los dominios (HTTP {status}).',
+    'communitySettings.domainsSaveError': 'No se pudieron guardar los dominios (HTTP {status}).',
+    'communitySettings.saving': 'Guardando…',
     'communitySettings.tabTerms': 'Términos',
     'communitySettings.tabPrivacy': 'Privacidad',
     'communitySettings.tabsAria': 'Secciones de la comunidad',
