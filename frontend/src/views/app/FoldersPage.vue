@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, unref } from 'vue'
+import { computed, onMounted, reactive, ref, unref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import FolderCard from '../../molecules/FolderCard.vue'
@@ -13,7 +13,7 @@ import FolderTree from '../../organisms/FolderTree.vue'
 import FolderSearchPanel from '../../organisms/FolderSearchPanel.vue'
 import FolderUnfiledSection from '../../organisms/FolderUnfiledSection.vue'
 import { useChatUnread } from '../../composables/useChatUnread.js'
-import { unwrapList } from '../../composables/useFolderExplorerContent.js'
+import { folderFocusQueryToFilterKind, unwrapList } from '../../composables/useFolderExplorerContent.js'
 import { useFolders } from '../../composables/useFolders.js'
 import { useDragDrop } from '../../composables/useDragDrop.js'
 import { useFolderSearch } from '../../composables/useFolderSearch.js'
@@ -60,6 +60,19 @@ const {
   recentQueries: folderSearchRecentQueries,
   pushRecent: pushFolderSearchRecent,
 } = useFolderSearch()
+
+watch(
+  unfiledFocusKind,
+  (focus) => {
+    const kind = folderFocusQueryToFilterKind(focus)
+    if (kind) {
+      folderSearchFilterType.value = kind
+    } else if (!focus) {
+      folderSearchFilterType.value = 'all'
+    }
+  },
+  { immediate: true },
+)
 
 async function loadAll() {
   await loadFolders()

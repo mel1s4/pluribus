@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import Icon from '../../atoms/Icon.vue'
 import FavoritesList from './FavoritesList.vue'
 import SidebarMyCommunities from './SidebarMyCommunities.vue'
@@ -9,6 +10,7 @@ import { sessionUser } from '../../composables/useSession'
 import { SIDEBAR_LINK_DEFS, isSidebarLinkDefAccessible } from '../../navigation/sidebarLinks'
 import { t } from '../../i18n/i18n'
 
+const route = useRoute()
 const { displayName } = useCommunity()
 const { withCommunityPath } = useActiveCommunity()
 
@@ -44,6 +46,21 @@ function maybeCloseMobile() {
     emit('close')
   }
 }
+
+function isFolderNavActive(key) {
+  if (key === 'chats') {
+    return route.name === 'folders' && route.query.focus === 'chats'
+  }
+  if (key === 'tasks') {
+    return route.name === 'folders' && route.query.focus === 'tasks'
+  }
+  if (key === 'folders') {
+    return route.name === 'folderDetail'
+      || route.name === 'noteDetail'
+      || (route.name === 'folders' && !route.query.focus)
+  }
+  return false
+}
 </script>
 
 <template>
@@ -73,7 +90,8 @@ function maybeCloseMobile() {
         :key="link.key"
         :to="link.to"
         class="app-sidebar__link"
-        active-class="is-active"
+        :active-class="['folders', 'chats', 'tasks'].includes(link.key) ? '' : 'is-active'"
+        :class="{ 'is-active': ['folders', 'chats', 'tasks'].includes(link.key) && isFolderNavActive(link.key) }"
         @click="maybeCloseMobile"
       >
         <Icon class="app-sidebar__icon" :name="link.icon" aria-hidden="true" />

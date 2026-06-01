@@ -11,7 +11,7 @@ import ChatEditDialogs from '../molecules/ChatEditDialogs.vue'
 import { useBulkSelection } from '../composables/useBulkSelection.js'
 import { useChatUnread } from '../composables/useChatUnread.js'
 import { useDragDrop } from '../composables/useDragDrop.js'
-import { buildMergedRows, filterExplorerRows } from '../composables/useFolderExplorerContent.js'
+import { buildMergedRows, filterExplorerRows, folderFocusQueryToFilterKind } from '../composables/useFolderExplorerContent.js'
 import { t } from '../i18n/i18n'
 import { bulkMoveFolderItems, deleteChat } from '../services/chatApi.js'
 import { deleteTask, updateTask } from '../services/contentApi.js'
@@ -207,7 +207,12 @@ watch(
 watch(
   () => props.focusKind,
   (k) => {
-    if (k === 'tasks') filterKind.value = 'task'
+    const kind = folderFocusQueryToFilterKind(k)
+    if (kind) {
+      filterKind.value = kind
+    } else if (!k) {
+      filterKind.value = 'all'
+    }
   },
   { immediate: true },
 )

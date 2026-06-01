@@ -4,10 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\Community;
 use App\Models\CommunityProject;
-use App\Models\ProjectArgument;
 use App\Models\User;
 use App\Support\LocaleOptions;
-use App\Support\ProjectArgumentDepth;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -67,7 +65,7 @@ class CommunityProjectsApiTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_member_can_create_list_show_and_add_argument(): void
+    public function test_member_can_create_list_and_show_project(): void
     {
         $community = $this->makeCommunity();
         $member = User::factory()->create(['user_type' => 'member']);
@@ -76,12 +74,11 @@ class CommunityProjectsApiTest extends TestCase
         $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects", [
             'title' => 'Solar panels',
             'description' => 'Short',
-            'thesis_title' => 'Should we install them?',
-            'thesis_body' => 'Details',
+            'status' => CommunityProject::STATUS_DRAFT,
         ])
             ->assertCreated()
             ->assertJsonPath('project.title', 'Solar panels')
-            ->assertJsonPath('project.thesis_title', 'Should we install them?');
+            ->assertJsonPath('project.status', CommunityProject::STATUS_DRAFT);
 
         $project = CommunityProject::query()->firstOrFail();
 
@@ -92,20 +89,9 @@ class CommunityProjectsApiTest extends TestCase
         $this->jsonAs($member, 'GET', "/api/communities/{$community->slug}/projects/{$project->id}")
             ->assertOk()
             ->assertJsonPath('project.id', $project->id);
-
-        $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects/{$project->id}/arguments", [
-            'parent_id' => null,
-            'stance' => ProjectArgument::STANCE_PRO,
-            'title' => 'Saves money',
-        ])
-            ->assertCreated()
-            ->assertJsonPath('argument.title', 'Saves money');
-
-        $arg = ProjectArgument::query()->firstOrFail();
-        $this->assertSame((int) $project->id, (int) $arg->project_id);
     }
 
-    public function test_my_projects_includes_proposed_and_participated(): void
+    public function test_my_projects_returns_only_proposer_projects(): void
     {
         $c1 = $this->makeCommunity('hub-a');
         $c2 = $this->makeCommunity('hub-b');
@@ -115,52 +101,33 @@ class CommunityProjectsApiTest extends TestCase
         $alice->communities()->attach($c2->id, ['role' => 'member']);
         $bob->communities()->attach($c1->id, ['role' => 'member']);
 
-        $p1 = CommunityProject::query()->create([
+        $bobProject = CommunityProject::query()->create([
             'community_id' => $c1->id,
             'proposer_id' => $bob->id,
             'title' => 'Bob proposal',
             'description' => null,
-            'thesis_title' => 'Thesis',
-            'thesis_body' => null,
-            'status' => CommunityProject::STATUS_OPEN,
+            'status' => CommunityProject::STATUS_ACTIVE,
+            'has_budget' => false,
+            'has_job_positions' => false,
         ]);
 
-        $p2 = CommunityProject::query()->create([
+        $aliceProject = CommunityProject::query()->create([
             'community_id' => $c2->id,
             'proposer_id' => $alice->id,
             'title' => 'Alice proposal',
             'description' => null,
-            'thesis_title' => 'T2',
-            'thesis_body' => null,
-            'status' => CommunityProject::STATUS_OPEN,
-        ]);
-
-        ProjectArgument::query()->create([
-            'project_id' => $p1->id,
-            'parent_id' => null,
-            'stance' => ProjectArgument::STANCE_CON,
-            'title' => 'Alice comment',
-            'body' => null,
-            'author_id' => $alice->id,
-            'sort_order' => 0,
+            'status' => CommunityProject::STATUS_DRAFT,
+            'has_budget' => false,
+            'has_job_positions' => false,
         ]);
 
         $res = $this->jsonAs($alice, 'GET', '/api/my-projects')->assertOk();
         $ids = collect($res->json('data'))->pluck('id')->all();
-        $this->assertContains($p1->id, $ids, 'Participated-only project should appear');
-        $this->assertContains($p2->id, $ids, 'Proposed project should appear');
-
-        $rowP1 = collect($res->json('data'))->firstWhere('id', $p1->id);
-        $this->assertNotNull($rowP1);
-        $this->assertFalse((bool) $rowP1['is_proposer']);
-        $this->assertTrue((bool) $rowP1['has_argued']);
-
-        $rowP2 = collect($res->json('data'))->firstWhere('id', $p2->id);
-        $this->assertNotNull($rowP2);
-        $this->assertTrue((bool) $rowP2['is_proposer']);
+        $this->assertNotContains($bobProject->id, $ids);
+        $this->assertContains($aliceProject->id, $ids);
     }
 
-    public function test_member_can_create_project_with_location_budget_and_list_shows_sum(): void
+    public function test_member_can_create_project_with_budget_job_positions_and_location(): void
     {
         $community = $this->makeCommunity('geo-budget-hub');
         $member = User::factory()->create(['user_type' => 'member']);
@@ -168,58 +135,117 @@ class CommunityProjectsApiTest extends TestCase
 
         $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects", [
             'title' => 'Park bench',
-            'thesis_title' => 'Should we install benches?',
+            'status' => CommunityProject::STATUS_ACTIVE,
+            'deadline' => '2026-12-31T23:59:59Z',
+            'has_budget' => true,
+            'has_job_positions' => true,
             'location_type' => 'point',
             'service_area_type' => 'none',
             'latitude' => 40.7128,
             'longitude' => -74.006,
             'budget_items' => [
-                ['name' => 'Wood', 'description' => 'Lumber', 'cost' => '120.50'],
-                ['name' => 'Labor', 'cost' => '80'],
+                ['name' => 'Wood', 'description' => 'Lumber', 'unit_cost' => '60.25', 'units' => '2'],
+                ['name' => 'Labor', 'unit_cost' => '80', 'units' => '1'],
+            ],
+            'job_positions' => [
+                [
+                    'title' => 'Carpenter',
+                    'tasks' => [
+                        ['body' => 'Cut wood'],
+                        ['body' => 'Assemble bench'],
+                    ],
+                ],
             ],
         ])
-            ->assertCreated();
+            ->assertCreated()
+            ->assertJsonPath('project.has_budget', true)
+            ->assertJsonPath('project.has_job_positions', true);
 
         $project = CommunityProject::query()->firstOrFail();
         $this->assertEqualsWithDelta(40.7128, (float) $project->latitude, 0.000001);
         $this->assertCount(2, $project->budgetItems);
+        $this->assertCount(1, $project->jobPositions);
+        $this->assertCount(2, $project->jobPositions->first()->tasks);
 
         $list = $this->jsonAs($member, 'GET', "/api/communities/{$community->slug}/projects")->assertOk();
-        $this->assertEqualsWithDelta(200.5, (float) $list->json('data.0.budget_sum'), 0.01);
+        $this->assertEqualsWithDelta(200.5, (float) $list->json('data.0.budget_total'), 0.01);
     }
 
-    public function test_argument_depth_limit(): void
+    public function test_index_filters_by_status_and_search(): void
     {
-        $community = $this->makeCommunity('depth-hub');
+        $community = $this->makeCommunity('filter-hub');
         $member = User::factory()->create(['user_type' => 'member']);
         $member->communities()->attach($community->id, ['role' => 'member']);
 
-        $project = CommunityProject::query()->create([
+        CommunityProject::query()->create([
             'community_id' => $community->id,
             'proposer_id' => $member->id,
-            'title' => 'P',
+            'title' => 'Alpha garden',
             'description' => null,
-            'thesis_title' => 'T',
-            'thesis_body' => null,
-            'status' => CommunityProject::STATUS_OPEN,
+            'status' => CommunityProject::STATUS_ACTIVE,
+            'has_budget' => false,
+            'has_job_positions' => false,
+        ]);
+        CommunityProject::query()->create([
+            'community_id' => $community->id,
+            'proposer_id' => $member->id,
+            'title' => 'Beta draft',
+            'description' => null,
+            'status' => CommunityProject::STATUS_DRAFT,
+            'has_budget' => false,
+            'has_job_positions' => false,
         ]);
 
-        $parentId = null;
-        for ($i = 1; $i <= ProjectArgumentDepth::MAX_DEPTH; $i++) {
-            $res = $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects/{$project->id}/arguments", [
-                'parent_id' => $parentId,
-                'stance' => $i % 2 === 1 ? ProjectArgument::STANCE_PRO : ProjectArgument::STANCE_CON,
-                'title' => "L{$i}",
-            ]);
-            $res->assertCreated();
-            $parentId = (int) $res->json('argument.id');
-        }
+        $this->jsonAs($member, 'GET', "/api/communities/{$community->slug}/projects?status=draft")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Beta draft');
 
-        $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects/{$project->id}/arguments", [
-            'parent_id' => $parentId,
-            'stance' => ProjectArgument::STANCE_PRO,
-            'title' => 'Too deep',
+        $this->jsonAs($member, 'GET', "/api/communities/{$community->slug}/projects?q=Alpha")
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.title', 'Alpha garden');
+    }
+
+    public function test_proposer_can_update_and_delete_project(): void
+    {
+        $community = $this->makeCommunity('crud-hub');
+        $member = User::factory()->create(['user_type' => 'member']);
+        $member->communities()->attach($community->id, ['role' => 'member']);
+
+        $create = $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects", [
+            'title' => 'Original',
+            'status' => CommunityProject::STATUS_DRAFT,
+        ])->assertCreated();
+
+        $projectId = (int) $create->json('project.id');
+
+        $this->jsonAs($member, 'PATCH', "/api/communities/{$community->slug}/projects/{$projectId}", [
+            'title' => 'Updated',
+            'status' => CommunityProject::STATUS_COMPLETED,
         ])
-            ->assertStatus(422);
+            ->assertOk()
+            ->assertJsonPath('project.title', 'Updated')
+            ->assertJsonPath('project.status', CommunityProject::STATUS_COMPLETED);
+
+        $this->jsonAs($member, 'DELETE', "/api/communities/{$community->slug}/projects/{$projectId}")
+            ->assertNoContent();
+
+        $this->assertDatabaseMissing('community_projects', ['id' => $projectId]);
+    }
+
+    public function test_has_budget_requires_budget_items(): void
+    {
+        $community = $this->makeCommunity('budget-req-hub');
+        $member = User::factory()->create(['user_type' => 'member']);
+        $member->communities()->attach($community->id, ['role' => 'member']);
+
+        $this->jsonAs($member, 'POST', "/api/communities/{$community->slug}/projects", [
+            'title' => 'No lines',
+            'has_budget' => true,
+            'budget_items' => [],
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['budget_items']);
     }
 }

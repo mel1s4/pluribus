@@ -1,24 +1,17 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute, RouterLink } from 'vue-router'
-import Button from '../../atoms/Button.vue'
-import Card from '../../atoms/Card.vue'
+import { useRoute, useRouter, RouterLink } from 'vue-router'
 import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import CommunityHubTabs from '../../components/App/CommunityHubTabs.vue'
 import ProjectOverviewSection from '../../organisms/ProjectOverviewSection.vue'
-import ProjectArgumentTree from '../../organisms/ProjectArgumentTree.vue'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { t } from '../../i18n/i18n'
 import { fetchCommunityMicrosite } from '../../services/communityApi'
-import {
-  createProjectArgument,
-  deleteProjectArgument,
-  fetchCommunityProject,
-  updateProjectArgument,
-} from '../../services/projectsApi.js'
+import { fetchCommunityProject } from '../../services/projectsApi.js'
 
 const route = useRoute()
+const router = useRouter()
 
 const slug = computed(() => {
   const raw = route.params.slug
@@ -35,22 +28,6 @@ const loading = ref(true)
 const loadError = ref('')
 const project = ref(null)
 const isMember = ref(false)
-
-const dialogOpen = ref(false)
-const dialogMode = ref('create')
-const dialogParentId = ref(null)
-const dialogStance = ref('pro')
-const dialogTitle = ref('')
-const dialogBody = ref('')
-const dialogArgumentId = ref(null)
-const dialogBusy = ref(false)
-const dialogError = ref('')
-
-const args = computed(() => {
-  const p = project.value
-  if (!p || !Array.isArray(p.arguments)) return []
-  return p.arguments
-})
 
 async function loadMember() {
   if (!slug.value) return
@@ -88,72 +65,8 @@ watch([slug, projectId], () => {
   void load()
 })
 
-function openAdd({ parentId, stance }) {
-  dialogMode.value = 'create'
-  dialogParentId.value = parentId
-  dialogStance.value = stance
-  dialogTitle.value = ''
-  dialogBody.value = ''
-  dialogArgumentId.value = null
-  dialogError.value = ''
-  dialogOpen.value = true
-}
-
-function openEdit(node) {
-  dialogMode.value = 'edit'
-  dialogParentId.value = node.parent_id
-  dialogStance.value = node.stance
-  dialogTitle.value = node.title || ''
-  dialogBody.value = node.body || ''
-  dialogArgumentId.value = node.id
-  dialogError.value = ''
-  dialogOpen.value = true
-}
-
-async function submitDialog() {
-  dialogError.value = ''
-  dialogBusy.value = true
-  if (dialogMode.value === 'create') {
-    const { ok, status, data } = await createProjectArgument(slug.value, projectId.value, {
-      parent_id: dialogParentId.value,
-      stance: dialogStance.value,
-      title: dialogTitle.value.trim(),
-      body: dialogBody.value.trim() || undefined,
-    })
-    dialogBusy.value = false
-    if (!ok) {
-      dialogError.value =
-        (data && typeof data === 'object' && typeof data.message === 'string' && data.message) ||
-        String(status)
-      return
-    }
-  } else if (dialogArgumentId.value != null) {
-    const { ok, status, data } = await updateProjectArgument(
-      slug.value,
-      projectId.value,
-      dialogArgumentId.value,
-      {
-        stance: dialogStance.value,
-        title: dialogTitle.value.trim(),
-        body: dialogBody.value.trim() || undefined,
-      },
-    )
-    dialogBusy.value = false
-    if (!ok) {
-      dialogError.value =
-        (data && typeof data === 'object' && typeof data.message === 'string' && data.message) ||
-        String(status)
-      return
-    }
-  }
-  dialogOpen.value = false
-  await loadProject()
-}
-
-async function onDelete(node) {
-  if (!window.confirm(t('communityProjects.deleteConfirm'))) return
-  const { ok } = await deleteProjectArgument(slug.value, projectId.value, node.id)
-  if (ok) await loadProject()
+function onDeleted() {
+  router.push({ name: 'communityProjects', params: { slug: slug.value } })
 }
 </script>
 
@@ -173,58 +86,14 @@ async function onDelete(node) {
 
     <p v-if="loadError" class="community-project-detail-page__error" role="alert">{{ loadError }}</p>
     <p v-else-if="loading" class="community-project-detail-page__muted">{{ t('communityProjects.loading') }}</p>
-    <template v-else-if="project">
-      <ProjectOverviewSection
-        :slug="slug"
-        :project-id="projectId"
-        :project="project"
-        @updated="loadProject"
-      />
-      <ProjectArgumentTree
-        :slug="slug"
-        :project-id="projectId"
-        :thesis-title="project.thesis_title"
-        :thesis-body="project.thesis_body || ''"
-        :arguments-list="args"
-        @add-child="openAdd"
-        @edit="openEdit"
-        @delete="onDelete"
-      />
-    </template>
-
-    <div
-      v-if="dialogOpen"
-      class="community-project-detail-page__dialog-backdrop"
-      role="presentation"
-      @click.self="dialogOpen = false"
-    >
-      <Card class="community-project-detail-page__dialog">
-        <Title tag="h2">{{ dialogMode === 'create' ? t('communityProjects.argCreate') : t('communityProjects.argEdit') }}</Title>
-        <p class="community-project-detail-page__muted">
-          {{ dialogStance === 'con' ? t('communityProjects.stanceCon') : t('communityProjects.stancePro') }}
-        </p>
-        <p v-if="dialogError" class="community-project-detail-page__error">{{ dialogError }}</p>
-        <label class="community-project-detail-page__field">
-          <span>{{ t('communityProjects.argTitle') }}</span>
-          <input v-model="dialogTitle" type="text" class="community-project-detail-page__input" maxlength="500" />
-        </label>
-        <label class="community-project-detail-page__field">
-          <span>{{ t('communityProjects.argBody') }}</span>
-          <textarea v-model="dialogBody" class="community-project-detail-page__textarea" rows="3" />
-        </label>
-        <label v-if="dialogMode === 'edit'" class="community-project-detail-page__field">
-          <span>{{ t('communityProjects.argStance') }}</span>
-          <select v-model="dialogStance" class="community-project-detail-page__input">
-            <option value="pro">{{ t('communityProjects.stancePro') }}</option>
-            <option value="con">{{ t('communityProjects.stanceCon') }}</option>
-          </select>
-        </label>
-        <div class="community-project-detail-page__dialog-actions">
-          <Button type="button" :disabled="dialogBusy" @click="submitDialog">{{ t('communityProjects.save') }}</Button>
-          <Button type="button" :disabled="dialogBusy" @click="dialogOpen = false">{{ t('communityProjects.cancel') }}</Button>
-        </div>
-      </Card>
-    </div>
+    <ProjectOverviewSection
+      v-else-if="project"
+      :slug="slug"
+      :project-id="projectId"
+      :project="project"
+      @updated="loadProject"
+      @deleted="onDeleted"
+    />
   </section>
 </template>
 
@@ -249,42 +118,5 @@ async function onDelete(node) {
 }
 .community-project-detail-page__error {
   color: #b91c1c;
-}
-.community-project-detail-page__dialog-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: 2rem 1rem;
-  z-index: 50;
-}
-.community-project-detail-page__dialog {
-  width: 100%;
-  max-width: 26rem;
-  padding: 1rem 1.15rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-.community-project-detail-page__field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.88rem;
-}
-.community-project-detail-page__input,
-.community-project-detail-page__textarea {
-  font: inherit;
-  padding: 0.4rem 0.5rem;
-  border-radius: 0.35rem;
-  border: 1px solid var(--border);
-}
-.community-project-detail-page__dialog-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.35rem;
 }
 </style>

@@ -10,7 +10,6 @@ use App\Http\Controllers\Api\ChatMemberController;
 use App\Http\Controllers\Api\ChatMessageController;
 use App\Http\Controllers\Api\CommunityInvitationController;
 use App\Http\Controllers\Api\CommunityMembershipController;
-use App\Http\Controllers\Api\CommunityProjectArgumentController;
 use App\Http\Controllers\Api\CommunityProjectController;
 use App\Http\Controllers\Api\CommunityCreditsController;
 use App\Http\Controllers\Api\CommunityMicrositeController;
@@ -154,17 +153,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/communities/{slug}/projects/{project}', [CommunityProjectController::class, 'destroy'])
             ->where('slug', '[a-z0-9-]+')
             ->whereNumber('project');
-        Route::post('/communities/{slug}/projects/{project}/arguments', [CommunityProjectArgumentController::class, 'store'])
-            ->where('slug', '[a-z0-9-]+')
-            ->whereNumber('project');
-        Route::patch('/communities/{slug}/projects/{project}/arguments/{argument}', [CommunityProjectArgumentController::class, 'update'])
-            ->where('slug', '[a-z0-9-]+')
-            ->whereNumber('project')
-            ->whereNumber('argument');
-        Route::delete('/communities/{slug}/projects/{project}/arguments/{argument}', [CommunityProjectArgumentController::class, 'destroy'])
-            ->where('slug', '[a-z0-9-]+')
-            ->whereNumber('project')
-            ->whereNumber('argument');
         Route::get('/communities', [CommunityAdminController::class, 'index']);
         Route::post('/communities', [CommunityAdminController::class, 'store']);
         Route::get('/communities/{community}', [CommunityAdminController::class, 'show']);

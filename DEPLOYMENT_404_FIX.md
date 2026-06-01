@@ -1,109 +1,91 @@
 # 404 Error Page and Vue Router Configuration
 
 ## Problem
-When accessing invitation links directly on the production server (e.g., `https://chante.vzs.mx/join/abc123`), Apache returns a 404 error instead of serving the Vue.js SPA. This happens because Vue Router uses history mode, which requires server-side configuration to redirect all routes to `index.html`.
+
+When accessing SPA routes directly on production (e.g. `https://pluribus.vzs.mx/join/abc123`), Apache can return 404 instead of the Vue app. Vue Router history mode needs requests rewritten to `index.html`.
+
+Legacy links on `https://chante.vzs.mx/...` must keep working via **301** to the same path on `https://pluribus.vzs.mx`.
 
 ## Solution
 
 ### 1. Apache Configuration (`.htaccess`)
-Created `/frontend/public/.htaccess` with:
-- URL rewriting to redirect all non-file requests to `index.html` (for Vue Router)
-- Custom 404 error page fallback
-- Security headers
-- Compression and caching rules
+
+`frontend/public/.htaccess` includes:
+
+- **301** from `chante.vzs.mx` (and `www`) to `pluribus.vzs.mx`, preserving path and query
+- URL rewriting for Vue Router (`index.html` fallback)
+- Custom 404 page, security headers, compression and caching
 
 ### 2. Custom 404 Error Page
-Created `/frontend/public/404.html` with:
-- User-friendly error message
-- Navigation links to home and login pages
-- Smart redirect logic for app routes
-- Dark mode support
+
+`frontend/public/404.html` — friendly error UI with links home / login.
 
 ## Deployment
 
-To deploy these changes to production:
-
 ```bash
-# Build and deploy the frontend (includes .htaccess and 404.html from public/)
-./deploy.sh frontend
+./deploy.sh env       # if FRONTEND_URL / Sanctum changed
+./deploy.sh frontend  # SPA + .htaccess + 404.html
 
-# Or deploy everything (frontend + backend)
+# Or
 ./deploy.sh all
 ```
 
+See `docs/domain-migration.md` for DNS, SSL, and vhost checklist.
+
 ## How It Works
 
-### Normal Flow (Direct Visits)
-1. User visits `https://chante.vzs.mx/join/TOKEN123`
-2. Apache receives the request
-3. `.htaccess` checks if the file exists (it doesn't)
-4. `.htaccess` rewrites the request to `/index.html`
-5. `index.html` loads and Vue Router handles the `/join/TOKEN123` route
-6. The invitation page is displayed
+### Legacy host (chante.vzs.mx)
 
-### Fallback (Real 404s)
-1. If a truly non-existent route is accessed and Vue Router can't handle it
-2. Apache falls back to the `404.html` page
-3. User sees a friendly error page with navigation options
+1. Request hits `chante.vzs.mx/join/TOKEN`
+2. `.htaccess` matches host → **301** to `https://pluribus.vzs.mx/join/TOKEN`
+3. Browser loads pluribus; Vue Router handles the route
+
+### Canonical host (pluribus.vzs.mx)
+
+1. User visits `https://pluribus.vzs.mx/join/TOKEN`
+2. No host redirect; non-file paths rewrite to `index.html`
+3. Vue Router shows the invitation page
+
+### Invitation emails (API share page)
+
+Links like `https://chante-api.vzs.mx/join-invitation-share/...` redirect to `FRONTEND_URL` + `/join/...` in Laravel. Set `FRONTEND_URL=https://pluribus.vzs.mx` in production `.env`.
 
 ## Testing
 
-### Local Testing (Development)
-The Vite dev server already handles SPA routing correctly, so this works out of the box:
+### Local (Vite)
+
 ```bash
-cd frontend
-npm run dev
-# Visit http://localhost:9123/join/test-token
+cd frontend && npm run dev
+# http://localhost:9123/join/test-token
 ```
 
-### Testing After Deployment
-1. Create an invitation link from the Users page
-2. Copy the full URL (e.g., `https://chante.vzs.mx/join/abc123...`)
-3. Open it in a new browser tab or incognito window
-4. The invitation page should load correctly
+### Production
 
-### Testing the 404 Page
-Visit a truly non-existent route:
-```
-https://chante.vzs.mx/this-page-definitely-does-not-exist
+```bash
+curl -sI 'https://chante.vzs.mx/login' | grep -iE '^(HTTP|location):'
+curl -sI 'https://pluribus.vzs.mx/login' | grep -iE '^(HTTP|location):'
 ```
 
-## Files Changed
+- Old `chante.vzs.mx` URLs → pluribus with same path
+- `pluribus.vzs.mx` deep links load the SPA
+- Invalid routes may show `404.html`
 
-- `frontend/public/.htaccess` - New file for Apache configuration
-- `frontend/public/404.html` - New custom 404 error page
-- `frontend/vite.config.js` - Updated to ensure public files are copied during build
+## Files
 
-## Why Invitation Links Were Failing
-
-The invitation links were generating correct URLs like:
-```
-https://chante.vzs.mx/join/TOKEN123
-```
-
-However, when accessed directly (not through client-side navigation):
-1. Apache looked for a file or directory at `/join/TOKEN123`
-2. Found nothing
-3. Returned the default Apache 404 page
-
-Now with `.htaccess` in place:
-1. Apache looks for a file or directory at `/join/TOKEN123`
-2. Finds nothing
-3. `.htaccess` rewrites the request to `/index.html`
-4. Vue.js loads and handles the route properly
+- `frontend/public/.htaccess` — redirects + SPA fallback
+- `frontend/public/404.html` — custom 404
+- `docs/domain-migration.md` — infrastructure checklist
 
 ## Important Notes
 
-- The `.htaccess` file only applies to the frontend (chante.vzs.mx)
-- The backend API (chante-api.vzs.mx) already has its own `.htaccess` for Laravel
-- After deployment, clear browser cache if routes still don't work
-- Check Apache error logs if issues persist: `/var/log/apache2/error.log`
+- `.htaccess` applies to the **frontend** vhosts (`pluribus.vzs.mx`, `chante.vzs.mx` when pointed at the same docroot)
+- **API** (`chante-api.vzs.mx`) uses Laravel’s `backend/public/.htaccess`
+- Avoid cPanel redirects that send all paths to `/` only
 
 ## Verification Checklist
 
-After deployment, verify:
-- [ ] Invitation links work when opened directly
-- [ ] Existing functionality (navigation, API calls) still works
-- [ ] Custom 404 page appears for invalid routes
-- [ ] Browser console has no errors
-- [ ] Email invitations include correct URLs
+- [ ] `chante.vzs.mx/join/TOKEN` → 301 → `pluribus.vzs.mx/join/TOKEN`
+- [ ] Direct pluribus deep links work
+- [ ] Login / API (Sanctum) without CORS or 419 errors
+- [ ] New invitation emails use pluribus in the final SPA URL
+- [ ] Custom 404 for invalid routes on pluribus

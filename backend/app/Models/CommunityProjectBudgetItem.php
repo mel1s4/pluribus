@@ -12,7 +12,9 @@ class CommunityProjectBudgetItem extends Model
         'community_project_id',
         'name',
         'description',
-        'cost',
+        'unit_cost',
+        'units',
+        'subtotal',
         'sort_order',
     ];
 
@@ -22,7 +24,9 @@ class CommunityProjectBudgetItem extends Model
     protected function casts(): array
     {
         return [
-            'cost' => 'decimal:2',
+            'unit_cost' => 'decimal:2',
+            'units' => 'decimal:2',
+            'subtotal' => 'decimal:2',
         ];
     }
 

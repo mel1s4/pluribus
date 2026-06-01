@@ -43,7 +43,7 @@ export const SIDEBAR_LINK_DEFS = [
     icon: 'eye',
     capability: 'users.personify',
   },
-  { key: 'chats', to: '/folders', labelKey: 'quickNav.chats', icon: 'comments', capability: null },
+  { key: 'chats', to: '/folders?focus=chats', labelKey: 'quickNav.chats', icon: 'comments', capability: null },
   { key: 'my-contacts', to: '/my-contacts', labelKey: 'contacts.title', icon: 'address-book', capability: null },
   {
     key: 'my-projects',

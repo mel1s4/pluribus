@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================
-# Deploy & FTP script for Pluribus (chante.vzs.mx / chante-api.vzs.mx)
+# Deploy & FTP script for Pluribus (pluribus.vzs.mx / chante-api.vzs.mx)
 # ============================================
 # Deploy: build frontend (optional) and upload backend and/or frontend.
 # FTP: list remote dirs, read remote files, or upload any file/folder.
@@ -60,7 +60,7 @@ print_warning() { echo -e "${YELLOW}⚠${NC} $1"; }
 print_error() { echo -e "${RED}✗${NC} $1"; }
 
 # --- Config (override with environment variables) ---
-# FTP host for chante.vzs.mx / chante-api.vzs.mx
+# FTP host for pluribus.vzs.mx (SPA) and chante-api.vzs.mx (API)
 FTP_HOST="${FTP_HOST:-ftp.virozstudio.com}"
 REMOTE_BACKEND_PATH="${REMOTE_BACKEND_PATH:-prod/backend}"
 REMOTE_FRONTEND_PATH="${REMOTE_FRONTEND_PATH:-prod/frontend}"

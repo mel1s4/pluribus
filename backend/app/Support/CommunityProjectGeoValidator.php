@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\CommunityProject;
 use App\Models\Place;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -28,6 +29,24 @@ final class CommunityProjectGeoValidator
     /**
      * @return array<string, mixed>
      */
+    public static function projectFieldRules(bool $forPatch = false): array
+    {
+        $p = $forPatch ? ['sometimes'] : [];
+        $statusRule = $forPatch
+            ? ['sometimes', 'string', Rule::in(CommunityProject::STATUSES)]
+            : ['sometimes', 'string', Rule::in(CommunityProject::STATUSES)];
+
+        return [
+            'status' => $statusRule,
+            'deadline' => array_merge($p, ['nullable', 'date']),
+            'has_budget' => array_merge($p, ['sometimes', 'boolean']),
+            'has_job_positions' => array_merge($p, ['sometimes', 'boolean']),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
     public static function budgetValidationRules(bool $forPatch = false): array
     {
         $p = $forPatch ? ['sometimes'] : [];
@@ -36,8 +55,25 @@ final class CommunityProjectGeoValidator
             'budget_items' => array_merge($p, ['nullable', 'array', 'max:100']),
             'budget_items.*.name' => ['required', 'string', 'max:255'],
             'budget_items.*.description' => ['nullable', 'string', 'max:10000'],
-            'budget_items.*.cost' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
+            'budget_items.*.unit_cost' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
+            'budget_items.*.units' => ['required', 'numeric', 'min:0', 'max:999999999.99'],
             'budget_items.*.sort_order' => ['sometimes', 'integer', 'min:0', 'max:2147483647'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function jobPositionValidationRules(bool $forPatch = false): array
+    {
+        $p = $forPatch ? ['sometimes'] : [];
+
+        return [
+            'job_positions' => array_merge($p, ['nullable', 'array', 'max:50']),
+            'job_positions.*.title' => ['required', 'string', 'max:255'],
+            'job_positions.*.tasks' => ['nullable', 'array', 'max:100'],
+            'job_positions.*.tasks.*.body' => ['required', 'string', 'max:5000'],
+            'job_positions.*.sort_order' => ['sometimes', 'integer', 'min:0', 'max:2147483647'],
         ];
     }
 
@@ -98,6 +134,31 @@ final class CommunityProjectGeoValidator
             if ($lt === Place::LOCATION_NONE && $sat === Place::SERVICE_AREA_NONE) {
                 if (($lat !== null && $lat !== '') || ($lng !== null && $lng !== '')) {
                     $inner->errors()->add('latitude', __('Latitude and longitude must be empty when both location and service area are none.'));
+                }
+            }
+        });
+    }
+
+    public static function validateNestedSections(Validator $v): void
+    {
+        $v->after(function (Validator $inner): void {
+            if ($inner->errors()->isNotEmpty()) {
+                return;
+            }
+
+            $hasBudget = filter_var($inner->getData()['has_budget'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $budgetItems = $inner->getData()['budget_items'] ?? null;
+            if ($hasBudget) {
+                if (! is_array($budgetItems) || $budgetItems === []) {
+                    $inner->errors()->add('budget_items', __('At least one budget line is required when the project has a budget.'));
+                }
+            }
+
+            $hasJobPositions = filter_var($inner->getData()['has_job_positions'] ?? false, FILTER_VALIDATE_BOOLEAN);
+            $jobPositions = $inner->getData()['job_positions'] ?? null;
+            if ($hasJobPositions) {
+                if (! is_array($jobPositions) || $jobPositions === []) {
+                    $inner->errors()->add('job_positions', __('At least one job position is required when the project has job positions.'));
                 }
             }
         });

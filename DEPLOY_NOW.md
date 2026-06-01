@@ -1,93 +1,65 @@
-# Quick Deployment Guide - 404 Fix for Invitation Links
+# Quick Deployment Guide - SPA routing and domain migration
 
-## Summary of Changes
+## Canonical domains
 
-Fixed the 404 error that appeared when accessing invitation links directly on the production server.
+- **SPA:** https://pluribus.vzs.mx
+- **API:** https://chante-api.vzs.mx
+- **Legacy SPA:** https://chante.vzs.mx → 301 to pluribus (same path; see `docs/domain-migration.md`)
 
-### Files Created:
-1. `frontend/public/.htaccess` - Apache configuration for Vue Router
-2. `frontend/public/404.html` - Custom 404 error page
-3. `DEPLOYMENT_404_FIX.md` - Detailed documentation
-
-### Files Modified:
-1. `frontend/vite.config.js` - Ensured public directory is copied during build
-
-## Deploy Now
+## Deploy
 
 ```bash
-# Navigate to project root
-cd /home/mel1s4/Development/pluribus
+cd /home/melisa/Development/pluribus
 
-# Deploy only the frontend (recommended)
+# Backend env (FRONTEND_URL, Sanctum domains)
+./deploy.sh env
+
+# Frontend build + upload (.htaccess includes legacy redirect)
 ./deploy.sh frontend
 
-# Or deploy everything (frontend + backend)
+# Or both
 ./deploy.sh all
 ```
 
-## What This Fixes
+## What the frontend `.htaccess` does
 
-**Before:**
-- Clicking invitation links like `https://chante.vzs.mx/join/abc123` showed Apache 404 error
-- Users couldn't accept invitations sent via email
-- Direct navigation to any Vue route failed
+1. **Legacy host:** `chante.vzs.mx` → 301 to `pluribus.vzs.mx` with the same URI
+2. **Vue Router:** non-file requests → `index.html` (history mode)
+3. **404:** custom `404.html` for routes the app does not handle
 
-**After:**
-- All invitation links work correctly
-- Vue Router handles all frontend routes
-- Custom 404 page for truly non-existent pages
-- Better user experience with friendly error messages
+## Testing after deployment
 
-## How It Works
+1. **Legacy redirect:**
+   ```bash
+   curl -sI 'https://chante.vzs.mx/join/test' | grep -iE '^(HTTP|location):'
+   ```
+   Expect `301` and `Location: https://pluribus.vzs.mx/join/test`
 
-The `.htaccess` file tells Apache to:
-1. Check if the requested file exists
-2. If not, serve `index.html` instead
-3. Let Vue.js and Vue Router handle the routing
+2. **Invitation links:**
+   - Log in to https://pluribus.vzs.mx
+   - Create an invitation; open the join URL in a private window
+   - Or open an old bookmark: `https://chante.vzs.mx/join/TOKEN` should land on pluribus
 
-This is called "history mode" routing and is standard for single-page applications.
+3. **Regular navigation:**
+   - https://pluribus.vzs.mx/login
+   - https://pluribus.vzs.mx/contact
 
-## Testing After Deployment
+4. **404 page:**
+   - https://pluribus.vzs.mx/this-does-not-exist
 
-1. **Test Invitation Links:**
-   - Log in to https://chante.vzs.mx
-   - Go to Users page
-   - Create a new invitation link
-   - Copy the full URL
-   - Open it in a new incognito/private browser window
-   - ✅ Should see the invitation registration form
-
-2. **Test Regular Navigation:**
-   - Visit https://chante.vzs.mx/login
-   - Visit https://chante.vzs.mx/contact
-   - ✅ All routes should work
-
-3. **Test 404 Page:**
-   - Visit https://chante.vzs.mx/this-does-not-exist
-   - ✅ Should see custom 404 page with home/login links
+5. **Login:** sign in on pluribus; confirm no 419 / CORS errors
 
 ## Troubleshooting
 
-If routes still don't work after deployment:
-
-1. **Check .htaccess was uploaded:**
+1. **Check `.htaccess` on server:**
    ```bash
    ./deploy.sh cat prod/frontend/.htaccess
    ```
 
-2. **Check Apache mod_rewrite is enabled:**
-   ```bash
-   # On server:
-   sudo a2enmod rewrite
-   sudo systemctl restart apache2
-   ```
+2. **Apache `mod_rewrite` and `AllowOverride All`**
 
-3. **Check Apache VirtualHost allows .htaccess:**
-   Make sure `AllowOverride All` is set in Apache config
+3. **Both domains must share `prod/frontend`** for the chante → pluribus redirect
 
-4. **Clear browser cache:**
-   Hard refresh with Ctrl+Shift+R (or Cmd+Shift+R on Mac)
+4. **Config cache after env upload:** `php artisan config:clear && php artisan config:cache`
 
-## Need Help?
-
-See `DEPLOYMENT_404_FIX.md` for detailed explanation of the problem and solution.
+See `DEPLOYMENT_404_FIX.md` and `docs/domain-migration.md` for details.

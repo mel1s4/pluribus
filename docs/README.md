@@ -12,6 +12,10 @@ Adding support for Stores, Map, Offers, and more.
 - Database: PostgreSQL
 - Hosting: Inmotion Hosting
 
+### Production domains
+
+See [domain-migration.md](domain-migration.md) for SPA/API hosts, legacy redirects, and deploy checklist.
+
 ### Frontend environment (Vite)
 
 Optional variables for the Vue app (see `frontend/.env` or deployment env):

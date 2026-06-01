@@ -251,7 +251,7 @@ const routes = [
   {
     path: '/chats',
     name: 'chats',
-    redirect: () => ({ name: 'folders' }),
+    redirect: () => ({ name: 'folders', query: { focus: 'chats' } }),
     meta: {
       layout: 'app',
       requiresAuth: true,

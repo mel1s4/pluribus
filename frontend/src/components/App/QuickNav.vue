@@ -22,7 +22,7 @@ const { quickNavFavoriteItems } = useFavorites()
 const { totalUnread, initializeChatUnread } = useChatUnread()
 
 const defaultItems = computed(() => [
-  { to: '/folders', icon: 'comments', label: t('quickNav.chats') },
+  { to: '/folders?focus=chats', icon: 'comments', label: t('quickNav.chats') },
   { to: '/my-places', icon: 'store', label: t('nav.myPlaces') },
   { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
   { to: '/notifications', icon: 'bell', label: t('quickNav.notifications') },

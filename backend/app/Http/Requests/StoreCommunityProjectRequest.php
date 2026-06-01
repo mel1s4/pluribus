@@ -33,14 +33,21 @@ class StoreCommunityProjectRequest extends FormRequest
         return array_merge([
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:10000'],
-            'thesis_title' => ['required', 'string', 'max:500'],
-            'thesis_body' => ['nullable', 'string', 'max:50000'],
-        ], CommunityProjectGeoValidator::validationRules(false), CommunityProjectGeoValidator::budgetValidationRules(false));
+        ], CommunityProjectGeoValidator::projectFieldRules(false), CommunityProjectGeoValidator::validationRules(false), CommunityProjectGeoValidator::budgetValidationRules(false), CommunityProjectGeoValidator::jobPositionValidationRules(false));
     }
 
     protected function prepareForValidation(): void
     {
         $merge = [];
+        if (! $this->has('status')) {
+            $merge['status'] = CommunityProject::STATUS_DRAFT;
+        }
+        if (! $this->has('has_budget')) {
+            $merge['has_budget'] = false;
+        }
+        if (! $this->has('has_job_positions')) {
+            $merge['has_job_positions'] = false;
+        }
         if (! $this->has('location_type')) {
             $merge['location_type'] = Place::LOCATION_NONE;
         }
@@ -59,6 +66,9 @@ class StoreCommunityProjectRequest extends FormRequest
         if ($this->has('radius_meters') && $this->input('radius_meters') === '') {
             $merge['radius_meters'] = null;
         }
+        if ($this->has('deadline') && $this->input('deadline') === '') {
+            $merge['deadline'] = null;
+        }
         if ($merge !== []) {
             $this->merge($merge);
         }
@@ -74,5 +84,6 @@ class StoreCommunityProjectRequest extends FormRequest
             'radius_meters' => $this->input('radius_meters'),
             'area_geojson' => $this->input('area_geojson'),
         ]);
+        CommunityProjectGeoValidator::validateNestedSections($validator);
     }
 }

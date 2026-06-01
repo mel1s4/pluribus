@@ -1,7 +1,11 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
-  
+
+  # Legacy frontend host → canonical SPA (preserve path + query)
+  RewriteCond %{HTTP_HOST} ^(www\.)?chante\.vzs\.mx$ [NC]
+  RewriteRule ^ https://pluribus.vzs.mx%{REQUEST_URI} [R=301,L]
+
   # Handle Authorization Header
   RewriteCond %{HTTP:Authorization} .
   RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

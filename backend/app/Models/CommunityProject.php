@@ -8,7 +8,21 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CommunityProject extends Model
 {
-    public const STATUS_OPEN = 'open';
+    public const STATUS_DRAFT = 'draft';
+
+    public const STATUS_ACTIVE = 'active';
+
+    public const STATUS_COMPLETED = 'completed';
+
+    public const STATUS_ARCHIVED = 'archived';
+
+    /** @var list<string> */
+    public const STATUSES = [
+        self::STATUS_DRAFT,
+        self::STATUS_ACTIVE,
+        self::STATUS_COMPLETED,
+        self::STATUS_ARCHIVED,
+    ];
 
     /** @var list<string> */
     protected $fillable = [
@@ -16,9 +30,10 @@ class CommunityProject extends Model
         'proposer_id',
         'title',
         'description',
-        'thesis_title',
-        'thesis_body',
         'status',
+        'deadline',
+        'has_budget',
+        'has_job_positions',
         'latitude',
         'longitude',
         'location_type',
@@ -33,6 +48,9 @@ class CommunityProject extends Model
     protected function casts(): array
     {
         return [
+            'deadline' => 'datetime',
+            'has_budget' => 'boolean',
+            'has_job_positions' => 'boolean',
             'latitude' => 'float',
             'longitude' => 'float',
             'radius_meters' => 'integer',
@@ -57,19 +75,21 @@ class CommunityProject extends Model
     }
 
     /**
-     * @return HasMany<ProjectArgument, $this>
-     */
-    public function arguments(): HasMany
-    {
-        return $this->hasMany(ProjectArgument::class, 'project_id');
-    }
-
-    /**
      * @return HasMany<CommunityProjectBudgetItem, $this>
      */
     public function budgetItems(): HasMany
     {
         return $this->hasMany(CommunityProjectBudgetItem::class, 'community_project_id')
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * @return HasMany<CommunityProjectJobPosition, $this>
+     */
+    public function jobPositions(): HasMany
+    {
+        return $this->hasMany(CommunityProjectJobPosition::class, 'community_project_id')
             ->orderBy('sort_order')
             ->orderBy('id');
     }

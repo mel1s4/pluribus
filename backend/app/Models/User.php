@@ -242,11 +242,4 @@ class User extends Authenticatable
         return $this->hasMany(CommunityProject::class, 'proposer_id');
     }
 
-    /**
-     * @return HasMany<ProjectArgument, $this>
-     */
-    public function projectArguments(): HasMany
-    {
-        return $this->hasMany(ProjectArgument::class, 'author_id');
-    }
 }

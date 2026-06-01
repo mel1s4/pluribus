@@ -15,13 +15,12 @@ class CommunityProjectBudgetItemResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'community_project_id' => $this->community_project_id,
             'name' => $this->name,
             'description' => $this->description,
-            'cost' => (string) $this->cost,
-            'sort_order' => (int) $this->sort_order,
-            'created_at' => $this->created_at?->toIso8601String(),
-            'updated_at' => $this->updated_at?->toIso8601String(),
+            'unit_cost' => (string) $this->unit_cost,
+            'units' => (string) $this->units,
+            'subtotal' => (string) $this->subtotal,
+            'sort_order' => $this->sort_order,
         ];
     }
 }

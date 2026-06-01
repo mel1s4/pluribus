@@ -7,12 +7,20 @@ import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
 import CommunityHubTabs from '../../components/App/CommunityHubTabs.vue'
 import ProjectBudgetFields from '../../molecules/ProjectBudgetFields.vue'
+import ProjectJobPositionFields from '../../molecules/ProjectJobPositionFields.vue'
 import ProjectLocationFields from '../../molecules/ProjectLocationFields.vue'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
 import { sessionStatus } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { fetchCommunityMicrosite } from '../../services/communityApi'
 import { createCommunityProject, fetchCommunityProjects } from '../../services/projectsApi.js'
+import {
+  PROJECT_STATUSES,
+  buildBudgetPayload,
+  buildJobPositionsPayload,
+  deadlineFromInputValue,
+  formatDeadline,
+} from '../../utils/communityProjectForm.js'
 
 const route = useRoute()
 const router = useRouter()
@@ -30,11 +38,20 @@ const showCreate = ref(false)
 const createBusy = ref(false)
 const createError = ref('')
 const pickerKey = ref(0)
+
+const filterStatus = ref('')
+const filterQ = ref('')
+const filterHasBudget = ref(false)
+const filterHasJobPositions = ref(false)
+const filterHasDeadline = ref(false)
+
 const form = ref({
   title: '',
   description: '',
-  thesis_title: '',
-  thesis_body: '',
+  status: 'draft',
+  deadlineInput: '',
+  has_budget: false,
+  has_job_positions: false,
 })
 const locationDraft = ref({
   latitude: null,
@@ -45,9 +62,18 @@ const locationDraft = ref({
   area_geojson: null,
 })
 const budgetRows = ref([])
+const jobPositions = ref([])
 
 watch(showCreate, (open) => {
   if (open) {
+    form.value = {
+      title: '',
+      description: '',
+      status: 'draft',
+      deadlineInput: '',
+      has_budget: false,
+      has_job_positions: false,
+    }
     locationDraft.value = {
       latitude: null,
       longitude: null,
@@ -57,9 +83,16 @@ watch(showCreate, (open) => {
       area_geojson: null,
     }
     budgetRows.value = []
+    jobPositions.value = []
     pickerKey.value += 1
   }
 })
+
+function statusLabel(status) {
+  const key = `communityProjects.status.${status}`
+  const label = t(key)
+  return label === key ? status : label
+}
 
 async function loadMicrositeFlags() {
   if (!slug.value) return
@@ -73,21 +106,22 @@ async function loadList() {
   if (!slug.value) return
   loading.value = true
   loadError.value = ''
-  const { ok, status, data } = await fetchCommunityProjects(slug.value, { per_page: 50 })
+  const opts = { per_page: 50 }
+  if (filterStatus.value) opts.status = filterStatus.value
+  if (filterQ.value.trim()) opts.q = filterQ.value.trim()
+  if (filterHasBudget.value) opts.has_budget = true
+  if (filterHasJobPositions.value) opts.has_job_positions = true
+  if (filterHasDeadline.value) opts.has_deadline = true
+  const { ok, status, data } = await fetchCommunityProjects(slug.value, opts)
   loading.value = false
   if (!ok) {
-    if (status === 401) {
-      loadError.value = t('communityProjects.loginToView')
-    } else if (status === 403) {
-      loadError.value = t('communityProjects.membersOnly')
-    } else {
-      loadError.value = t('communityProjects.loadError').replace('{status}', String(status))
-    }
+    if (status === 401) loadError.value = t('communityProjects.loginToView')
+    else if (status === 403) loadError.value = t('communityProjects.membersOnly')
+    else loadError.value = t('communityProjects.loadError').replace('{status}', String(status))
     list.value = []
     return
   }
-  const rows = Array.isArray(data?.data) ? data.data : []
-  list.value = rows
+  list.value = Array.isArray(data?.data) ? data.data : []
 }
 
 async function load() {
@@ -105,46 +139,41 @@ function goLogin() {
   router.push({ name: 'login', query: { redirect: route.fullPath } })
 }
 
-function buildBudgetPayload() {
-  return budgetRows.value
-    .filter((r) => typeof r.name === 'string' && r.name.trim() !== '')
-    .map((r, i) => ({
-      name: r.name.trim(),
-      description: typeof r.description === 'string' && r.description.trim() !== '' ? r.description.trim() : undefined,
-      cost: String(r.cost ?? '0').trim() || '0',
-      sort_order: i,
-    }))
+function applyFilters() {
+  void loadList()
 }
 
 async function submitCreate() {
   createError.value = ''
   createBusy.value = true
   const loc = locationDraft.value
+  const f = form.value
   const payload = {
-    title: form.value.title.trim(),
-    description: form.value.description.trim() || undefined,
-    thesis_title: form.value.thesis_title.trim(),
-    thesis_body: form.value.thesis_body.trim() || undefined,
+    title: f.title.trim(),
+    description: f.description.trim() || undefined,
+    status: f.status,
+    deadline: f.deadlineInput ? deadlineFromInputValue(f.deadlineInput) : undefined,
+    has_budget: f.has_budget,
+    has_job_positions: f.has_job_positions,
     latitude: loc.latitude,
     longitude: loc.longitude,
     location_type: loc.location_type || 'none',
     service_area_type: loc.service_area_type || 'none',
     radius_meters: loc.radius_meters,
     area_geojson: loc.area_geojson,
-    budget_items: buildBudgetPayload(),
   }
+  if (f.has_budget) payload.budget_items = buildBudgetPayload(budgetRows.value)
+  if (f.has_job_positions) payload.job_positions = buildJobPositionsPayload(jobPositions.value)
   const { ok, status, data } = await createCommunityProject(slug.value, payload)
   createBusy.value = false
   if (!ok) {
-    const msg =
+    createError.value =
       data && typeof data === 'object' && typeof data.message === 'string' ? data.message : String(status)
-    createError.value = msg
     return
   }
   const project = data && typeof data === 'object' ? data.project : null
   const id = project && typeof project.id === 'number' ? project.id : null
   showCreate.value = false
-  form.value = { title: '', description: '', thesis_title: '', thesis_body: '' }
   if (id != null) {
     router.push({ name: 'communityProjectDetail', params: { slug: slug.value, projectId: String(id) } })
   } else {
@@ -179,6 +208,33 @@ async function submitCreate() {
       </p>
       <p v-else class="community-projects-page__muted">{{ t('communityProjects.membersOnly') }}</p>
 
+      <form v-if="isMember" class="community-projects-page__filters" @submit.prevent="applyFilters">
+        <label class="community-projects-page__filter">
+          <span>{{ t('communityProjects.filterStatus') }}</span>
+          <select v-model="filterStatus" class="community-projects-page__input">
+            <option value="">{{ t('communityProjects.filterAll') }}</option>
+            <option v-for="s in PROJECT_STATUSES" :key="s" :value="s">{{ statusLabel(s) }}</option>
+          </select>
+        </label>
+        <label class="community-projects-page__filter">
+          <span>{{ t('communityProjects.filterSearch') }}</span>
+          <input v-model="filterQ" type="search" class="community-projects-page__input" />
+        </label>
+        <label class="community-projects-page__filter-check">
+          <input v-model="filterHasBudget" type="checkbox" />
+          <span>{{ t('communityProjects.filterHasBudget') }}</span>
+        </label>
+        <label class="community-projects-page__filter-check">
+          <input v-model="filterHasJobPositions" type="checkbox" />
+          <span>{{ t('communityProjects.filterHasJobPositions') }}</span>
+        </label>
+        <label class="community-projects-page__filter-check">
+          <input v-model="filterHasDeadline" type="checkbox" />
+          <span>{{ t('communityProjects.filterHasDeadline') }}</span>
+        </label>
+        <Button type="submit">{{ t('communityProjects.filterApply') }}</Button>
+      </form>
+
       <ul v-if="isMember" class="community-projects-page__list" role="list">
         <li v-for="row in list" :key="row.id" class="community-projects-page__item">
           <RouterLink
@@ -186,13 +242,16 @@ async function submitCreate() {
             :to="{ name: 'communityProjectDetail', params: { slug, projectId: String(row.id) } }"
           >
             <span class="community-projects-page__item-title">{{ row.title }}</span>
-            <span class="community-projects-page__item-thesis">{{ row.thesis_title }}</span>
             <span class="community-projects-page__item-meta">
-              <span v-if="row.location_type === 'point' && row.latitude != null && row.longitude != null" class="community-projects-page__badge">{{
-                t('communityProjects.listHasLocation')
-              }}</span>
-              <span v-if="parseFloat(String(row.budget_sum || '0')) > 0" class="community-projects-page__badge community-projects-page__badge--budget">
-                {{ t('communityProjects.listBudgetTotal').replace('{amount}', String(row.budget_sum)) }}
+              <span class="community-projects-page__badge">{{ statusLabel(row.status) }}</span>
+              <span v-if="row.deadline" class="community-projects-page__badge community-projects-page__badge--deadline">
+                {{ formatDeadline(row.deadline) }}
+              </span>
+              <span v-if="row.location_type === 'point' && row.latitude != null" class="community-projects-page__badge">
+                {{ t('communityProjects.listHasLocation') }}
+              </span>
+              <span v-if="row.has_budget && parseFloat(String(row.budget_total || '0')) > 0" class="community-projects-page__badge community-projects-page__badge--budget">
+                {{ t('communityProjects.listBudgetTotal').replace('{amount}', String(row.budget_total)) }}
               </span>
             </span>
           </RouterLink>
@@ -214,18 +273,29 @@ async function submitCreate() {
           <textarea v-model="form.description" class="community-projects-page__textarea" rows="2" />
         </label>
         <label class="community-projects-page__field">
-          <span>{{ t('communityProjects.fieldThesis') }}</span>
-          <input v-model="form.thesis_title" type="text" class="community-projects-page__input" maxlength="500" />
+          <span>{{ t('communityProjects.fieldStatus') }}</span>
+          <select v-model="form.status" class="community-projects-page__input">
+            <option v-for="s in PROJECT_STATUSES" :key="s" :value="s">{{ statusLabel(s) }}</option>
+          </select>
         </label>
         <label class="community-projects-page__field">
-          <span>{{ t('communityProjects.fieldThesisBody') }}</span>
-          <textarea v-model="form.thesis_body" class="community-projects-page__textarea" rows="3" />
+          <span>{{ t('communityProjects.fieldDeadline') }}</span>
+          <input v-model="form.deadlineInput" type="datetime-local" class="community-projects-page__input" />
         </label>
+        <label class="community-projects-page__toggle">
+          <input v-model="form.has_budget" type="checkbox" />
+          <span>{{ t('communityProjects.hasBudget') }}</span>
+        </label>
+        <ProjectBudgetFields v-if="form.has_budget" v-model="budgetRows" />
+        <label class="community-projects-page__toggle">
+          <input v-model="form.has_job_positions" type="checkbox" />
+          <span>{{ t('communityProjects.hasJobPositions') }}</span>
+        </label>
+        <ProjectJobPositionFields v-if="form.has_job_positions" v-model="jobPositions" />
         <div class="community-projects-page__field community-projects-page__field--full">
           <span>{{ t('communityProjects.locationBlockTitle') }}</span>
           <ProjectLocationFields :key="pickerKey" v-model="locationDraft" />
         </div>
-        <ProjectBudgetFields v-model="budgetRows" />
         <div class="community-projects-page__dialog-actions">
           <Button type="button" :disabled="createBusy" @click="submitCreate">{{ t('communityProjects.createSubmit') }}</Button>
           <Button type="button" :disabled="createBusy" @click="showCreate = false">{{ t('communityProjects.cancel') }}</Button>
@@ -254,6 +324,30 @@ async function submitCreate() {
 .community-projects-page__actions {
   margin: 0.5rem 0 1rem;
 }
+.community-projects-page__filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+}
+.community-projects-page__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.82rem;
+  min-width: 8rem;
+}
+.community-projects-page__filter-check,
+.community-projects-page__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+}
 .community-projects-page__list {
   list-style: none;
   padding: 0;
@@ -261,9 +355,6 @@ async function submitCreate() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-}
-.community-projects-page__item {
-  margin: 0;
 }
 .community-projects-page__item-link {
   display: flex;
@@ -280,10 +371,6 @@ async function submitCreate() {
 }
 .community-projects-page__item-title {
   font-weight: 600;
-}
-.community-projects-page__item-thesis {
-  font-size: 0.88rem;
-  opacity: 0.8;
 }
 .community-projects-page__item-meta {
   display: flex;
@@ -302,6 +389,10 @@ async function submitCreate() {
 .community-projects-page__badge--budget {
   background: color-mix(in srgb, #15803d 14%, var(--bg));
   color: #14532d;
+}
+.community-projects-page__badge--deadline {
+  background: color-mix(in srgb, #b45309 14%, var(--bg));
+  color: #78350f;
 }
 .community-projects-page__muted {
   color: var(--muted, #6b7280);

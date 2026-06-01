@@ -88,3 +88,12 @@ export function filterExplorerRows(rows, opts) {
   }
   return out
 }
+
+/** Map `?focus=` route query to explorer/search filter kind. */
+export function folderFocusQueryToFilterKind(focus) {
+  const value = String(focus || '')
+  if (value === 'chats') return 'chat'
+  if (value === 'tasks') return 'task'
+  if (value === 'notes') return 'note'
+  return null
+}

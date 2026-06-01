@@ -10,7 +10,6 @@ use App\Models\Group;
 use App\Models\Note;
 use App\Models\Place;
 use App\Models\Post;
-use App\Models\ProjectArgument;
 use App\Models\Task;
 use App\Models\User;
 use App\Policies\CalendarPolicy;
@@ -20,7 +19,6 @@ use App\Policies\GroupPolicy;
 use App\Policies\PlacePolicy;
 use App\Policies\NotePolicy;
 use App\Policies\PostPolicy;
-use App\Policies\ProjectArgumentPolicy;
 use App\Policies\TaskPolicy;
 use App\Support\CapabilityResolver;
 use App\Support\WalletLedger\LedgerAppender;
@@ -94,18 +92,6 @@ class AppServiceProvider extends ServiceProvider
             return $project;
         });
 
-        Route::bind('argument', function (string $value, \Illuminate\Routing\Route $route): ProjectArgument {
-            $project = $route->parameter('project');
-            if (! $project instanceof CommunityProject) {
-                abort(404);
-            }
-
-            return ProjectArgument::query()
-                ->where('project_id', $project->id)
-                ->whereKey((int) $value)
-                ->firstOrFail();
-        });
-
         Gate::policy(Place::class, PlacePolicy::class);
         Gate::policy(Chat::class, ChatPolicy::class);
         Gate::policy(Group::class, GroupPolicy::class);
@@ -114,7 +100,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Task::class, TaskPolicy::class);
         Gate::policy(Note::class, NotePolicy::class);
         Gate::policy(CommunityProject::class, CommunityProjectPolicy::class);
-        Gate::policy(ProjectArgument::class, ProjectArgumentPolicy::class);
 
         Gate::before(function ($user, string $_ability) {
             if ($user instanceof User && $user->isRoot()) {
