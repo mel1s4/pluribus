@@ -25,6 +25,7 @@ const TableAccessView = () => import('../views/public/TableAccessPage.vue')
 const DashboardView = () => import('../views/app/Dashboard.vue')
 const SettingsView = () => import('../views/app/Settings.vue')
 const MyContactsPage = () => import('../views/app/MyContactsPage.vue')
+const ChatsPage = () => import('../views/app/ChatsPage.vue')
 const ChatThreadPage = () => import('../views/app/ChatThreadPage.vue')
 const ChatInfoPage = () => import('../views/app/ChatInfoPage.vue')
 const MapPage = () => import('../views/public/MapPage.vue')
@@ -255,7 +256,7 @@ const routes = [
   {
     path: '/chats',
     name: 'chats',
-    redirect: () => ({ name: 'folders', query: { focus: 'chats' } }),
+    component: ChatsPage,
     meta: {
       layout: 'app',
       requiresAuth: true,

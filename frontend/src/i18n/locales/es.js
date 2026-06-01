@@ -291,6 +291,9 @@ export default {
     'contacts.startConversationError': 'No se pudo crear la conversación (HTTP {status}).',
 
     'chats.title': 'Chats',
+    'chats.searchPlaceholder': 'Buscar o iniciar un chat nuevo',
+    'chats.openChatFolder': 'Abrir la carpeta del chat',
+    'chats.noSearchResults': 'Ningún chat coincide con tu búsqueda.',
     'chats.intro':
       'Conversaciones (con contactos o IA), listas, notas y carpetas. Usa Añadir para crear cualquiera de ellos.',
     'chats.add': 'Añadir',

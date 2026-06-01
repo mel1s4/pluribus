@@ -23,6 +23,7 @@ const { hydrateFromChats, getChatUnread } = useChatUnread()
 const chats = ref([])
 const folders = ref([])
 const loading = ref(true)
+const searchQuery = ref('')
 
 const chatDialogRef = ref(null)
 const folderDialogRef = ref(null)
@@ -92,24 +93,21 @@ function unwrapList(payload) {
   return []
 }
 
-const sections = computed(() => {
-  const byFolder = new Map()
-  for (const folder of folders.value) byFolder.set(folder.id, [])
-  for (const chat of chats.value) {
-    const key = chat.folder_id ?? 'unfiled'
-    const out = byFolder.get(key) || []
-    out.push(chat)
-    byFolder.set(key, out)
-  }
-  return [
-    { id: 'unfiled', name: t('chats.unfiled'), folder: null, chats: byFolder.get('unfiled') || [] },
-    ...folders.value.map((folder) => ({
-      id: folder.id,
-      name: folder.name,
-      folder,
-      chats: byFolder.get(folder.id) || [],
-    })),
-  ]
+function chatSortTime(chat) {
+  return new Date(chat?.last_message_at || chat?.updated_at || chat?.created_at || 0).getTime()
+}
+
+const sortedChats = computed(() => [...chats.value].sort((a, b) => chatSortTime(b) - chatSortTime(a)))
+
+const filteredChats = computed(() => {
+  const q = searchQuery.value.trim().toLowerCase()
+  if (!q) return sortedChats.value
+  return sortedChats.value.filter((chat) => {
+    const title = String(chat.title || t('chats.defaultConversation')).toLowerCase()
+    const members = chatMembersSummary(chat).toLowerCase()
+    const folder = folderNameFor(chat).toLowerCase()
+    return title.includes(q) || members.includes(q) || folder.includes(q)
+  })
 })
 
 async function load() {
@@ -270,8 +268,35 @@ function openChat(chat) {
   router.push({ name: 'chatThread', params: { chatId: chat.id } })
 }
 
-function openFolder(folderId) {
-  router.push({ name: 'chatFolder', params: { folderId } })
+function folderNameFor(chat) {
+  if (chat?.folder_id == null) return t('chats.unfiled')
+  const folder = folders.value.find((f) => Number(f.id) === Number(chat.folder_id))
+  return folder?.name || t('chats.folderDefault')
+}
+
+function openChatFolder(chat) {
+  closeKebabFor(chat.id)
+  if (chat.folder_id == null) {
+    router.push({ name: 'folders', query: { focus: 'chats' } })
+    return
+  }
+  router.push({ name: 'folderDetail', params: { folderId: chat.folder_id } })
+}
+
+function formatChatTime(chat) {
+  const source = chat?.last_message_at || chat?.updated_at || chat?.created_at || null
+  if (!source) return ''
+  const parsed = new Date(source)
+  if (Number.isNaN(parsed.getTime())) return ''
+  const now = new Date()
+  const sameDay =
+    parsed.getFullYear() === now.getFullYear() &&
+    parsed.getMonth() === now.getMonth() &&
+    parsed.getDate() === now.getDate()
+  if (sameDay) {
+    return parsed.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })
+  }
+  return parsed.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
 function chatMembersSummary(chat) {
@@ -289,19 +314,40 @@ onMounted(load)
 
 <template>
   <section class="chats-page">
-    <header class="chats-page__toolbar">
+    <header class="chats-page__header">
       <PageToolbarTitle class="chats-page__titleRow" route-key="chats">
         <Title tag="h1">{{ t('chats.title') }}</Title>
       </PageToolbarTitle>
-      <div class="chats-page__actions">
-        <button type="button" class="btn btn--primary btn--sm" @click="openNewChatDialog">
-          {{ t('chats.addConversation') }}
+      <div class="chats-page__headerActions">
+        <button
+          type="button"
+          class="chats-page__headerBtn"
+          :aria-label="t('chats.addConversation')"
+          @click="openNewChatDialog"
+        >
+          <Icon name="comments" aria-hidden="true" />
         </button>
-        <button type="button" class="btn btn--secondary btn--sm" @click="openNewFolderDialog">
-          {{ t('chats.addFolder') }}
+        <button
+          type="button"
+          class="chats-page__headerBtn"
+          :aria-label="t('chats.addFolder')"
+          @click="openNewFolderDialog"
+        >
+          <Icon name="folder" aria-hidden="true" />
         </button>
       </div>
     </header>
+
+    <label class="chats-page__search">
+      <Icon class="chats-page__searchIcon" name="magnifying-glass" aria-hidden="true" />
+      <input
+        v-model="searchQuery"
+        type="search"
+        class="chats-page__searchInput"
+        :placeholder="t('chats.searchPlaceholder')"
+        autocomplete="off"
+      >
+    </label>
 
     <dialog
       ref="chatDialogRef"
@@ -513,108 +559,257 @@ onMounted(load)
       </div>
     </dialog>
 
-    <p v-if="loading">{{ t('chats.loading') }}</p>
-    <div v-for="section in sections" :key="section.id" class="chats-page__section">
-      <div class="chats-page__sectionHeader">
-        <button
-          v-if="section.id !== 'unfiled'"
-          type="button"
-          class="chats-page__folderButton"
-          @click="openFolder(section.id)"
-        >
+    <p v-if="loading" class="chats-page__status">{{ t('chats.loading') }}</p>
+    <p v-else-if="chats.length === 0" class="chats-page__status">{{ t('chats.emptyAll') }}</p>
+    <p v-else-if="filteredChats.length === 0" class="chats-page__status">{{ t('chats.noSearchResults') }}</p>
+    <ul v-else class="chats-page__list" :aria-label="t('chats.title')">
+      <li v-for="chat in filteredChats" :key="chat.id" class="chats-page__row">
+        <button type="button" class="chats-page__chatOpen" @click="openChat(chat)">
           <span
-            v-if="section.folder?.icon_emoji"
-            class="chats-page__folderIcon"
-            :style="{ backgroundColor: section.folder.icon_bg_color || '#64748b' }"
-          >{{ section.folder.icon_emoji }}</span>
-          {{ section.name }}
-        </button>
-        <span v-else>{{ section.name }}</span>
-      </div>
-      <ul class="chats-page__list">
-        <li v-for="chat in section.chats" :key="chat.id" class="chats-page__item">
-          <button type="button" class="chats-page__chatOpen" @click="openChat(chat)">
-            <span class="chats-page__icon" :style="{ backgroundColor: chat.icon_bg_color || '#2563eb' }">
-              {{ chat.icon_emoji || '💬' }}
-            </span>
-            <span class="chats-page__chatText">
+            class="chats-page__avatar"
+            :style="{ backgroundColor: chat.icon_bg_color || '#2563eb' }"
+          >
+            {{ chat.icon_emoji || '💬' }}
+          </span>
+          <span class="chats-page__chatBody">
+            <span class="chats-page__chatTop">
               <span class="chats-page__chatTitle">{{ chat.title || t('chats.defaultConversation') }}</span>
-              <span v-if="chatMembersSummary(chat)" class="chats-page__chatMembers">
-                {{ chatMembersSummary(chat) }}
+              <span v-if="formatChatTime(chat)" class="chats-page__chatTime">{{ formatChatTime(chat) }}</span>
+            </span>
+            <span class="chats-page__chatBottom">
+              <span class="chats-page__chatPreview">
+                {{ chatMembersSummary(chat) || folderNameFor(chat) }}
+              </span>
+              <span v-if="getChatUnread(chat.id) > 0" class="chats-page__unreadBadge">
+                {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
               </span>
             </span>
-            <span v-if="getChatUnread(chat.id) > 0" class="chats-page__unreadBadge">
-              {{ getChatUnread(chat.id) > 99 ? '99+' : getChatUnread(chat.id) }}
-            </span>
-          </button>
-          <details
-            class="chats-page__kebab"
-            :ref="(el) => setKebabRef(chat.id, el)"
+          </span>
+        </button>
+        <details
+          class="chats-page__kebab"
+          :ref="(el) => setKebabRef(chat.id, el)"
+        >
+          <summary
+            class="chats-page__kebabTrigger"
+            :aria-label="t('chats.actionsMenu')"
           >
-            <summary
-              class="chats-page__kebabTrigger"
-              :aria-label="t('chats.actionsMenu')"
+            <Icon class="chats-page__kebabGlyph" name="ellipsis-vertical" aria-hidden="true" />
+          </summary>
+          <div
+            class="chats-page__kebabMenu"
+            role="menu"
+            @click.stop
+          >
+            <button
+              type="button"
+              class="chats-page__kebabItem"
+              role="menuitem"
+              @click="openChatFolder(chat)"
             >
-              <Icon class="chats-page__kebabGlyph" name="ellipsis-vertical" aria-hidden="true" />
-            </summary>
-            <div
-              class="chats-page__kebabMenu"
-              role="menu"
-              @click.stop
+              <Icon class="chats-page__kebabGlyph" name="folder-open" aria-hidden="true" />
+              {{ t('chats.openChatFolder') }}
+            </button>
+            <button
+              type="button"
+              class="chats-page__kebabItem"
+              role="menuitem"
+              @click="openEditDialog(chat)"
             >
-              <button
-                type="button"
-                class="chats-page__kebabItem"
-                role="menuitem"
-                @click="openRenameDialog(chat)"
-              >
-                <Icon class="chats-page__kebabGlyph" name="pen" aria-hidden="true" />
-                {{ t('chats.rename') }}
-              </button>
-              <button
-                type="button"
-                class="chats-page__kebabItem"
-                role="menuitem"
-                @click="openEditDialog(chat)"
-              >
-                <Icon class="chats-page__kebabGlyph" name="gear" aria-hidden="true" />
-                {{ t('chats.edit') }}
-              </button>
-              <button
-                type="button"
-                class="chats-page__kebabItem chats-page__kebabItem--danger"
-                role="menuitem"
-                @click="onDeleteChat(chat)"
-              >
-                <Icon class="chats-page__kebabGlyph" name="trash" aria-hidden="true" />
-                {{ t('chats.delete') }}
-              </button>
-            </div>
-          </details>
-        </li>
-      </ul>
-    </div>
+              <Icon class="chats-page__kebabGlyph" name="pen" aria-hidden="true" />
+              {{ t('chats.edit') }}
+            </button>
+            <button
+              type="button"
+              class="chats-page__kebabItem chats-page__kebabItem--danger"
+              role="menuitem"
+              @click="onDeleteChat(chat)"
+            >
+              <Icon class="chats-page__kebabGlyph" name="trash" aria-hidden="true" />
+              {{ t('chats.delete') }}
+            </button>
+          </div>
+        </details>
+      </li>
+    </ul>
   </section>
 </template>
 
 <style scoped lang="scss">
-.chats-page { padding: 1rem; }
-.chats-page__toolbar { display: flex; justify-content: space-between; gap: 1rem; flex-wrap: wrap; align-items: center; }
-.chats-page__titleRow { flex: 1; min-width: 0; }
-.chats-page__actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
-.chats-page__section { border: 1px solid var(--border); border-radius: 0.5rem; margin-top: 0.75rem; }
-.chats-page__sectionHeader { padding: 0.5rem 0.75rem; font-weight: 700; border-bottom: 1px solid var(--border); }
-.chats-page__list { list-style: none; margin: 0; padding: 0.5rem; display: grid; gap: 0.5rem; }
-.chats-page__item { display: flex; align-items: center; gap: 0.5rem; }
-.chats-page__chatOpen { border: none; background: transparent; display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 0; text-align: left; cursor: pointer; }
-.chats-page__chatText { min-width: 0; display: flex; flex-direction: column; gap: 0.12rem; }
-.chats-page__chatTitle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.chats-page__chatMembers { font-size: 0.74rem; opacity: 0.72; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chats-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0 0 1rem;
+  background: var(--bg);
+}
+
+.chats-page__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0.35rem;
+}
+
+.chats-page__titleRow {
+  flex: 1;
+  min-width: 0;
+}
+
+.chats-page__headerActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.chats-page__headerBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.chats-page__headerBtn:hover {
+  background: var(--btn-bg-hover, rgba(0, 0, 0, 0.06));
+}
+
+.chats-page__search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.35rem 1rem 0.5rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  background: var(--btn-bg, rgba(15, 23, 42, 0.06));
+}
+
+.chats-page__searchIcon {
+  opacity: 0.55;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+
+.chats-page__searchInput {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.92rem;
+  outline: none;
+}
+
+.chats-page__searchInput::placeholder {
+  opacity: 0.65;
+}
+
+.chats-page__status {
+  margin: 0.75rem 1rem;
+  opacity: 0.75;
+}
+
+.chats-page__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.chats-page__row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+
+.chats-page__row:hover {
+  background: var(--btn-bg-hover, rgba(0, 0, 0, 0.03));
+}
+
+.chats-page__chatOpen {
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+  min-width: 0;
+  padding: 0.65rem 0.35rem 0.65rem 1rem;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.chats-page__avatar {
+  width: 3rem;
+  height: 3rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-size: 1.25rem;
+}
+
+.chats-page__chatBody {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.chats-page__chatTop,
+.chats-page__chatBottom {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.chats-page__chatTitle {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  font-size: 0.98rem;
+}
+
+.chats-page__chatTime {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  opacity: 0.62;
+}
+
+.chats-page__chatPreview {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.84rem;
+  opacity: 0.72;
+}
 
 .chats-page__kebab {
   position: relative;
   flex-shrink: 0;
   list-style: none;
+  align-self: center;
+  margin-right: 0.35rem;
 }
 .chats-page__kebabTrigger {
   list-style: none;
@@ -679,41 +874,19 @@ html[data-theme='dark'] .chats-page__kebabMenu {
   background: rgba(220, 38, 38, 0.12);
   color: #dc2626;
 }
-.chats-page__icon { width: 1.8rem; height: 1.8rem; display: inline-flex; align-items: center; justify-content: center; border-radius: 999px; }
 .chats-page__unreadBadge {
-  margin-left: auto;
-  min-width: 1.2rem;
-  height: 1.2rem;
-  padding: 0 0.3rem;
+  flex-shrink: 0;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
   border-radius: 999px;
-  background: #ef4444;
+  background: #25d366;
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-weight: 700;
-}
-.chats-page__folderButton {
-  border: none;
-  background: transparent;
-  font: inherit;
-  padding: 0;
-  cursor: pointer;
-  text-decoration: underline;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-.chats-page__folderIcon {
-  width: 1.65rem;
-  height: 1.65rem;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  text-decoration: none;
-  font-size: 0.95rem;
 }
 
 .chats-page__dialog {
