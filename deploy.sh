@@ -586,8 +586,35 @@ upload_backend() {
 }
 
 # --- Upload frontend dist ---
+# Upload hashed assets before index.html so a hard refresh never sees new hashes with missing files.
 upload_frontend() {
-  ftp_put_generic "$PROJECT_ROOT/frontend/dist-deploy" "$REMOTE_FRONTEND_PATH"
+  local dist="$PROJECT_ROOT/frontend/dist-deploy"
+  if [[ ! -d "$dist" ]]; then
+    print_error "frontend/dist-deploy missing — run build first"
+    exit 1
+  fi
+  if [[ -z "$FTP_HOST" ]]; then
+    print_error "FTP_HOST is not set."
+    exit 1
+  fi
+  local remote="${REMOTE_FRONTEND_PATH%/}"
+  local script
+  script="$(mktemp)"
+  trap 'rm -f "$script"' RETURN
+  lftp_preamble > "$script"
+  cat >> "$script" <<EOF
+cd $remote
+mirror -R -v -e --delete -x '^index\.html$' "$dist" .
+put "$dist/index.html" -o index.html
+bye
+EOF
+  print_info "Uploading frontend (assets first, then index.html) -> $remote ..."
+  if run_with_timeout "$FTP_TIMEOUT" lftp -f "$script"; then
+    print_success "Frontend upload completed"
+  else
+    print_error "Frontend upload failed"
+    exit 1
+  fi
 }
 
 # --- Upload a single file ---

@@ -76,6 +76,23 @@ curl -sI 'https://pluribus.vzs.mx/login' | grep -iE '^(HTTP|location):'
 - `frontend/public/404.html` — custom 404
 - `docs/domain-migration.md` — infrastructure checklist
 
+## MIME type errors on `/assets/*.js` (text/html)
+
+If the browser console shows **“disallowed MIME type (text/html)”** for hashed files under `/assets/`, Apache is usually serving **`index.html` instead of the missing `.js` file** (SPA fallback). Common causes:
+
+1. **Deploy race** — `index.html` uploaded before new hashed assets (or `mirror --delete` removed old files first). `./deploy.sh frontend` now uploads everything except `index.html`, then uploads `index.html` last.
+2. **Stale tab + new deploy** — hard refresh loads a new `index.html` while assets are still uploading; wait for deploy to finish and refresh again.
+3. **Service worker** — rare on hard refresh; unregister in DevTools → Application → Service Workers if it persists.
+
+`.htaccess` no longer rewrites missing `/assets/*` (or `sw.js`, `workbox-*`, `version.json`) to `index.html`, so a missing file returns **404** instead of a confusing MIME error.
+
+Verify a failing URL (use a browser User-Agent; some hosts return **406** to plain `curl`):
+
+```bash
+curl -sI -A 'Mozilla/5.0' 'https://pluribus.vzs.mx/assets/index-BgG2wUt3.js' | grep -iE '^(HTTP|content-type):'
+# Expect: HTTP/2 200 and content-type: application/javascript
+```
+
 ## Important Notes
 
 - `.htaccess` applies to the **frontend** vhosts (`pluribus.vzs.mx`, `chante.vzs.mx` when pointed at the same docroot)
