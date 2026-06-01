@@ -17,6 +17,9 @@ For each community domain:
 |----------|---------|
 | `PLURIBUS_PLATFORM_HOSTS` | Comma-separated hosts that are **not** community sites (`localhost`, `pluribus.vzs.mx`, …) |
 | `SANCTUM_STATEFUL_DOMAINS` | Must include every community SPA host (verified domains are merged automatically at boot when the table exists) |
+| `community_domains` row | Host must match the browser hostname (e.g. `nuestrachante.vzs.mx`, without `www.`) |
+
+CORS and Sanctum both pick up hosts from `community_domains` after migrations have run and `php artisan config:cache` has been refreshed.
 | `FRONTEND_URL` | Default SPA origin for emails when a community has no primary domain |
 
 Example (`backend/.env`):
@@ -35,7 +38,7 @@ php artisan config:cache
 
 ## How it works
 
-1. The SPA calls `GET /api/community/resolve-host` using the page `Host`.
+1. The SPA calls `GET /api/community/resolve-host?host=<page-hostname>` (required because API requests go to `chante-api.vzs.mx`, not the community domain). Subsequent API calls also send `X-Community-Host`.
 2. The API loads the community from `community_domains` and sets `active_community` for the request.
 3. Authenticated requests from that host scope branding, capabilities, and guest membership to that community.
 4. **Members** sign in with email/password (must already belong to the community).

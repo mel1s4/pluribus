@@ -63,14 +63,12 @@ export async function resolveCommunityHost() {
     return
   }
 
-  const { ok, status, data } = await apiJson('GET', '/api/community/resolve-host')
+  const resolvePath = `/api/community/resolve-host?host=${encodeURIComponent(pageHost)}`
+  const { ok, status, data } = await apiJson('GET', resolvePath)
   if (!ok) {
-    communityHostMode.value = status === 404 ? 'platform' : 'platform'
+    communityHostMode.value = 'platform'
     communityHostSlug.value = null
     communityHostName.value = null
-    if (status === 404) {
-      communityHostMode.value = 'platform'
-    }
     return
   }
 
@@ -88,10 +86,22 @@ export async function resolveCommunityHost() {
   communityHostName.value = null
 }
 
+export function communityHostPageHeaders() {
+  if (typeof window === 'undefined') {
+    return {}
+  }
+  const pageHost = normalizeHost(window.location.hostname)
+  if (!pageHost || isLikelyPlatformHost(pageHost)) {
+    return {}
+  }
+  return { 'X-Community-Host': pageHost }
+}
+
 export function communityHostRequestHeaders() {
+  const headers = communityHostPageHeaders()
   const slug = communityHostSlug.value
   if (typeof slug === 'string' && slug.trim() !== '') {
-    return { 'X-Community-Slug': slug.trim() }
+    headers['X-Community-Slug'] = slug.trim()
   }
-  return {}
+  return headers
 }

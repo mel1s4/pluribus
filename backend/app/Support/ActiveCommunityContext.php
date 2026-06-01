@@ -59,7 +59,7 @@ class ActiveCommunityContext
 
     public function resolveCommunityFromHost(Request $request): ?Community
     {
-        $host = CommunityHost::normalize($request->getHost());
+        $host = CommunityHost::spaHostFromRequest($request);
         if ($host === null || CommunityHost::isPlatformHost($host)) {
             return null;
         }
@@ -74,6 +74,8 @@ class ActiveCommunityContext
 
     public function isPlatformRequest(Request $request): bool
     {
-        return CommunityHost::isPlatformHost($request->getHost());
+        $host = CommunityHost::spaHostFromRequest($request);
+
+        return $host === null || CommunityHost::isPlatformHost($host);
     }
 }

@@ -74,6 +74,19 @@ class CommunityCustomDomainApiTest extends TestCase
             ->assertJsonPath('community.slug', 'river-hub');
     }
 
+    public function test_resolve_host_uses_host_query_when_request_host_is_api(): void
+    {
+        $this->communityWithDomain('nuestrachante.vzs.mx', 'nuestra-chante');
+
+        $this->getJson('/api/community/resolve-host?host=nuestrachante.vzs.mx', [
+            'Host' => 'chante-api.test',
+            'Accept' => 'application/json',
+        ])
+            ->assertOk()
+            ->assertJsonPath('mode', 'community')
+            ->assertJsonPath('community.slug', 'nuestra-chante');
+    }
+
     public function test_resolve_host_returns_404_for_unknown_custom_domain(): void
     {
         $this->getJson('/api/community/resolve-host', $this->communityHostHeaders('unknown.example'))

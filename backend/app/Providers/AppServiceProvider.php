@@ -218,6 +218,18 @@ class AppServiceProvider extends ServiceProvider
             config([
                 'sanctum.stateful' => array_values(array_unique(array_merge($existing, $hosts))),
             ]);
+
+            $origins = config('cors.allowed_origins', []);
+            if (! is_array($origins)) {
+                $origins = [];
+            }
+            foreach ($hosts as $host) {
+                $origins[] = 'https://'.$host;
+                $origins[] = 'http://'.$host;
+            }
+            config([
+                'cors.allowed_origins' => array_values(array_unique(array_filter($origins))),
+            ]);
         } catch (\Throwable) {
             // Migrations may not have run yet (e.g. package discovery).
         }
