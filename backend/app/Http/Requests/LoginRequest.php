@@ -20,6 +20,7 @@ class LoginRequest extends FormRequest
             'email' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string'],
             'remember' => ['sometimes', 'boolean'],
+            'intent' => ['sometimes', 'string', 'in:guest,member'],
         ];
     }
 }

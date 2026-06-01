@@ -6,6 +6,7 @@ import router from './router'
 import { initI18n } from './i18n/i18n'
 import { initTheme } from './theme/theme'
 import { communityDefaultLanguage, fetchCommunityBranding } from './composables/useCommunity'
+import { communityHostSlug, resolveCommunityHost } from './composables/useCommunityHost'
 import { resolveSession, sessionStatus } from './composables/useSession'
 import { isLegacyChanteHost, redirectLegacyHostIfNeeded } from './legacyHostRedirect.js'
 import './composables/useFavorites.js'
@@ -55,8 +56,14 @@ function bootstrapApp() {
 
     createApp(App).use(router).mount('#app')
 
-    void resolveSession().catch(() => {})
-    settleWithin(fetchCommunityBranding(), BOOTSTRAP_TIMEOUT_MS, 'community-branding').then(() => {
+  void resolveSession().catch(() => {})
+  settleWithin(resolveCommunityHost(), BOOTSTRAP_TIMEOUT_MS, 'community-host').then(() => {
+    const slug =
+      typeof communityHostSlug.value === 'string' && communityHostSlug.value.trim() !== ''
+        ? communityHostSlug.value.trim()
+        : null
+    return settleWithin(fetchCommunityBranding(slug), BOOTSTRAP_TIMEOUT_MS, 'community-branding')
+  }).then(() => {
       if (sessionStatus.value === 'unknown') {
         // Never block public app shell forever because an upstream request stalled.
         sessionStatus.value = 'guest'

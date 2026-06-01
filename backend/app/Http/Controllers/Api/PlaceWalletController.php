@@ -34,7 +34,7 @@ class PlaceWalletController extends Controller
         }
         $this->authorize('viewPlaceWallet', $place);
 
-        $community = Community::current();
+        $community = Community::forRequest($request);
         $communityId = (int) $community->id;
         $this->assertMemberOfCommunity($user, $communityId);
 
@@ -86,7 +86,7 @@ class PlaceWalletController extends Controller
         }
         $this->authorize('transferFromPlaceWallet', $place);
 
-        $community = Community::current();
+        $community = Community::forRequest($request);
         $communityId = (int) $community->id;
         $this->assertMemberOfCommunity($actor, $communityId);
 

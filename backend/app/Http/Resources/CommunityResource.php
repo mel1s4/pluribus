@@ -15,6 +15,10 @@ class CommunityResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $domains = $this->relationLoaded('domains')
+            ? $this->domains
+            : $this->domains()->orderByDesc('is_primary')->orderBy('id')->get();
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -31,6 +35,13 @@ class CommunityResource extends JsonResource
             'local_currency_code' => $this->local_currency_code,
             'latitude' => $this->latitude !== null ? (float) $this->latitude : null,
             'longitude' => $this->longitude !== null ? (float) $this->longitude : null,
+            'domains' => $domains->map(fn ($domain): array => [
+                'id' => $domain->id,
+                'host' => $domain->host,
+                'is_primary' => (bool) $domain->is_primary,
+                'verified_at' => $domain->verified_at?->toIso8601String(),
+            ])->values()->all(),
+            'public_site_url' => $this->publicSiteUrl(),
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),
         ];

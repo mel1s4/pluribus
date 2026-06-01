@@ -180,6 +180,11 @@ export default {
     'login.password': 'Password',
     'login.passwordPlaceholder': '••••••••',
     'login.signIn': 'Sign in',
+    'login.enterAsGuest': 'Enter as guest',
+    'login.visitorLink': 'Send visitor login link',
+    'login.visitorLinkSent': 'Check your email for a sign-in link.',
+    'login.communityHostHint':
+      'Members sign in with email and password. Guests can request a magic link without a formal invitation.',
     'login.rememberMe': 'Remember me',
     'login.errorInvalid': 'These credentials do not match our records.',
     'login.errorRateLimit': 'Too many attempts. Please try again shortly.',
@@ -1484,6 +1489,9 @@ export default {
     'communityMicrosite.recentPostsEmpty': 'No recent posts.',
     'communityMicrosite.joinHint': 'Join this community with an invitation to see member-only places and posts.',
     'communityMicrosite.logIn': 'Log in',
+    'communityMicrosite.enterAsGuest': 'Enter as guest',
+    'communityMicrosite.guestLinkSent': 'We sent a sign-in link to your email.',
+    'communityMicrosite.guestLinkError': 'Could not send the guest sign-in link. Try again.',
     'communityMicrosite.myCommunitiesLink': 'My communities',
     'communityMicrosite.creditsDetailLink': 'Credits & ledger export',
 
@@ -1603,6 +1611,12 @@ export default {
     'communities.fieldName': 'Name',
     'communities.fieldSlug': 'Slug',
     'communities.fieldDescription': 'Description',
+    'communities.fieldDomains': 'Custom domains',
+    'communities.domainsHint':
+      'Point each domain DNS (A or CNAME) to the same server as Pluribus, enable SSL, and add the host to SANCTUM_STATEFUL_DOMAINS on deploy.',
+    'communities.domainHostPlaceholder': 'e.g. river.example.org',
+    'communities.addDomain': 'Add domain',
+    'communities.primaryDomain': 'Primary',
     'communities.slugPlaceholder': 'e.g. northside',
     'communities.create': 'Create',
     'communities.save': 'Save changes',
@@ -1619,6 +1633,7 @@ export default {
     'communities.editNoPermission': 'You do not have permission to edit community details.',
     'communities.editLoadError': 'Could not load this community (HTTP {status}).',
     'communities.editInvalidId': 'Invalid community.',
+    'communities.noDomains': 'No custom domains configured.',
     'communities.createMissingCommunityPayload': 'Community was created but the response was incomplete. Return to the list.',
     'communities.adminsSectionTitle': 'Administrators & members',
     'communities.adminsSectionIntro':

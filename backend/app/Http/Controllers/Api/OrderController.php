@@ -77,7 +77,7 @@ class OrderController extends Controller
                 $this->authorizeOfferForCheckout($request, $row->offer);
             }
 
-            $community = Community::current();
+            $community = Community::forRequest($request);
             $this->assertMemberOfCommunity($user, (int) $community->id);
 
             $total = '0.00';

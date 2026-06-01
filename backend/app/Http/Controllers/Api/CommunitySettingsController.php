@@ -203,7 +203,7 @@ class CommunitySettingsController extends Controller
     {
         $active = $request->attributes->get('active_community');
 
-        return $active instanceof Community ? $active : Community::current();
+        return $active instanceof Community ? $active : Community::forRequest($request);
     }
 
     private function deleteStoredCommunityLogo(?string $logo): void

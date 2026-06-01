@@ -7,8 +7,9 @@ import Title from '../../atoms/Title.vue'
 import CommunityHubTabs from '../../components/App/CommunityHubTabs.vue'
 import { t } from '../../i18n/i18n'
 import { fetchCommunityBranding } from '../../composables/useCommunity'
+import { communityHostSlug, isCommunityHostSite } from '../../composables/useCommunityHost'
 import { hasCapability } from '../../composables/useCapabilities'
-import { sessionStatus, sessionUser } from '../../composables/useSession'
+import { requestVisitorLoginLink, sessionStatus, sessionUser } from '../../composables/useSession'
 import { fetchCommunityMicrosite } from '../../services/communityApi'
 
 const route = useRoute()
@@ -17,10 +18,17 @@ const router = useRouter()
 const loading = ref(true)
 const loadError = ref('')
 const payload = ref(null)
+const guestLinkSending = ref(false)
+const guestLinkMessage = ref('')
+const guestLinkError = ref('')
 
 const slug = computed(() => {
   const raw = route.params.slug
-  return typeof raw === 'string' ? raw.trim() : ''
+  if (typeof raw === 'string' && raw.trim() !== '') {
+    return raw.trim()
+  }
+  const hostSlug = communityHostSlug.value
+  return typeof hostSlug === 'string' ? hostSlug.trim() : ''
 })
 
 const community = computed(() => {
@@ -88,6 +96,25 @@ watch(slug, () => {
 
 function goLogin() {
   router.push({ name: 'login', query: { redirect: route.fullPath } })
+}
+
+async function enterAsGuest() {
+  guestLinkError.value = ''
+  guestLinkMessage.value = ''
+  const u = sessionUser.value
+  const email = typeof u?.email === 'string' ? u.email.trim() : ''
+  if (!email) {
+    goLogin()
+    return
+  }
+  guestLinkSending.value = true
+  const { ok } = await requestVisitorLoginLink({ email })
+  guestLinkSending.value = false
+  if (ok) {
+    guestLinkMessage.value = t('communityMicrosite.guestLinkSent')
+  } else {
+    guestLinkError.value = t('communityMicrosite.guestLinkError')
+  }
 }
 </script>
 
@@ -184,12 +211,37 @@ function goLogin() {
 
       <div v-else class="community-microsite__cta">
         <p class="community-microsite__cta-text">{{ t('communityMicrosite.joinHint') }}</p>
-        <Button v-if="sessionStatus !== 'authenticated'" type="button" @click="goLogin">
-          {{ t('communityMicrosite.logIn') }}
-        </Button>
-        <RouterLink v-else class="community-microsite__link community-microsite__link--inline" :to="{ name: 'myCommunities' }">
-          {{ t('communityMicrosite.myCommunitiesLink') }}
-        </RouterLink>
+        <template v-if="sessionStatus !== 'authenticated'">
+          <Button type="button" @click="goLogin">
+            {{ t('communityMicrosite.logIn') }}
+          </Button>
+          <Button
+            type="button"
+            variant="secondary"
+            class="community-microsite__guestBtn"
+            @click="goLogin"
+          >
+            {{ t('communityMicrosite.enterAsGuest') }}
+          </Button>
+        </template>
+        <template v-else>
+          <Button
+            type="button"
+            :disabled="guestLinkSending"
+            @click="enterAsGuest"
+          >
+            {{ t('communityMicrosite.enterAsGuest') }}
+          </Button>
+          <p v-if="guestLinkMessage" class="community-microsite__guestMsg">{{ guestLinkMessage }}</p>
+          <p v-if="guestLinkError" class="community-microsite__error">{{ guestLinkError }}</p>
+          <RouterLink
+            v-if="!isCommunityHostSite"
+            class="community-microsite__link community-microsite__link--inline"
+            :to="{ name: 'myCommunities' }"
+          >
+            {{ t('communityMicrosite.myCommunitiesLink') }}
+          </RouterLink>
+        </template>
       </div>
     </template>
   </section>
@@ -307,6 +359,14 @@ function goLogin() {
 .community-microsite__cta-text {
   margin: 0 0 0.75rem;
   color: var(--muted, #6b7280);
+}
+.community-microsite__guestBtn {
+  margin-top: 0.5rem;
+}
+.community-microsite__guestMsg {
+  margin: 0.75rem 0 0;
+  color: #0f766e;
+  font-size: 0.9rem;
 }
 .community-microsite__error {
   color: #b91c1c;

@@ -181,6 +181,11 @@ export default {
     'login.password': 'Contraseña',
     'login.passwordPlaceholder': '••••••••',
     'login.signIn': 'Entrar',
+    'login.enterAsGuest': 'Entrar como invitadx',
+    'login.visitorLink': 'Enviar enlace de acceso visitante',
+    'login.visitorLinkSent': 'Revisa tu correo para el enlace de acceso.',
+    'login.communityHostHint':
+      'Las personas miembros entran con correo y contraseña. Las invitadas pueden pedir un enlace mágico sin invitación formal.',
     'login.rememberMe': 'Recuérdame',
     'login.errorInvalid': 'Las credenciales no coinciden con nuestros registros.',
     'login.errorRateLimit': 'Demasiados intentos. Inténtalo de nuevo en breve.',
@@ -1529,6 +1534,9 @@ export default {
     'communityMicrosite.joinHint':
       'Únete con una invitación para ver lugares y publicaciones solo para miembras.',
     'communityMicrosite.logIn': 'Iniciar sesión',
+    'communityMicrosite.enterAsGuest': 'Entrar como invitadx',
+    'communityMicrosite.guestLinkSent': 'Enviamos un enlace de acceso a tu correo.',
+    'communityMicrosite.guestLinkError': 'No se pudo enviar el enlace de acceso. Inténtalo de nuevo.',
     'communityMicrosite.myCommunitiesLink': 'Mis comunidades',
     'communityMicrosite.creditsDetailLink': 'Créditos y exportación del libro',
 
@@ -1649,6 +1657,13 @@ export default {
     'communities.fieldName': 'Nombre',
     'communities.fieldSlug': 'Slug',
     'communities.fieldDescription': 'Descripción',
+    'communities.fieldDomains': 'Dominios propios',
+    'communities.domainsHint':
+      'Apunta el DNS de cada dominio (A o CNAME) al mismo servidor que Pluribus, activa SSL y añade el host a SANCTUM_STATEFUL_DOMAINS al desplegar.',
+    'communities.domainHostPlaceholder': 'p. ej. river.ejemplo.org',
+    'communities.addDomain': 'Añadir dominio',
+    'communities.primaryDomain': 'Principal',
+    'communities.noDomains': 'No hay dominios propios configurados.',
     'communities.slugPlaceholder': 'ej. northside',
     'communities.create': 'Crear',
     'communities.save': 'Guardar cambios',

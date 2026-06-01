@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
+use App\Models\Community;
 use App\Models\User;
 use App\Models\UserPersonificationAudit;
+use App\Support\CommunityGuestAccess;
 use App\Support\PersonificationSession;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,10 +34,31 @@ class AuthController extends Controller
             ]);
         }
 
+        $user = $request->user();
+        if (! $user instanceof User) {
+            throw ValidationException::withMessages([
+                'email' => [trans('auth.failed')],
+            ]);
+        }
+
+        $community = $request->attributes->get('active_community');
+        if ($community instanceof Community) {
+            $intent = (string) $request->input('intent', 'member');
+            $hasMembership = CommunityGuestAccess::hasMembership($user, $community);
+            if ($intent === 'guest') {
+                CommunityGuestAccess::ensureVisitorMembership($user, $community);
+            } elseif (! $hasMembership) {
+                Auth::logout();
+                throw ValidationException::withMessages([
+                    'email' => [__('You are not a member of this community. Use guest access or join with an invitation.')],
+                ]);
+            }
+        }
+
         $request->session()->regenerate();
 
         return response()->json([
-            'user' => UserResource::make($request->user()),
+            'user' => UserResource::make($user->fresh()),
             'personification' => ['active' => false],
         ]);
     }

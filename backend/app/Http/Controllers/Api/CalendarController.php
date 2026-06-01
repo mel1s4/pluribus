@@ -31,7 +31,7 @@ class CalendarController extends Controller
     public function store(StoreCalendarRequest $request): JsonResponse
     {
         $calendar = Calendar::query()->create([
-            'community_id' => Community::current()->id,
+            'community_id' => Community::forRequest($request)->id,
             'owner_id' => $request->user()->id,
             ...$request->validated(),
         ]);

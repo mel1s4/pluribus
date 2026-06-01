@@ -199,6 +199,17 @@ let pendingCsrfRequest = null
  * @param {FormData} formData
  * @returns {Promise<{ ok: boolean, status: number, data: unknown }>}
  */
+async function mergeCommunityHostHeaders(extra) {
+  const hostHeaders =
+    typeof window !== 'undefined'
+      ? (await import('../composables/useCommunityHost.js')).communityHostRequestHeaders()
+      : {}
+  return {
+    ...hostHeaders,
+    ...(extra && typeof extra === 'object' ? extra : {}),
+  }
+}
+
 export async function apiForm(method, path, formData, requestOptions = undefined) {
   await ensureCsrfCookie()
   const url = `${apiBaseUrl()}${path.startsWith('/') ? path : `/${path}`}`
@@ -209,7 +220,7 @@ export async function apiForm(method, path, formData, requestOptions = undefined
   const headers = {
     Accept: 'application/json',
     ...xsrfHeaders(),
-    ...extra,
+    ...(await mergeCommunityHostHeaders(extra)),
   }
   const res = await requestWithTimeout(method, path, url, {
     method,
@@ -242,7 +253,7 @@ export async function apiJson(method, path, body, requestOptions = undefined) {
   const headers = {
     Accept: 'application/json',
     ...xsrfHeaders(),
-    ...extra,
+    ...(await mergeCommunityHostHeaders(extra)),
   }
   const opts = {
     method,

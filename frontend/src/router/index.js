@@ -1,6 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { hasCapability, isVisitorUser } from '../composables/useCapabilities'
 import {
+  communityHostSlug,
+  isCommunityHostSite,
+} from '../composables/useCommunityHost'
+import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
   resolveSession,
@@ -993,7 +997,29 @@ function communityMembershipsBeforeEnter(to) {
   return { name: 'dashboard' }
 }
 
+const COMMUNITY_HOST_BLOCKED_ROUTE_NAMES = new Set([
+  'home',
+  'myCommunities',
+  'communities',
+  'communitiesScoped',
+  'communityCreate',
+  'communityCreateScoped',
+  'communityEdit',
+  'communityEditScoped',
+  'map',
+])
+
 router.beforeEach(async (to) => {
+  if (isCommunityHostSite.value && communityHostSlug.value) {
+    const slug = communityHostSlug.value
+    if (to.name === 'home') {
+      return { name: 'communityMicrosite', params: { slug } }
+    }
+    if (COMMUNITY_HOST_BLOCKED_ROUTE_NAMES.has(String(to.name || ''))) {
+      return { name: 'communityMicrosite', params: { slug } }
+    }
+  }
+
   const requiresAuth = Boolean(to.meta.requiresAuth)
   const unknownSession = sessionStatus.value === 'unknown'
   const needsResolution =

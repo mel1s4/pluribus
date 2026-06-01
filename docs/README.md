@@ -16,6 +16,8 @@ Adding support for Stores, Map, Offers, and more.
 
 See [domain-migration.md](domain-migration.md) for SPA/API hosts, legacy redirects, and deploy checklist.
 
+See [community-custom-domains.md](community-custom-domains.md) for per-community SPA hosts and guest access.
+
 ### Frontend environment (Vite)
 
 Optional variables for the Vue app (see `frontend/.env` or deployment env):

@@ -186,12 +186,7 @@ class CommunityInvitationController extends Controller
 
     private function activeCommunity(Request $request): Community
     {
-        $active = $request->attributes->get('active_community');
-        if ($active instanceof Community) {
-            return $active;
-        }
-
-        return Community::current();
+        return Community::forRequest($request);
     }
 
     private function maxGrantMintTotal(CommunityInvitation $invitation): ?string

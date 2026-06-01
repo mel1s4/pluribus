@@ -110,15 +110,19 @@ export async function resolveSession() {
 }
 
 /**
- * @param {{ email: string, password: string, remember?: boolean }} payload
+ * @param {{ email: string, password: string, remember?: boolean, intent?: 'guest' | 'member' }} payload
  */
 export async function loginRequest(payload) {
   await ensureCsrfCookie()
-  const result = await apiJson('POST', '/api/login', {
+  const body = {
     email: payload.email,
     password: payload.password,
     remember: Boolean(payload.remember),
-  })
+  }
+  if (payload.intent === 'guest' || payload.intent === 'member') {
+    body.intent = payload.intent
+  }
+  const result = await apiJson('POST', '/api/login', body)
   return result
 }
 

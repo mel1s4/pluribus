@@ -21,7 +21,7 @@ class PlaceOfferResource extends JsonResource
         $gallery = $this->gallery_paths;
         /** @var list<string>|null $tags */
         $tags = $this->tags;
-        $community = Community::current();
+        $community = Community::forRequest($request);
         $localCurrencyCode = $community->local_currency_code;
 
         return [

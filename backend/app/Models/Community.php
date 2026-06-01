@@ -2,16 +2,15 @@
 
 namespace App\Models;
 
+use App\Support\CommunityHost;
 use App\Support\LocaleOptions;
 use App\Support\PlaceMedia;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Http\Request;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 
-/**
- * Application-wide community (exactly one row). Use {@see self::current()} to resolve it.
- */
 class Community extends Model
 {
     /**
@@ -34,7 +33,25 @@ class Community extends Model
     ];
 
     /**
-     * Singleton row: first by id, created if missing (e.g. fresh DB before seeder).
+     * Active community for this HTTP request (slug header, route, or custom host).
+     */
+    public static function forRequest(Request $request): self
+    {
+        $active = $request->attributes->get('active_community');
+        if ($active instanceof self) {
+            return $active;
+        }
+
+        $host = CommunityHost::normalize($request->getHost());
+        if ($host !== null && ! CommunityHost::isPlatformHost($host)) {
+            abort(403, 'Unknown community host.');
+        }
+
+        return self::current();
+    }
+
+    /**
+     * Default community on platform hosts (first by id, created if missing).
      */
     public static function current(): self
     {
@@ -92,6 +109,40 @@ class Community extends Model
     public function communityProjects(): HasMany
     {
         return $this->hasMany(CommunityProject::class);
+    }
+
+    /**
+     * @return HasMany<CommunityDomain, $this>
+     */
+    public function domains(): HasMany
+    {
+        return $this->hasMany(CommunityDomain::class);
+    }
+
+    public function primaryDomain(): ?CommunityDomain
+    {
+        /** @var CommunityDomain|null $primary */
+        $primary = $this->domains()->where('is_primary', true)->orderBy('id')->first();
+        if ($primary !== null) {
+            return $primary;
+        }
+
+        /** @var CommunityDomain|null $first */
+        $first = $this->domains()->orderBy('id')->first();
+
+        return $first;
+    }
+
+    public function publicSiteUrl(): ?string
+    {
+        $domain = $this->primaryDomain();
+        if ($domain === null || $domain->host === '') {
+            return null;
+        }
+
+        $scheme = app()->environment('production') ? 'https' : 'http';
+
+        return $scheme.'://'.$domain->host;
     }
 
     public function publicLogoUrl(): ?string

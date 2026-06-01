@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\CommunityMicrositeController;
 use App\Http\Controllers\Api\CommunityPublicLegalDocumentsController;
 use App\Http\Controllers\Api\CommunityPlaceOfferController;
 use App\Http\Controllers\Api\CommunityAdminController;
+use App\Http\Controllers\Api\CommunityResolveHostController;
 use App\Http\Controllers\Api\CommunitySettingsController;
 use App\Http\Controllers\Api\ContactController;
 use App\Http\Controllers\Api\DiscoveryController;
@@ -64,6 +65,7 @@ Route::get('/health', function () {
 });
 
 Route::get('/community/branding', [CommunitySettingsController::class, 'branding']);
+Route::get('/community/resolve-host', [CommunityResolveHostController::class, 'show']);
 
 Route::get('/places/{place}/public', [PlaceController::class, 'showPublic']);
 

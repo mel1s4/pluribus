@@ -87,7 +87,7 @@ class TaskController extends Controller
             return (int) $active->id;
         }
 
-        return Community::current()->id;
+        return Community::forRequest($request)->id;
     }
 
     private function requestedOrActiveCommunityId(Request $request): int

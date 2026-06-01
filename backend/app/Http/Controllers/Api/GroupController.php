@@ -30,7 +30,7 @@ class GroupController extends Controller
     {
         $group = DB::transaction(function () use ($request): Group {
             $group = Group::query()->create([
-                'community_id' => Community::current()->id,
+                'community_id' => Community::forRequest($request)->id,
                 'owner_id' => $request->user()->id,
                 'name' => (string) $request->validated('name'),
                 'description' => $request->validated('description'),

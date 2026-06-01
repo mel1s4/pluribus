@@ -60,7 +60,7 @@ class ChatController extends Controller
             ->values();
 
         $chat = Chat::query()->create([
-            'community_id' => Community::current()->id,
+            'community_id' => Community::forRequest($request)->id,
             'owner_id' => $user->id,
             'type' => $validated['type'],
             'title' => $validated['title'] ?? null,

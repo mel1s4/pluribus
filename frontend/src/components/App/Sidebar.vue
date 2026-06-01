@@ -5,6 +5,7 @@ import Icon from '../../atoms/Icon.vue'
 import FavoritesList from './FavoritesList.vue'
 import SidebarMyCommunities from './SidebarMyCommunities.vue'
 import { useCommunity } from '../../composables/useCommunity'
+import { isCommunityHostSite } from '../../composables/useCommunityHost'
 import { useActiveCommunity } from '../../composables/useActiveCommunity'
 import { sessionUser } from '../../composables/useSession'
 import { SIDEBAR_LINK_DEFS, isSidebarLinkDefAccessible } from '../../navigation/sidebarLinks'
@@ -30,6 +31,9 @@ const links = computed(() => {
   return SIDEBAR_LINK_DEFS
     .filter((item) => {
       if (item.hideInPrimaryNav) return false
+      if (isCommunityHostSite.value && ['communities', 'map'].includes(item.key)) {
+        return false
+      }
       return isSidebarLinkDefAccessible(item)
     })
     .map((item) => ({
@@ -78,7 +82,7 @@ function isFolderNavActive(key) {
     </div>
 
     <SidebarMyCommunities
-      v-if="Number(sessionUser?.community_count || 0) > 0"
+      v-if="!isCommunityHostSite && Number(sessionUser?.community_count || 0) > 0"
       class="app-sidebar__my-communities"
       @navigate="maybeCloseMobile"
     />

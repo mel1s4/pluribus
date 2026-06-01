@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Calendar;
 use App\Models\Chat;
 use App\Models\Community;
+use App\Models\CommunityDomain;
 use App\Models\CommunityProject;
 use App\Models\Group;
 use App\Models\Note;
@@ -28,6 +29,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -53,6 +55,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->mergeCommunityHostsIntoSanctumStatefulDomains();
+
         Route::bind('place', function (string $value) {
             if (ctype_digit($value)) {
                 return Place::query()->where('id', (int) $value)->firstOrFail();
@@ -195,5 +199,27 @@ class AppServiceProvider extends ServiceProvider
 
             return Limit::perHour(30)->by($user ? (string) $user->id : $request->ip());
         });
+    }
+
+    private function mergeCommunityHostsIntoSanctumStatefulDomains(): void
+    {
+        try {
+            if (! Schema::hasTable('community_domains')) {
+                return;
+            }
+            $hosts = CommunityDomain::query()->pluck('host')->filter()->all();
+            if ($hosts === []) {
+                return;
+            }
+            $existing = config('sanctum.stateful', []);
+            if (! is_array($existing)) {
+                $existing = [];
+            }
+            config([
+                'sanctum.stateful' => array_values(array_unique(array_merge($existing, $hosts))),
+            ]);
+        } catch (\Throwable) {
+            // Migrations may not have run yet (e.g. package discovery).
+        }
     }
 }

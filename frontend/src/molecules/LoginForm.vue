@@ -14,9 +14,13 @@ defineProps({
     type: String,
     default: '',
   },
+  showGuestAccess: {
+    type: Boolean,
+    default: false,
+  },
 })
 
-const emit = defineEmits(['submit', 'visitor-link'])
+const emit = defineEmits(['submit', 'visitor-link', 'guest-link'])
 
 const email = ref('')
 const password = ref('')
@@ -32,6 +36,12 @@ function handleSubmit() {
 
 function handleVisitorLink() {
   emit('visitor-link', {
+    email: email.value,
+  })
+}
+
+function handleGuestLink() {
+  emit('guest-link', {
     email: email.value,
   })
 }
@@ -76,13 +86,24 @@ function handleVisitorLink() {
       {{ t('login.signIn') }}
     </Button>
     <Button
+      v-if="showGuestAccess"
+      type="button"
+      variant="secondary"
+      size="md"
+      :disabled="submitting"
+      @click="handleGuestLink"
+    >
+      {{ t('login.enterAsGuest') }}
+    </Button>
+    <Button
+      v-else
       type="button"
       variant="secondary"
       size="md"
       :disabled="submitting"
       @click="handleVisitorLink"
     >
-      Send visitor login link
+      {{ t('login.visitorLink') }}
     </Button>
   </form>
 </template>

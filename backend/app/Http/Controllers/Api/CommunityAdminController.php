@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCommunityRequest;
 use App\Http\Requests\UpdateCommunityRequest;
 use App\Http\Resources\CommunityResource;
 use App\Models\Community;
+use App\Support\CommunityDomainSync;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -18,6 +19,7 @@ class CommunityAdminController extends Controller
         $this->authorize('communities.view');
 
         $communities = Community::query()
+            ->with('domains')
             ->orderBy('name')
             ->orderBy('id')
             ->get();
@@ -29,6 +31,8 @@ class CommunityAdminController extends Controller
     {
         $this->authorize('communities.view');
 
+        $community->load('domains');
+
         return response()->json([
             'data' => (new CommunityResource($community))->resolve(),
         ]);
@@ -38,7 +42,13 @@ class CommunityAdminController extends Controller
     {
         $this->authorize('communities.manage');
 
-        $community = Community::query()->create($request->validated());
+        $validated = $request->validated();
+        $domains = $validated['domains'] ?? null;
+        unset($validated['domains']);
+
+        $community = Community::query()->create($validated);
+        CommunityDomainSync::sync($community, is_array($domains) ? $domains : null);
+        $community->load('domains');
 
         return response()->json([
             'community' => new CommunityResource($community),
@@ -49,8 +59,14 @@ class CommunityAdminController extends Controller
     {
         $this->authorize('communities.manage');
 
-        $community->fill($request->validated());
+        $validated = $request->validated();
+        $domains = $validated['domains'] ?? null;
+        unset($validated['domains']);
+
+        $community->fill($validated);
         $community->save();
+        CommunityDomainSync::sync($community, is_array($domains) ? $domains : null);
+        $community->load('domains');
 
         return response()->json([
             'community' => new CommunityResource($community->fresh()),

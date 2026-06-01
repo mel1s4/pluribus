@@ -17,7 +17,7 @@ trait ValidatesPlaceOfferLocalPrice
             if (! is_numeric($localPrice) || (float) $localPrice <= 0) {
                 return;
             }
-            $community = Community::current();
+            $community = Community::forRequest($this);
             $code = $community->local_currency_code;
             if (! is_string($code) || trim($code) === '') {
                 $v->errors()->add(

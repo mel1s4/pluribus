@@ -31,6 +31,9 @@ const form = ref({
   description: '',
 })
 
+/** @type {import('vue').Ref<Array<{ host: string, is_primary: boolean }>>} */
+const domainRows = ref([])
+
 const canManage = computed(() => hasCapability('communities.manage'))
 
 const listRoute = computed(() => {
@@ -74,6 +77,38 @@ async function loadCommunity() {
     slug: row.slug ?? '',
     description: row.description ?? '',
   }
+  const domains = Array.isArray(row.domains) ? row.domains : []
+  domainRows.value = domains.map((d) => ({
+    host: typeof d?.host === 'string' ? d.host : '',
+    is_primary: Boolean(d?.is_primary),
+  }))
+}
+
+function addDomainRow() {
+  domainRows.value.push({ host: '', is_primary: domainRows.value.length === 0 })
+}
+
+function removeDomainRow(index) {
+  domainRows.value.splice(index, 1)
+  if (domainRows.value.length > 0 && !domainRows.value.some((r) => r.is_primary)) {
+    domainRows.value[0].is_primary = true
+  }
+}
+
+function setPrimaryDomain(index) {
+  domainRows.value = domainRows.value.map((row, i) => ({
+    ...row,
+    is_primary: i === index,
+  }))
+}
+
+function domainsPayload() {
+  return domainRows.value
+    .map((row) => ({
+      host: String(row.host || '').trim(),
+      is_primary: Boolean(row.is_primary),
+    }))
+    .filter((row) => row.host !== '')
 }
 
 async function onSubmit() {
@@ -84,6 +119,7 @@ async function onSubmit() {
     name: form.value.name,
     slug: form.value.slug || undefined,
     description: form.value.description || null,
+    domains: domainsPayload(),
   })
   saving.value = false
   if (!response.ok) {
@@ -105,6 +141,11 @@ async function onSubmit() {
       slug: next.slug ?? '',
       description: next.description ?? '',
     }
+    const domains = Array.isArray(next.domains) ? next.domains : []
+    domainRows.value = domains.map((d) => ({
+      host: typeof d?.host === 'string' ? d.host : '',
+      is_primary: Boolean(d?.is_primary),
+    }))
   }
 }
 
@@ -152,6 +193,40 @@ onMounted(() => {
             <span>{{ t('communities.fieldDescription') }}</span>
             <textarea v-model="form.description" rows="4" />
           </label>
+          <div class="community-edit-page__domains">
+            <span class="community-edit-page__domains-title">{{ t('communities.fieldDomains') }}</span>
+            <p class="community-edit-page__hint">{{ t('communities.domainsHint') }}</p>
+            <p v-if="domainRows.length === 0" class="community-edit-page__muted">
+              {{ t('communities.noDomains') }}
+            </p>
+            <div
+              v-for="(row, index) in domainRows"
+              :key="index"
+              class="community-edit-page__domain-row"
+            >
+              <Input
+                v-model="row.host"
+                :label="t('communities.fieldDomains')"
+                :placeholder="t('communities.domainHostPlaceholder')"
+                autocomplete="off"
+              />
+              <label class="community-edit-page__primary">
+                <input
+                  type="radio"
+                  name="primary-domain"
+                  :checked="row.is_primary"
+                  @change="setPrimaryDomain(index)"
+                />
+                {{ t('communities.primaryDomain') }}
+              </label>
+              <Button type="button" variant="secondary" size="sm" @click="removeDomainRow(index)">
+                ×
+              </Button>
+            </div>
+            <Button type="button" variant="secondary" size="sm" @click="addDomainRow">
+              {{ t('communities.addDomain') }}
+            </Button>
+          </div>
           <div class="community-edit-page__buttons">
             <Button type="submit" :disabled="saving">
               {{ saving ? t('communities.saving') : t('communities.save') }}
@@ -209,5 +284,31 @@ onMounted(() => {
 .community-edit-page__buttons {
   display: flex;
   gap: 0.75rem;
+}
+
+.community-edit-page__domains {
+  display: grid;
+  gap: 0.65rem;
+  margin-top: 0.5rem;
+}
+
+.community-edit-page__domains-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+}
+
+.community-edit-page__domain-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border: 1px dashed var(--border, #e5e7eb);
+  border-radius: 0.375rem;
+}
+
+.community-edit-page__primary {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8125rem;
 }
 </style>

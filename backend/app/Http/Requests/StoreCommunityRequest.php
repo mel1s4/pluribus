@@ -49,6 +49,9 @@ class StoreCommunityRequest extends FormRequest
             'logo' => ['nullable', 'string', 'max:2048'],
             'default_language' => ['sometimes', 'string', 'in:'.implode(',', LocaleOptions::codes())],
             'currency_code' => ['nullable', 'string', 'max:4'],
+            'domains' => ['sometimes', 'array'],
+            'domains.*.host' => ['required_with:domains', 'string', 'max:255'],
+            'domains.*.is_primary' => ['sometimes', 'boolean'],
         ];
     }
 }

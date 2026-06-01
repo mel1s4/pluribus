@@ -6,8 +6,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\RequestVisitorLoginLinkRequest;
 use App\Http\Resources\UserResource;
 use App\Mail\VisitorLoginMail;
+use App\Models\Community;
 use App\Models\User;
 use App\Models\VisitorLoginToken;
+use App\Support\CommunityGuestAccess;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -22,6 +24,8 @@ class VisitorAuthController extends Controller
     public function requestLoginLink(RequestVisitorLoginLinkRequest $request): JsonResponse
     {
         $email = strtolower(trim((string) $request->validated('email')));
+        $community = $this->activeCommunity($request);
+
         $user = $this->findUserByEmail($email);
         if (! $user instanceof User) {
             $user = User::query()->create([
@@ -36,12 +40,14 @@ class VisitorAuthController extends Controller
         $plainToken = Str::random(48);
         VisitorLoginToken::query()->create([
             'user_id' => $user->id,
+            'community_id' => $community?->id,
             'email' => $email,
             'token_hash' => VisitorLoginToken::hashPlainToken($plainToken),
             'expires_at' => now()->addMinutes(30),
             'consumed_at' => null,
         ]);
-        $loginUrl = rtrim((string) config('app.frontend_url'), '/').'/visitor-auth/'.$plainToken;
+
+        $loginUrl = $this->visitorLoginUrl($plainToken, $community);
 
         try {
             Mail::to($email)->queue(new VisitorLoginMail($loginUrl));
@@ -63,7 +69,9 @@ class VisitorAuthController extends Controller
             throw ValidationException::withMessages(['token' => [__('Invalid login link.')]]);
         }
 
-        $user = DB::transaction(function () use ($token): User {
+        $community = $this->activeCommunity($request);
+
+        $user = DB::transaction(function () use ($token, $community): User {
             $row = VisitorLoginToken::query()
                 ->where('token_hash', VisitorLoginToken::hashPlainToken($token))
                 ->lockForUpdate()
@@ -77,6 +85,15 @@ class VisitorAuthController extends Controller
                 throw ValidationException::withMessages(['token' => [__('Invalid login link.')]]);
             }
 
+            $targetCommunity = $community;
+            if ($targetCommunity === null && $row->community_id !== null) {
+                $targetCommunity = Community::query()->find((int) $row->community_id);
+            }
+
+            if ($targetCommunity instanceof Community) {
+                CommunityGuestAccess::ensureVisitorMembership($user, $targetCommunity);
+            }
+
             return $user;
         });
 
@@ -86,6 +103,23 @@ class VisitorAuthController extends Controller
         return response()->json([
             'user' => UserResource::make($user->fresh()),
         ]);
+    }
+
+    private function activeCommunity(Request $request): ?Community
+    {
+        $active = $request->attributes->get('active_community');
+
+        return $active instanceof Community ? $active : null;
+    }
+
+    private function visitorLoginUrl(string $plainToken, ?Community $community): string
+    {
+        $base = $community?->publicSiteUrl();
+        if ($base === null || $base === '') {
+            $base = rtrim((string) config('app.frontend_url'), '/');
+        }
+
+        return $base.'/visitor-auth/'.$plainToken;
     }
 
     private function findUserByEmail(string $email): ?User
