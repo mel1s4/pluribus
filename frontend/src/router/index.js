@@ -4,6 +4,7 @@ import {
   communityHostSlug,
   isCommunityHostSite,
 } from '../composables/useCommunityHost'
+import { COMMUNITY_HOST_ALLOWED_ROUTE_NAMES } from '../navigation/communityHostNav'
 import {
   clearHadAuthenticatedSession,
   hadAuthenticatedSessionMarker,
@@ -967,6 +968,12 @@ const router = createRouter({
 })
 
 function dashboardFallbackRoute(to) {
+  if (isCommunityHostSite.value && communityHostSlug.value) {
+    return {
+      name: 'dashboardScoped',
+      params: { communitySlug: communityHostSlug.value },
+    }
+  }
   const scopedSlug = typeof to.params?.communitySlug === 'string' ? to.params.communitySlug : ''
   if (scopedSlug) {
     return { name: 'dashboardScoped', params: { communitySlug: scopedSlug } }
@@ -998,26 +1005,32 @@ function communityMembershipsBeforeEnter(to) {
   return { name: 'dashboard' }
 }
 
-const COMMUNITY_HOST_BLOCKED_ROUTE_NAMES = new Set([
-  'home',
-  'myCommunities',
-  'communities',
-  'communitiesScoped',
-  'communityCreate',
-  'communityCreateScoped',
-  'communityEdit',
-  'communityEditScoped',
-  'map',
-])
-
 router.beforeEach(async (to) => {
   if (isCommunityHostSite.value && communityHostSlug.value) {
     const slug = communityHostSlug.value
+    const routeName = String(to.name || '')
     if (to.name === 'home') {
       return { name: 'communityMicrosite', params: { slug } }
     }
-    if (COMMUNITY_HOST_BLOCKED_ROUTE_NAMES.has(String(to.name || ''))) {
+    if (routeName && !COMMUNITY_HOST_ALLOWED_ROUTE_NAMES.has(routeName)) {
+      if (to.meta?.requiresAuth) {
+        return { name: 'dashboardScoped', params: { communitySlug: slug } }
+      }
       return { name: 'communityMicrosite', params: { slug } }
+    }
+
+    const paramSlug = to.params.slug ?? to.params.communitySlug
+    if (paramSlug && String(paramSlug).trim() !== slug) {
+      const nextParams = { ...to.params }
+      if ('slug' in nextParams) nextParams.slug = slug
+      if ('communitySlug' in nextParams) nextParams.communitySlug = slug
+      return {
+        name: to.name,
+        params: nextParams,
+        query: to.query,
+        hash: to.hash,
+        replace: true,
+      }
     }
   }
 
@@ -1084,6 +1097,12 @@ router.beforeEach(async (to) => {
       'map',
     ].includes(String(to.name || ''))
   ) {
+    if (isCommunityHostSite.value && communityHostSlug.value) {
+      return {
+        name: 'communityMicrosite',
+        params: { slug: communityHostSlug.value },
+      }
+    }
     return { name: 'myCommunities' }
   }
   if (

@@ -8,15 +8,21 @@
       :aria-hidden="!open"
       :aria-label="t('nav.sidebar')"
     >
-      <Sidebar :open="open" @close="$emit('close')" />
+      <CommunityHostSidebar v-if="useCommunityHostNav" :open="open" @close="$emit('close')" />
+      <Sidebar v-else :open="open" @close="$emit('close')" />
     </aside>
   </div>
 </template>
 
 <script setup>
 import { onUnmounted, watch } from 'vue'
+import { computed } from 'vue'
+import CommunityHostSidebar from './CommunityHostSidebar.vue'
 import Sidebar from './Sidebar.vue'
+import { isCommunityHostSite } from '../../composables/useCommunityHost'
 import { t } from '../../i18n/i18n'
+
+const useCommunityHostNav = computed(() => isCommunityHostSite.value)
 
 const props = defineProps({
   open: {

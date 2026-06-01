@@ -18,7 +18,10 @@ const memberships = computed(() => {
 })
 
 const visible = computed(
-  () => sessionStatus.value === 'authenticated' && memberships.value.length > 0,
+  () =>
+    !isCommunityHostSite.value
+    && sessionStatus.value === 'authenticated'
+    && memberships.value.length > 0,
 )
 
 const selectedSlug = computed(() => {

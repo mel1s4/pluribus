@@ -18,7 +18,12 @@
         class="app-shell__sidebarDesktop"
         :class="{ 'is-open': sidebarOpen }"
       >
-        <Sidebar :open="sidebarOpen" @close="closeSidebar" />
+        <CommunityHostSidebar
+          v-if="useCommunityHostNav"
+          :open="sidebarOpen"
+          @close="closeSidebar"
+        />
+        <Sidebar v-else :open="sidebarOpen" @close="closeSidebar" />
       </aside>
 
       <main class="app-shell__main">
@@ -27,7 +32,8 @@
     </div>
 
     <div v-if="showHeader" class="app-shell__bottomNav">
-      <QuickNav placement="bottom" />
+      <CommunityHostQuickNav v-if="useCommunityHostNav" />
+      <QuickNav v-else placement="bottom" />
     </div>
 
     <MobileNav v-if="!isDesktop" :open="sidebarOpen" @close="closeSidebar" />
@@ -48,8 +54,11 @@ import CartFab from '../components/App/CartFab.vue'
 import MobileNav from '../components/App/MobileNav.vue'
 import QuickNav from '../components/App/QuickNav.vue'
 import PersonificationBanner from '../components/App/PersonificationBanner.vue'
+import CommunityHostQuickNav from '../components/App/CommunityHostQuickNav.vue'
+import CommunityHostSidebar from '../components/App/CommunityHostSidebar.vue'
 import Sidebar from '../components/App/Sidebar.vue'
 import { useAppShell } from '../composables/useAppShell'
+import { isCommunityHostSite } from '../composables/useCommunityHost'
 import { useDesktopViewport } from '../composables/useDesktopViewport'
 import { sessionStatus } from '../composables/useSession'
 
@@ -61,6 +70,8 @@ const { sidebarOpen, closeSidebar, headerActions } = useAppShell()
 const CART_FAB_ROUTE_NAMES = new Set(['placePublic', 'placeView'])
 
 const showCartFab = computed(() => CART_FAB_ROUTE_NAMES.has(String(route.name || '')))
+
+const useCommunityHostNav = computed(() => isCommunityHostSite.value)
 
 const showHeader = computed(() => !route.meta?.hideHeader)
 

@@ -7,6 +7,7 @@ import VotingIdVerifiedBadge from '../../molecules/VotingIdVerifiedBadge.vue'
 import FavoriteButton from './FavoriteButton.vue'
 import { useAppShell } from '../../composables/useAppShell'
 import { useCart } from '../../composables/useCart'
+import { isCommunityHostSite } from '../../composables/useCommunityHost'
 import { sessionStatus } from '../../composables/useSession'
 import { t } from '../../i18n/i18n'
 import { fetchGlobalSearch } from '../../services/searchApi'
@@ -49,17 +50,24 @@ const sidebarKey = computed(() => {
   return typeof key === 'string' && key.length > 0 ? key : ''
 })
 
-const quickItems = computed(() => [
-  { to: '/folders?focus=chats', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
-  { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
-  {
-    to: '/notifications',
-    icon: 'bell',
-    label: t('quickNav.notifications'),
-    unread: inAppNotificationsUnread.value,
-  },
-  { to: '/profile', icon: 'user', label: t('quickNav.profile') },
-])
+const quickItems = computed(() => {
+  if (isCommunityHostSite.value) {
+    return []
+  }
+  return [
+    { to: '/folders?focus=chats', icon: 'comments', label: t('quickNav.chats'), unread: totalUnread.value },
+    { to: '/map', icon: 'map-location-dot', label: t('quickNav.map') },
+    {
+      to: '/notifications',
+      icon: 'bell',
+      label: t('quickNav.notifications'),
+      unread: inAppNotificationsUnread.value,
+    },
+    { to: '/profile', icon: 'user', label: t('quickNav.profile') },
+  ]
+})
+
+const hideGlobalSearch = computed(() => isCommunityHostSite.value)
 
 const resultSections = computed(() => ([
   { key: 'members', label: t('header.searchMembers'), items: searchResults.value.members },
@@ -221,7 +229,7 @@ onBeforeUnmount(() => {
           <Icon class="app-header__iconGlyph" name="bars" aria-hidden="true" />
         </button>
 
-        <div ref="searchRoot" class="app-header__searchWrap">
+        <div v-if="!hideGlobalSearch" ref="searchRoot" class="app-header__searchWrap">
           <div class="app-header__search">
           <Icon
             class="app-header__searchIcon"
