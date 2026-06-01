@@ -14,9 +14,8 @@
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
 
-  # Missing build assets must 404 — not index.html (browsers block text/html as JS/CSS)
-  RewriteCond %{REQUEST_URI} ^/(assets|sw\.js|workbox-|manifest\.webmanifest|version\.json) [NC]
-  RewriteRule ^ - [L]
+  # Exclude build assets from SPA fallback — missing assets should 404, not serve index.html
+  RewriteCond %{REQUEST_URI} !^/(assets|sw\.js|workbox-|manifest\.webmanifest|version\.json) [NC]
 
   # Rewrite everything else to index.html to allow Vue Router to handle routing
   RewriteRule ^ index.html [L]
