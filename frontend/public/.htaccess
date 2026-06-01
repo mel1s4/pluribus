@@ -23,6 +23,12 @@ ErrorDocument 404 /404.html
 
 # Security headers
 <IfModule mod_headers.c>
+  # Legacy host: never cache HTML (avoids stale SPA without server 301)
+  SetEnvIf Host ^(www\.)?chante\.vzs\.mx$ legacy_frontend_host
+  Header always set Cache-Control "no-store, no-cache, must-revalidate" env=legacy_frontend_host
+  Header always set Pragma "no-cache" env=legacy_frontend_host
+  Header always set Expires "0" env=legacy_frontend_host
+
   # Prevent clickjacking
   Header always set X-Frame-Options "SAMEORIGIN"
   

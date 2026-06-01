@@ -7,9 +7,8 @@ import { initI18n } from './i18n/i18n'
 import { initTheme } from './theme/theme'
 import { communityDefaultLanguage, fetchCommunityBranding } from './composables/useCommunity'
 import { resolveSession, sessionStatus } from './composables/useSession'
+import { isLegacyChanteHost, redirectLegacyHostIfNeeded } from './legacyHostRedirect.js'
 import './composables/useFavorites.js'
-
-initTheme()
 
 const BOOTSTRAP_TIMEOUT_MS = 8000
 
@@ -39,31 +38,40 @@ async function prepareDevServiceWorker() {
   await Promise.all(registrations.map((r) => r.unregister()))
 }
 
-prepareDevServiceWorker().then(() => {
-  if (import.meta.env.PROD) {
-    const updateSW = registerSW({
-      immediate: true,
-      onNeedRefresh() {
-        // Activate the new service worker immediately and then reload.
-        void updateSW(true)
-      },
-      onOfflineReady() {
-        console.info('[PWA] App is ready for offline usage.')
-      },
-    })
-  }
-
-  createApp(App).use(router).mount('#app')
-
-  void resolveSession().catch(() => {})
-  settleWithin(fetchCommunityBranding(), BOOTSTRAP_TIMEOUT_MS, 'community-branding').then(() => {
-    if (sessionStatus.value === 'unknown') {
-      // Never block public app shell forever because an upstream request stalled.
-      sessionStatus.value = 'guest'
+function bootstrapApp() {
+  prepareDevServiceWorker().then(() => {
+    if (import.meta.env.PROD && !isLegacyChanteHost()) {
+      const updateSW = registerSW({
+        immediate: true,
+        onNeedRefresh() {
+          // Activate the new service worker immediately and then reload.
+          void updateSW(true)
+        },
+        onOfflineReady() {
+          console.info('[PWA] App is ready for offline usage.')
+        },
+      })
     }
-    initI18n({
-      defaultLanguage: communityDefaultLanguage.value,
-      allowStoredLanguage: sessionStatus.value === 'authenticated',
+
+    createApp(App).use(router).mount('#app')
+
+    void resolveSession().catch(() => {})
+    settleWithin(fetchCommunityBranding(), BOOTSTRAP_TIMEOUT_MS, 'community-branding').then(() => {
+      if (sessionStatus.value === 'unknown') {
+        // Never block public app shell forever because an upstream request stalled.
+        sessionStatus.value = 'guest'
+      }
+      initI18n({
+        defaultLanguage: communityDefaultLanguage.value,
+        allowStoredLanguage: sessionStatus.value === 'authenticated',
+      })
     })
   })
-})
+}
+
+if (isLegacyChanteHost()) {
+  void redirectLegacyHostIfNeeded()
+} else {
+  initTheme()
+  bootstrapApp()
+}

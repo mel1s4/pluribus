@@ -63,3 +63,13 @@ RewriteRule ^ https://pluribus.vzs.mx%{REQUEST_URI} [R=301,L]
 ```
 
 Email invitations that use `chante-api.vzs.mx/join-invitation-share/...` redirect to the SPA via `FRONTEND_URL` in Laravel (no change to API hostname required).
+
+## PWA / service worker
+
+An installed PWA on `chante.vzs.mx` could serve a cached `index.html` and skip Apache’s 301 until a hard refresh. The app now:
+
+- Redirects from `chante.vzs.mx` in an inline script in `index.html` (before the bundle loads)
+- Unregisters service workers on the legacy host and does not register a new one there
+- Uses `NetworkOnly` for navigation requests in Workbox (no precached HTML shell)
+
+After deploy, one normal visit to `chante.vzs.mx` should redirect to `pluribus`; users who still see the old app can hard-refresh once to pick up the new service worker.

@@ -2,6 +2,27 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function () {
+        if (!/^(www\.)?chante\.vzs\.mx$/i.test(location.hostname)) return
+        var url =
+          'https://pluribus.vzs.mx' +
+          location.pathname +
+          location.search +
+          location.hash
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker
+            .getRegistrations()
+            .then(function (regs) {
+              return Promise.all(regs.map(function (r) { return r.unregister() }))
+            })
+            .catch(function () {})
+            .finally(function () { location.replace(url) })
+        } else {
+          location.replace(url)
+        }
+      })()
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

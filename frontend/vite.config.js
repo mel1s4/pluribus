@@ -52,9 +52,16 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//],
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
+        // Let Apache/cPanel serve index.html for navigations so legacy 301 redirects
+        // are not bypassed by a precached SPA shell on chante.vzs.mx.
+        navigateFallback: null,
+        globPatterns: ['**/*.{js,css,ico,png,svg,woff2,webmanifest}'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkOnly',
+          },
+        ],
       },
     }),
   ],
