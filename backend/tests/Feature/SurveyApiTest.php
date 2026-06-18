@@ -232,4 +232,183 @@ class SurveyApiTest extends TestCase
             ->assertUnprocessable()
             ->assertJsonValidationErrors(['options']);
     }
+
+    public function test_multiple_selection_without_ranking(): void
+    {
+        $community = Community::current();
+        $voter = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '555555',
+        ]);
+        $this->attach($voter, $community);
+
+        $create = $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/surveys', [
+                'title' => 'Pick many',
+                'allow_multiple' => true,
+                'options' => ['A', 'B', 'C'],
+            ])
+            ->assertCreated();
+
+        $surveyId = (int) $create->json('survey.id');
+        $opts = $create->json('survey.options');
+        $idA = (int) $opts[0]['id'];
+        $idB = (int) $opts[1]['id'];
+
+        $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->putJson("/api/surveys/{$surveyId}/vote", [
+                'selections' => [
+                    ['option_id' => $idA],
+                    ['option_id' => $idB],
+                ],
+            ])
+            ->assertOk()
+            ->assertJsonPath('survey.user_selections', fn ($rows) => count($rows) === 2);
+
+        $this->assertDatabaseCount('survey_votes', 2);
+    }
+
+    public function test_ranked_survey_requires_consecutive_ranks(): void
+    {
+        $community = Community::current();
+        $voter = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '666666',
+        ]);
+        $this->attach($voter, $community);
+
+        $create = $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/surveys', [
+                'title' => 'Ranked',
+                'allow_multiple' => true,
+                'require_ranked' => true,
+                'options' => ['First', 'Second'],
+            ])
+            ->assertCreated();
+
+        $surveyId = (int) $create->json('survey.id');
+        $opts = $create->json('survey.options');
+
+        $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->putJson("/api/surveys/{$surveyId}/vote", [
+                'selections' => [
+                    ['option_id' => (int) $opts[0]['id'], 'rank' => 1],
+                    ['option_id' => (int) $opts[1]['id'], 'rank' => 3],
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['selections']);
+    }
+
+    public function test_custom_option_visible_to_other_member(): void
+    {
+        $community = Community::current();
+        $author = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '777777',
+        ]);
+        $voter = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '888888',
+        ]);
+        $this->attach($author, $community);
+        $this->attach($voter, $community);
+
+        $create = $this->actingAs($author)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/surveys', [
+                'title' => 'Open options',
+                'allow_add_options' => true,
+                'options' => ['Preset', 'Other'],
+            ])
+            ->assertCreated();
+
+        $surveyId = (int) $create->json('survey.id');
+
+        $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->putJson("/api/surveys/{$surveyId}/vote", [
+                'selections' => [
+                    ['custom_label' => 'From voter'],
+                ],
+            ])
+            ->assertOk();
+
+        $this->actingAs($author)
+            ->getJson("/api/surveys/{$surveyId}")
+            ->assertOk()
+            ->assertJsonPath('survey.options', fn ($options) => collect($options)->contains(
+                fn ($o) => $o['label'] === 'From voter' && $o['is_custom'] === true
+            ));
+    }
+
+    public function test_custom_label_rejected_when_not_allowed(): void
+    {
+        $community = Community::current();
+        $voter = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '999999',
+        ]);
+        $this->attach($voter, $community);
+
+        $create = $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->postJson('/api/surveys', [
+                'title' => 'Fixed options',
+                'allow_add_options' => false,
+                'options' => ['A', 'B'],
+            ])
+            ->assertCreated();
+
+        $surveyId = (int) $create->json('survey.id');
+
+        $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->putJson("/api/surveys/{$surveyId}/vote", [
+                'selections' => [
+                    ['custom_label' => 'Not allowed'],
+                ],
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_cannot_change_modalities_after_votes(): void
+    {
+        $community = Community::current();
+        $voter = User::factory()->create([
+            'user_type' => 'member',
+            'voting_id' => '101010',
+        ]);
+        $this->attach($voter, $community);
+
+        $survey = Survey::query()->create([
+            'community_id' => $community->id,
+            'author_id' => $voter->id,
+            'title' => 'Modalities locked',
+            'status' => Survey::STATUS_OPEN,
+            'allow_multiple' => false,
+        ]);
+        $option = SurveyOption::query()->create([
+            'survey_id' => $survey->id,
+            'label' => 'Only',
+            'sort_order' => 0,
+        ]);
+        SurveyVote::query()->create([
+            'survey_id' => $survey->id,
+            'user_id' => $voter->id,
+            'survey_option_id' => $option->id,
+        ]);
+
+        $this->actingAs($voter)
+            ->withoutMiddleware(ValidateCsrfToken::class)
+            ->patchJson("/api/surveys/{$survey->id}", [
+                'allow_multiple' => true,
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['allow_multiple']);
+    }
 }

@@ -17,15 +17,25 @@ class SurveyResource extends JsonResource
     public function toArray(Request $request): array
     {
         $user = $request->user();
-        $userVoteOptionId = null;
-        if ($user instanceof User) {
-            $vote = $this->votes->firstWhere('user_id', $user->id);
-            if ($vote instanceof SurveyVote) {
-                $userVoteOptionId = (int) $vote->survey_option_id;
-            }
-        }
+        $userVotes = $user instanceof User
+            ? $this->votes->where('user_id', $user->id)->values()
+            : collect();
 
-        $totalVotes = (int) $this->options->sum('votes_count');
+        $userSelections = $userVotes->map(static function (SurveyVote $vote): array {
+            $option = $vote->relationLoaded('option') ? $vote->option : null;
+
+            return [
+                'option_id' => (int) $vote->survey_option_id,
+                'label' => $option?->label ?? '',
+                'rank' => $vote->rank,
+            ];
+        })->values()->all();
+
+        $firstVote = $userVotes->first();
+        $userOptionId = $firstVote instanceof SurveyVote ? (int) $firstVote->survey_option_id : null;
+
+        $totalSelections = (int) $this->options->sum('votes_count');
+        $participantCount = (int) ($this->participant_count ?? 0);
 
         return [
             'id' => $this->id,
@@ -36,22 +46,36 @@ class SurveyResource extends JsonResource
             'status' => $this->status,
             'is_open' => $this->isOpen(),
             'closes_at' => $this->closes_at?->toIso8601String(),
+            'allow_multiple' => (bool) $this->allow_multiple,
+            'require_ranked' => (bool) $this->require_ranked,
+            'allow_add_options' => (bool) $this->allow_add_options,
             'has_votes' => $this->hasVotes(),
-            'total_votes' => $totalVotes,
-            'user_option_id' => $userVoteOptionId,
-            'user_has_voted' => $userVoteOptionId !== null,
+            'total_votes' => $totalSelections,
+            'participant_count' => $participantCount,
+            'user_option_id' => $userOptionId,
+            'user_has_voted' => $userVotes->isNotEmpty(),
+            'user_selections' => $userSelections,
             'can_vote' => $user instanceof User ? $user->can('vote', $this->resource) : false,
             'can_manage' => $user instanceof User ? $user->can('update', $this->resource) : false,
-            'options' => $this->options->map(static function ($option) use ($totalVotes): array {
+            'options' => $this->options->map(function ($option) use ($totalSelections): array {
                 $count = (int) ($option->votes_count ?? 0);
-                $percent = $totalVotes > 0 ? round(($count / $totalVotes) * 100, 1) : 0.0;
+                $percent = $totalSelections > 0 ? round(($count / $totalSelections) * 100, 1) : 0.0;
+                $averageRank = null;
+                if ($this->require_ranked && $option->relationLoaded('votes')) {
+                    $ranked = $option->votes->pluck('rank')->filter();
+                    if ($ranked->isNotEmpty()) {
+                        $averageRank = round($ranked->avg(), 2);
+                    }
+                }
 
                 return [
                     'id' => $option->id,
                     'label' => $option->label,
                     'sort_order' => (int) $option->sort_order,
+                    'is_custom' => (bool) $option->is_custom,
                     'vote_count' => $count,
                     'vote_percent' => $percent,
+                    'average_rank' => $averageRank,
                 ];
             })->values()->all(),
             'author' => $this->whenLoaded('author', fn () => [

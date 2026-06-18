@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
@@ -28,6 +28,9 @@ const title = ref('')
 const description = ref('')
 const closesAtInput = ref('')
 const options = ref(['', ''])
+const allowMultiple = ref(false)
+const requireRanked = ref(false)
+const allowAddOptions = ref(false)
 
 function toDatetimeLocalValue(iso) {
   if (!iso) return ''
@@ -89,8 +92,11 @@ async function loadSurvey() {
   description.value = survey.description || ''
   closesAtInput.value = toDatetimeLocalValue(survey.closes_at)
   hasVotes.value = Boolean(survey.has_votes)
+  allowMultiple.value = Boolean(survey.allow_multiple)
+  requireRanked.value = Boolean(survey.require_ranked)
+  allowAddOptions.value = Boolean(survey.allow_add_options)
   options.value = Array.isArray(survey.options)
-    ? survey.options.map((o) => o.label)
+    ? survey.options.filter((o) => !o.is_custom).map((o) => o.label)
     : ['', '']
   if (options.value.length < 2) {
     options.value = ['', '']
@@ -110,6 +116,9 @@ async function submit() {
   const opts = trimmedOptions()
   if (!hasVotes.value) {
     payload.options = opts
+    payload.allow_multiple = allowMultiple.value
+    payload.require_ranked = requireRanked.value
+    payload.allow_add_options = allowAddOptions.value
   }
 
   const res = isEdit.value
@@ -132,6 +141,10 @@ function cancel() {
   }
   router.push({ name: 'surveys' })
 }
+
+watch(allowMultiple, (on) => {
+  if (!on) requireRanked.value = false
+})
 
 onMounted(loadSurvey)
 </script>
@@ -162,6 +175,30 @@ onMounted(loadSurvey)
         <span>{{ t('surveys.closesAtLabel') }}</span>
         <input v-model="closesAtInput" type="datetime-local" />
       </label>
+
+      <fieldset class="survey-composer__modalities" :disabled="hasVotes">
+        <legend>{{ t('surveys.modalitiesLabel') }}</legend>
+        <p v-if="hasVotes" class="survey-composer__muted">{{ t('surveys.modalitiesLocked') }}</p>
+        <label class="survey-composer__check">
+          <input v-model="allowMultiple" type="checkbox" :disabled="hasVotes" />
+          <span>{{ t('surveys.allowMultiple') }}</span>
+        </label>
+        <p class="survey-composer__hint">{{ t('surveys.allowMultipleHint') }}</p>
+        <label class="survey-composer__check">
+          <input
+            v-model="requireRanked"
+            type="checkbox"
+            :disabled="hasVotes || !allowMultiple"
+          />
+          <span>{{ t('surveys.requireRanked') }}</span>
+        </label>
+        <p class="survey-composer__hint">{{ t('surveys.requireRankedHint') }}</p>
+        <label class="survey-composer__check">
+          <input v-model="allowAddOptions" type="checkbox" :disabled="hasVotes" />
+          <span>{{ t('surveys.allowAddOptions') }}</span>
+        </label>
+        <p class="survey-composer__hint">{{ t('surveys.allowAddOptionsHint') }}</p>
+      </fieldset>
 
       <fieldset class="survey-composer__options">
         <legend>{{ t('surveys.optionsLabel') }}</legend>
@@ -235,12 +272,25 @@ onMounted(loadSurvey)
   border-radius: 0.4rem;
 }
 
+.survey-composer__modalities,
 .survey-composer__options {
   border: 1px solid #9ab8a0;
   border-radius: 0.5rem;
   padding: 0.65rem;
   display: grid;
   gap: 0.5rem;
+}
+
+.survey-composer__check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.survey-composer__hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #555;
 }
 
 .survey-composer__optionRow {

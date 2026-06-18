@@ -13,6 +13,8 @@ class SurveyOption extends Model
         'survey_id',
         'label',
         'sort_order',
+        'is_custom',
+        'created_by_user_id',
     ];
 
     /**
@@ -22,7 +24,13 @@ class SurveyOption extends Model
     {
         return [
             'sort_order' => 'integer',
+            'is_custom' => 'boolean',
         ];
+    }
+
+    public static function normalizeLabel(string $label): string
+    {
+        return mb_strtolower(trim($label));
     }
 
     /**

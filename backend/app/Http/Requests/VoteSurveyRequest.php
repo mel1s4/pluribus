@@ -17,7 +17,11 @@ class VoteSurveyRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'option_id' => ['required', 'integer'],
+            'option_id' => ['sometimes', 'integer'],
+            'selections' => ['sometimes', 'array', 'min:1'],
+            'selections.*.option_id' => ['sometimes', 'integer'],
+            'selections.*.custom_label' => ['sometimes', 'string', 'max:255'],
+            'selections.*.rank' => ['sometimes', 'nullable', 'integer', 'min:1'],
         ];
     }
 }

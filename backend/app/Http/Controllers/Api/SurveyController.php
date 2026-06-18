@@ -12,6 +12,7 @@ use App\Models\Survey;
 use App\Models\SurveyOption;
 use App\Models\SurveyVote;
 use App\Models\User;
+use App\Support\SurveyBallotValidator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -27,8 +28,13 @@ class SurveyController extends Controller
 
         $surveys = Survey::query()
             ->where('community_id', $community->id)
+            ->addSelect([
+                'participant_count' => SurveyVote::query()
+                    ->selectRaw('count(distinct user_id)')
+                    ->whereColumn('survey_id', 'surveys.id'),
+            ])
             ->with(['options' => fn ($q) => $q->withCount('votes')])
-            ->with(['votes' => fn ($q) => $q->where('user_id', (int) $request->user()->id)])
+            ->with(['votes' => fn ($q) => $q->where('user_id', (int) $request->user()->id)->with('option')])
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();
@@ -49,8 +55,9 @@ class SurveyController extends Controller
         $validated = $request->validated();
         $optionLabels = $validated['options'];
         unset($validated['options']);
+        $modality = $this->modalityAttributes($validated);
 
-        $survey = DB::transaction(function () use ($validated, $optionLabels, $community, $user): Survey {
+        $survey = DB::transaction(function () use ($validated, $modality, $optionLabels, $community, $user): Survey {
             $survey = Survey::query()->create([
                 'community_id' => $community->id,
                 'author_id' => $user->id,
@@ -58,6 +65,9 @@ class SurveyController extends Controller
                 'description' => $validated['description'] ?? null,
                 'closes_at' => $validated['closes_at'] ?? null,
                 'status' => Survey::STATUS_OPEN,
+                'allow_multiple' => $modality['allow_multiple'],
+                'require_ranked' => $modality['require_ranked'],
+                'allow_add_options' => $modality['allow_add_options'],
             ]);
 
             foreach (array_values($optionLabels) as $index => $label) {
@@ -65,6 +75,7 @@ class SurveyController extends Controller
                     'survey_id' => $survey->id,
                     'label' => trim((string) $label),
                     'sort_order' => $index,
+                    'is_custom' => false,
                 ]);
             }
 
@@ -89,6 +100,12 @@ class SurveyController extends Controller
     {
         $this->authorize('update', $survey);
 
+        if ($survey->hasVotes() && $this->hasModalityChange($request)) {
+            throw ValidationException::withMessages([
+                'allow_multiple' => ['Survey modalities cannot be changed after votes have been cast.'],
+            ]);
+        }
+
         $validated = $request->validated();
 
         if ($survey->hasVotes() && $request->has('options')) {
@@ -97,22 +114,26 @@ class SurveyController extends Controller
             ]);
         }
 
-        DB::transaction(function () use ($survey, $validated): void {
+        DB::transaction(function () use ($survey, $validated, $request): void {
             $optionLabels = $validated['options'] ?? null;
             unset($validated['options']);
 
-            if ($validated !== []) {
-                $survey->fill($validated);
+            $modality = $this->modalityAttributes($validated, $survey);
+            $fill = array_merge($validated, $modality);
+            if ($fill !== []) {
+                $survey->fill($fill);
+                $survey->normalizeModalityFlags();
                 $survey->save();
             }
 
             if (is_array($optionLabels)) {
-                $survey->options()->delete();
+                $survey->options()->where('is_custom', false)->delete();
                 foreach (array_values($optionLabels) as $index => $label) {
                     SurveyOption::query()->create([
                         'survey_id' => $survey->id,
                         'label' => trim((string) $label),
                         'sort_order' => $index,
+                        'is_custom' => false,
                     ]);
                 }
             }
@@ -147,23 +168,32 @@ class SurveyController extends Controller
             abort(403, 'This survey is not open for voting.');
         }
 
-        $optionId = (int) $request->validated('option_id');
-        $optionExists = $survey->options()->whereKey($optionId)->exists();
-        if (! $optionExists) {
+        $rawSelections = SurveyBallotValidator::normalizeInputPayload($request->all());
+        if ($rawSelections === []) {
             throw ValidationException::withMessages([
-                'option_id' => ['The selected option is invalid for this survey.'],
+                'selections' => ['At least one selection is required.'],
             ]);
         }
 
-        SurveyVote::query()->updateOrCreate(
-            [
-                'survey_id' => $survey->id,
-                'user_id' => $user->id,
-            ],
-            [
-                'survey_option_id' => $optionId,
-            ]
-        );
+        $validator = new SurveyBallotValidator;
+
+        DB::transaction(function () use ($survey, $user, $validator, $rawSelections): void {
+            $ballot = $validator->resolve($survey, $user, $rawSelections);
+
+            SurveyVote::query()
+                ->where('survey_id', $survey->id)
+                ->where('user_id', $user->id)
+                ->delete();
+
+            foreach ($ballot as $row) {
+                SurveyVote::query()->create([
+                    'survey_id' => $survey->id,
+                    'user_id' => $user->id,
+                    'survey_option_id' => $row['survey_option_id'],
+                    'rank' => $row['rank'],
+                ]);
+            }
+        });
 
         $survey->refresh();
 
@@ -172,15 +202,61 @@ class SurveyController extends Controller
         ]);
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array{title?: string, description?: string|null, closes_at?: mixed, allow_multiple: bool, require_ranked: bool, allow_add_options: bool}
+     */
+    private function modalityAttributes(array $validated, ?Survey $existing = null): array
+    {
+        $allowMultiple = array_key_exists('allow_multiple', $validated)
+            ? (bool) $validated['allow_multiple']
+            : (bool) ($existing?->allow_multiple ?? false);
+        $requireRanked = array_key_exists('require_ranked', $validated)
+            ? (bool) $validated['require_ranked']
+            : (bool) ($existing?->require_ranked ?? false);
+        $allowAddOptions = array_key_exists('allow_add_options', $validated)
+            ? (bool) $validated['allow_add_options']
+            : (bool) ($existing?->allow_add_options ?? false);
+
+        if (! $allowMultiple) {
+            $requireRanked = false;
+        }
+
+        return [
+            'allow_multiple' => $allowMultiple,
+            'require_ranked' => $requireRanked,
+            'allow_add_options' => $allowAddOptions,
+        ];
+    }
+
+    private function hasModalityChange(UpdateSurveyRequest $request): bool
+    {
+        return $request->has('allow_multiple')
+            || $request->has('require_ranked')
+            || $request->has('allow_add_options');
+    }
+
     private function loadSurveyForResource(Survey $survey, ?int $userId = null): Survey
     {
         $userId ??= 0;
 
-        return $survey->load([
+        $optionsQuery = fn ($q) => $q->withCount('votes');
+        if ($survey->require_ranked) {
+            $optionsQuery = fn ($q) => $q->withCount('votes')->with(['votes' => fn ($vq) => $vq->whereNotNull('rank')]);
+        }
+
+        $survey->load([
             'author:id,name',
-            'options' => fn ($q) => $q->withCount('votes'),
-            'votes' => fn ($q) => $q->when($userId > 0, fn ($inner) => $inner->where('user_id', $userId)),
+            'options' => $optionsQuery,
+            'votes' => fn ($q) => $q->when($userId > 0, fn ($inner) => $inner->where('user_id', $userId)->with('option')),
         ]);
+
+        $survey->participant_count = (int) SurveyVote::query()
+            ->where('survey_id', $survey->id)
+            ->distinct('user_id')
+            ->count('user_id');
+
+        return $survey;
     }
 
     private function resolveCommunity(Request $request): Community

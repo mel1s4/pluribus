@@ -47,6 +47,14 @@ function statusLabel(survey) {
   return t('surveys.statusClosed')
 }
 
+function modalityChips(survey) {
+  const chips = []
+  if (survey.allow_multiple) chips.push(t('surveys.chipMultiple'))
+  if (survey.require_ranked) chips.push(t('surveys.chipRanked'))
+  if (survey.allow_add_options) chips.push(t('surveys.chipAddOptions'))
+  return chips
+}
+
 function goCreate() {
   router.push({ name: 'surveys-new' })
 }
@@ -107,6 +115,13 @@ watch(communityScope, () => {
             </span>
             <span class="surveys-card__chip surveys-card__chip--muted">
               {{ t('surveys.voteCount').replace('{count}', String(survey.total_votes ?? 0)) }}
+            </span>
+            <span
+              v-for="chip in modalityChips(survey)"
+              :key="chip"
+              class="surveys-card__chip surveys-card__chip--modality"
+            >
+              {{ chip }}
             </span>
           </div>
           <p v-if="survey.description" class="surveys-card__description">{{ survey.description }}</p>
@@ -196,6 +211,11 @@ watch(communityScope, () => {
 
 .surveys-card__chip--muted {
   background: #eef2ef;
+}
+
+.surveys-card__chip--modality {
+  background: #e8f0ff;
+  color: #1a3d6b;
 }
 
 .surveys-card__description {

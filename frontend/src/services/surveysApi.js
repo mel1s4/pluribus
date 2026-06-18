@@ -37,9 +37,17 @@ export async function deleteSurvey(surveyId) {
   return result
 }
 
-export async function castSurveyVote(surveyId, optionId) {
+/**
+ * @param {number|string} surveyId
+ * @param {{ option_id?: number, selections?: Array<{ option_id?: number, custom_label?: string, rank?: number|null }> }} payload
+ */
+export async function castSurveyVote(surveyId, payload) {
   await ensureCsrfCookie()
-  const result = await apiJson('PUT', `/api/surveys/${surveyId}/vote`, { option_id: optionId })
+  const body =
+    payload && typeof payload === 'object' && Array.isArray(payload.selections)
+      ? { selections: payload.selections }
+      : { option_id: payload?.option_id ?? payload }
+  const result = await apiJson('PUT', `/api/surveys/${surveyId}/vote`, body)
   if (result.ok) invalidateSurveyCaches()
   return result
 }

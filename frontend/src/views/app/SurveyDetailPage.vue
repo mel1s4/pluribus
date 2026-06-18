@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import Button from '../../atoms/Button.vue'
 import Title from '../../atoms/Title.vue'
 import PageToolbarTitle from '../../components/App/PageToolbarTitle.vue'
+import SurveyVoteForm from '../../components/organisms/SurveyVoteForm.vue'
 import { useHasVotingId } from '../../composables/useHasVotingId'
 import { t } from '../../i18n/i18n'
 import {
@@ -22,7 +23,6 @@ const survey = ref(null)
 const loading = ref(false)
 const error = ref('')
 const voteBusy = ref(false)
-const selectedOptionId = ref(null)
 const deleteDialogRef = ref(null)
 
 const canVote = computed(() => Boolean(survey.value?.can_vote))
@@ -40,13 +40,12 @@ async function load() {
     return
   }
   survey.value = res.data?.survey ?? null
-  selectedOptionId.value = survey.value?.user_option_id ?? null
 }
 
-async function submitVote() {
-  if (!survey.value || selectedOptionId.value == null) return
+async function submitVote(selections) {
+  if (!survey.value) return
   voteBusy.value = true
-  const res = await castSurveyVote(survey.value.id, selectedOptionId.value)
+  const res = await castSurveyVote(survey.value.id, { selections })
   voteBusy.value = false
   if (!res.ok) {
     error.value = t('surveys.voteError').replace('{status}', String(res.status))
@@ -97,6 +96,14 @@ function statusLabel(item) {
   return item?.is_open ? t('surveys.statusOpen') : t('surveys.statusClosed')
 }
 
+function resultMeta(option) {
+  let text = `${option.vote_count} (${option.vote_percent}%)`
+  if (survey.value?.require_ranked && option.average_rank != null) {
+    text += ` · ${t('surveys.avgRank').replace('{rank}', String(option.average_rank))}`
+  }
+  return text
+}
+
 onMounted(load)
 </script>
 
@@ -117,6 +124,8 @@ onMounted(load)
 
       <p v-if="survey.description" class="survey-detail__description">{{ survey.description }}</p>
       <p class="survey-detail__muted">
+        {{ t('surveys.participantCount').replace('{count}', String(survey.participant_count ?? 0)) }}
+        ·
         {{ t('surveys.voteCount').replace('{count}', String(survey.total_votes ?? 0)) }}
       </p>
 
@@ -132,10 +141,11 @@ onMounted(load)
           class="survey-detail__result"
         >
           <div class="survey-detail__resultHead">
-            <span>{{ option.label }}</span>
-            <span class="survey-detail__muted">
-              {{ option.vote_count }} ({{ option.vote_percent }}%)
+            <span>
+              {{ option.label }}
+              <span v-if="option.is_custom" class="survey-detail__customTag">{{ t('surveys.customOption') }}</span>
             </span>
+            <span class="survey-detail__muted">{{ resultMeta(option) }}</span>
           </div>
           <div class="survey-detail__barTrack" aria-hidden="true">
             <div
@@ -146,25 +156,12 @@ onMounted(load)
         </li>
       </ul>
 
-      <form v-if="showVoteForm" class="survey-detail__vote" @submit.prevent="submitVote">
-        <p class="survey-detail__voteTitle">{{ t('surveys.castVote') }}</p>
-        <label
-          v-for="option in survey.options"
-          :key="`vote-${option.id}`"
-          class="survey-detail__voteOption"
-        >
-          <input
-            v-model="selectedOptionId"
-            type="radio"
-            name="survey-option"
-            :value="option.id"
-          />
-          <span>{{ option.label }}</span>
-        </label>
-        <Button type="submit" variant="primary" :disabled="selectedOptionId == null || voteBusy">
-          {{ voteBusy ? t('surveys.voting') : t('surveys.submitVote') }}
-        </Button>
-      </form>
+      <SurveyVoteForm
+        v-if="showVoteForm"
+        :survey="survey"
+        :busy="voteBusy"
+        @submit="submitVote"
+      />
 
       <div v-if="canManage" class="survey-detail__manage">
         <Button
@@ -241,6 +238,12 @@ onMounted(load)
   font-size: 0.9rem;
 }
 
+.survey-detail__customTag {
+  font-size: 0.7rem;
+  color: #555;
+  margin-left: 0.25rem;
+}
+
 .survey-detail__barTrack {
   height: 0.45rem;
   background: #e8ece9;
@@ -251,20 +254,6 @@ onMounted(load)
 .survey-detail__barFill {
   height: 100%;
   background: #4caf6a;
-}
-
-.survey-detail__vote {
-  display: grid;
-  gap: 0.45rem;
-  padding: 0.65rem;
-  border: 1px solid #9ab8a0;
-  border-radius: 0.5rem;
-}
-
-.survey-detail__voteOption {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
 }
 
 .survey-detail__manage {

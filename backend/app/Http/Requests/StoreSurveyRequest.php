@@ -22,6 +22,9 @@ class StoreSurveyRequest extends FormRequest
             'title' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'closes_at' => ['nullable', 'date'],
+            'allow_multiple' => ['sometimes', 'boolean'],
+            'require_ranked' => ['sometimes', 'boolean'],
+            'allow_add_options' => ['sometimes', 'boolean'],
             'options' => ['required', 'array', 'min:2', 'max:10'],
             'options.*' => ['required', 'string', 'max:255'],
         ];

@@ -31,6 +31,9 @@ class UpdateSurveyRequest extends FormRequest
         ];
 
         if (! $hasVotes) {
+            $rules['allow_multiple'] = ['sometimes', 'boolean'];
+            $rules['require_ranked'] = ['sometimes', 'boolean'];
+            $rules['allow_add_options'] = ['sometimes', 'boolean'];
             $rules['options'] = ['sometimes', 'array', 'min:2', 'max:10'];
             $rules['options.*'] = ['required', 'string', 'max:255'];
         }
@@ -43,8 +46,13 @@ class UpdateSurveyRequest extends FormRequest
         $validator->after(function (Validator $validator): void {
             /** @var Survey|null $survey */
             $survey = $this->route('survey');
-            if ($survey instanceof Survey && $survey->hasVotes() && $this->has('options')) {
-                $validator->errors()->add('options', 'Options cannot be changed after votes have been cast.');
+            if ($survey instanceof Survey && $survey->hasVotes()) {
+                if ($this->has('options')) {
+                    $validator->errors()->add('options', 'Options cannot be changed after votes have been cast.');
+                }
+                if ($this->has('allow_multiple') || $this->has('require_ranked') || $this->has('allow_add_options')) {
+                    $validator->errors()->add('allow_multiple', 'Survey modalities cannot be changed after votes have been cast.');
+                }
 
                 return;
             }

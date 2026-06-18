@@ -12,7 +12,18 @@ class SurveyVote extends Model
         'survey_id',
         'user_id',
         'survey_option_id',
+        'rank',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'rank' => 'integer',
+        ];
+    }
 
     /**
      * @return BelongsTo<Survey, $this>

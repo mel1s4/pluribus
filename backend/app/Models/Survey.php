@@ -18,6 +18,10 @@ class Survey extends Model
         self::STATUS_CLOSED,
     ];
 
+    public const MAX_CUSTOM_OPTIONS_PER_SURVEY = 30;
+
+    public const MAX_CUSTOM_LABELS_PER_BALLOT = 3;
+
     /** @var list<string> */
     protected $fillable = [
         'community_id',
@@ -26,6 +30,9 @@ class Survey extends Model
         'description',
         'status',
         'closes_at',
+        'allow_multiple',
+        'require_ranked',
+        'allow_add_options',
     ];
 
     /**
@@ -35,7 +42,17 @@ class Survey extends Model
     {
         return [
             'closes_at' => 'datetime',
+            'allow_multiple' => 'boolean',
+            'require_ranked' => 'boolean',
+            'allow_add_options' => 'boolean',
         ];
+    }
+
+    public function normalizeModalityFlags(): void
+    {
+        if (! $this->allow_multiple) {
+            $this->require_ranked = false;
+        }
     }
 
     public function isOpen(): bool
